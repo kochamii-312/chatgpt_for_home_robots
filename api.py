@@ -1,7 +1,31 @@
+import streamlit as st
 from openai import OpenAI
 import re
+import os
 
-client = OpenAI(api_key="")
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except Exception:
+    pass
+
+def _get_streamlit_secret():
+    try:
+        import streamlit as st
+        return st.secrets.get("OPENAI_API_KEY")
+    except Exception:
+        return None
+
+api_key = os.getenv("OPENAI_API_KEY") or _get_streamlit_secret()
+
+if not api_key:
+    raise RuntimeError(
+        "OPENAI_API_KEY が見つかりません。\n"
+        "・通常実行なら .env に OPENAI_API_KEY=... を書く\n"
+        "・Streamlit 実行なら .streamlit/secrets.toml に OPENAI_API_KEY=\"...\" を書く"
+    )
+
+client = OpenAI(api_key=api_key)
 
 # 論文形式のシステムプロンプト
 # 制約や要件、環境、現在の状態、目標、解決策
