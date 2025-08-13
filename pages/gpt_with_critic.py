@@ -4,6 +4,8 @@ import re
 import json
 from dotenv import load_dotenv
 from api import client, SYSTEM_PROMPT, move_to, pick_object, place_object
+import joblib
+from two_classify import prepare_data  # 既存関数を利用
 
 load_dotenv()
 
@@ -55,9 +57,27 @@ def finalize_and_render_plan(label: str):
         language="json"
     )
 
+# 事前に two_classify.py で学習済みモデルを保存しておく（例: joblib.dump(model, "critic_model.joblib")）
+model = joblib.load("critic_model.joblib")
+
+def get_critic_label(context):
+    # contextから判定用テキストを生成
+    instruction = next((m["content"] for m in context if m["role"] == "user"), "")
+    clarifying_steps = []
+    for m in context:
+        if m["role"] == "assistant":
+            q = extract_between("llm_question", m["content"]) or ""
+            a = extract_between("user_answer", m["content"]) or ""
+            if q and a:
+                clarifying_steps.append({"llm_question": q, "user_answer": a})
+    ex = {"instruction": instruction, "clarifying_steps": clarifying_steps, "label": "unknown"}
+    texts, _ = prepare_data([ex])
+    pred = model.predict(texts)
+    return "sufficient" if pred[0] == 1 else "insufficient"
+
 def app():
     st.title("LLMATCHデモアプリ")
-    st.subheader("GPT")
+    st.subheader("GPT with 'Critic'")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:
@@ -88,6 +108,13 @@ def app():
         print("context: ", context)
 
         run_plan_and_show(reply)
+
+    # sufficient判定なら終了
+    label = get_critic_label(context)
+    if label == "sufficient":
+        st.success("クリティックモデルが「十分」と判定したため会話を終了します。")
+        finalize_and_render_plan(label="sufficient")
+        st.stop()
 
     # 画面下部に履歴を全表示（systemは省く）
     # iが20になったら会話終了

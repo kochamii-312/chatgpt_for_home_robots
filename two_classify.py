@@ -1,4 +1,5 @@
 import json
+import joblib
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
@@ -9,8 +10,8 @@ def load_jsonl(path):
     with open(path, "r", encoding="utf-8") as f:
         return [json.loads(line) for line in f]
 
-train_data = load_jsonl("critic_dataset_train.jsonl")
-valid_data = load_jsonl("critic_dataset_valid.jsonl")
+train_data = load_jsonl(".json/critic_dataset_train.jsonl")
+valid_data = load_jsonl(".json/critic_dataset_valid.jsonl")
 
 # テキストとラベルを作成
 def prepare_data(data):
@@ -38,3 +39,6 @@ model.fit(X_train, y_train)
 # 評価
 pred = model.predict(X_valid)
 print(classification_report(y_valid, pred))
+
+# モデル保存
+joblib.dump(model, "critic_model.joblib")

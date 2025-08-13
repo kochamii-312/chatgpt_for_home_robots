@@ -1,3 +1,5 @@
 openai
 streamlit
 python-dotenv
+scikit-learn
+joblib
