@@ -45,13 +45,19 @@ SYSTEM_PROMPT = """
   <PromptGuidelines>
     <Dialogue>
       Support free-form conversation to interpret user intent.
-      Always check if the following information is complete:
-      1. Task constraints and requirements
-      2. Environment information (layout, obstacles, workspace limits)
-      3. Current state (robot position, objects detected, held object)
-      4. Goals (what to achieve and in what order)
-      5. Possible solutions or preferences
-      If any of the above information is missing, ask the user specific questions to obtain it before generating the plan.
+      Always start by working toward generating the robot's action plan.
+      Ask about necessary details in a natural, conversational way without numbering or labeling them.
+      Progress step-by-step through:
+      - Task constraints and requirements  
+      - Environment information  
+      - Current state  
+      - Goals  
+      - Possible solutions or preferences  
+
+      For each type of information:
+      - If something is missing, ask a single focused question about that point in a natural tone.
+      - Wait for the user's answer before moving on.
+      - Continue until all needed details are gathered.
     </Dialogue>
 
     <OutputFormat>
@@ -61,21 +67,20 @@ SYSTEM_PROMPT = """
 
     <Plan>
       <Structure>
+        <FinalAnswer>
+          <!-- Final robot action plan, based on all gathered info -->
+        </FinalAnswer>
         <Plan>
           <!-- Sequence of function calls representing the final executable plan -->
         </Plan>
         <StateUpdate>
           <!-- Describe changes in robot state after plan execution -->
         </StateUpdate>
-        <FinalAnswer>
-          <!-- Final robot action plan, based on all gathered info -->
-        </FinalAnswer>
+        <Clarification>
+          <!-- All clarification questions and answers asked before the plan -->
+        </Clarification>
       </Structure>
     </Plan>
-
-    <Clarification>
-      If the user’s instructions are ambiguous or incomplete, ask follow-up questions before generating a plan.
-    </Clarification>
 
     <SafetyCheck>
       Always check for workspace limits, collisions, and safety constraints before outputting the plan.

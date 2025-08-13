@@ -93,11 +93,16 @@ def app():
                 model="gpt-4o-mini",
                 messages=context
             )
-            final_answer = extract_between("FinalAnswer", response.choices[0].message.content)
-            context.append({"role": "assistant", "content": final_answer})
+            reply = (response.choices[0].message.content).strip()
+            print("Assistant:", reply)
+
+            final_answer = extract_between("FinalAnswer", reply)
+            if final_answer:
+                context.append({"role": "assistant", "content": "現在の情報に基づく計画: " + final_answer})
+            else:
+                context.append({"role": "assistant", "content": "現在の情報に基づく計画: ありません"})
 
             # 可能なら Plan を実行
-            reply = response.choices[0].message.content.strip()
             run_plan_and_show(reply)
 
     # 3) 追加の自由入力（会話継続用）
@@ -109,7 +114,19 @@ def app():
             messages=context
         )
         reply = response.choices[0].message.content.strip()
+        print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
+        print("context: ", context)
+        # final_answer = extract_between("FinalAnswer", reply)
+        # if final_answer:
+        #     context.append({"role": "assistant", "content": "現在の情報に基づく計画: " + final_answer})
+        # else:
+        #     context.append({"role": "assistant", "content": "現在の情報に基づく計画: ありません"})
+        # clarification = extract_between("Clarification", reply)
+        # if clarification:
+        #     context.append({"role": "assistant", "content": clarification})
+        # else:
+        #     context.append({"role": "assistant", "content": reply})
         run_plan_and_show(reply)
 
     # 4) 画面下部に履歴を全表示（systemは省く）
@@ -127,10 +144,7 @@ def app():
             # 表示は常にタグを外しています（strip_tags）。Plan 実行・FinalAnswer 抽出はタグで行います。
             # メモ：<FinalAnswer> ... </FinalAnswer> を LLM が返すよう、SYSTEM_PROMPT に「最終結論は <FinalAnswer> で包む」等を1行足しておくと常に表示されます。
             # FinalAnswerと追加質問は<>のタグ付きで両方出力するようにする
-            # final_answer = extract_between("FinalAnswer", msg["content"])
-            # if final_answer:
-            #     st.info(f"Final Answer: {final_answer}")
-
+            
             # ボタン（最後のassistantの直後だけ）
             col1, col2 = st.columns(2)
             with col1:
@@ -141,9 +155,13 @@ def app():
                     st.stop()
             with col2:
                 if st.button("不十分", key=f"not_enough_{i}"):
-                    # 継続フラグを立て、アシスタントから追い質問を促す一言を自動追加
+                    # 継続フラグを立てる
                     st.session_state.awaiting_feedback = True
+                    
                     clarification = extract_between("Clarification", msg["content"])
-                    context.append({"role": "assistant", "content": clarification})
+                    if clarification:
+                        context.append({"role": "assistant", "content": clarification})
+                    else:
+                        context.append({"role": "assistant", "content": msg["content"]})
 
 app()
