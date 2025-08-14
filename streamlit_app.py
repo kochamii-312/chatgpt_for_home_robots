@@ -3,7 +3,7 @@ from openai import OpenAI
 import re
 import json
 from dotenv import load_dotenv
-from api import client, SYSTEM_PROMPT, move_to, pick_object, place_object
+from api import client, CREATING_DATA_SYSTEM_PROMPT, move_to, pick_object, place_object
 
 load_dotenv()
 
@@ -17,8 +17,17 @@ def extract_between(tag: str, text: str) -> str | None:
     return m.group(1).strip() if m else None
 
 def run_plan_and_show(reply: str):
-    """<Plan> ... </Plan> を見つけて実行し、結果を表示"""
-    plan_match = re.search(r"<Plan>(.*?)</Plan>", reply, re.S)
+    """<Plan> ... </Plan> を見つけて実行し、結果を表示
+       <Provisional output> ... </Provosional output> をコードブロックで表示
+    """
+    # Provisional output の抽出と表示
+    prov_match = re.search(r"<Provisional output>([\s\S]*?)</Provosional output>", reply, re.IGNORECASE)
+    if prov_match:
+        st.subheader("Provisional output")
+        st.code(prov_match.group(0), language="xml")
+
+    # Plan の抽出と実行
+    plan_match = re.search(r"<Sequence of function>(.*?)</Sequence of function>", reply, re.S)
     if not plan_match:
         return
     steps = re.findall(r"<Step>(.*?)</Step>", plan_match.group(1))
@@ -33,34 +42,41 @@ def run_plan_and_show(reply: str):
             except Exception as e:
                 st.write(f"⚠️ `{step}` の実行でエラー: {e}")
 
-def finalize_and_render_json(label: str):
-    """会話終了時に JSON をまとめて画面表示"""
-    # final_answer の決定
-    last_assistant = next((m for m in reversed(st.session_state.context) if m["role"] == "assistant"), None)
-    final_answer = extract_between("FinalAnswer", last_assistant["content"]) if last_assistant else None
-    if not final_answer and last_assistant:
-        final_answer = strip_tags(last_assistant["content"])
+def save_jsonl_entry(label: str):
+    """会話ログをjsonl形式で1行保存"""
+    # instruction
+    instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
+    # clarifying_steps: assistant→userのペア
+    clarifying_steps = []
+    msgs = st.session_state.context
+    for i in range(len(msgs) - 1):
+        if msgs[i]["role"] == "assistant" and msgs[i+1]["role"] == "user":
+            clarifying_steps.append({
+                "llm_question": msgs[i]["content"],
+                "user_answer": msgs[i+1]["content"]
+            })
+    entry = {
+        "instruction": instruction,
+        "clarifying_steps": clarifying_steps,
+        "label": label
+    }
+    if "saved_jsonl" not in st.session_state:
+        st.session_state.saved_jsonl = []
+    st.session_state.saved_jsonl.append(entry)
 
-    st.session_state.conv_log["final_answer"] = final_answer or ""
-    st.session_state.conv_log["label"] = "sufficient" if label == "sufficient" else "insufficient"
-
-    # question_label が None のステップは継続が無ければ insufficient で埋める
-    for s in st.session_state.conv_log["clarifying_steps"]:
-        if s["question_label"] is None:
-            s["question_label"] = "insufficient"
-
-    st.subheader("会話サマリ（JSON）")
-    st.code(
-        json.dumps(st.session_state.conv_log, ensure_ascii=False, indent=2),
-        language="json"
-    )
+def show_jsonl_block():
+    """保存済みjsonlデータをコードブロックで表示"""
+    if "saved_jsonl" in st.session_state and st.session_state.saved_jsonl:
+        st.subheader("保存済みJSONLデータ")
+        jsonl_str = "\n".join([json.dumps(e, ensure_ascii=False) for e in st.session_state.saved_jsonl])
+        st.code(jsonl_str, language="json")
 
 def app():
     st.title("LLMATCHデモアプリ")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:
-        st.session_state["context"] = [{"role": "system", "content": SYSTEM_PROMPT}]
+        st.session_state["context"] = [{"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT}]
     if "active" not in st.session_state:
         st.session_state.active = True
     if "conv_log" not in st.session_state:
@@ -84,8 +100,6 @@ def app():
         else:
             # フォーム送信のタイミングでユーザー指示を表示
             st.success(f"ロボットへの指示がセットされました：**{instruction}**")
-
-            # 文脈にユーザー発話を追加
             context.append({"role": "user", "content": instruction})
 
             # 最初のアシスタント応答を取得
@@ -95,12 +109,7 @@ def app():
             )
             reply = (response.choices[0].message.content).strip()
             print("Assistant:", reply)
-
-            final_answer = extract_between("FinalAnswer", reply)
-            if final_answer:
-                context.append({"role": "assistant", "content": "現在の情報に基づく計画: " + final_answer})
-            else:
-                context.append({"role": "assistant", "content": "現在の情報に基づく計画: ありません"})
+            context.append({"role": "assistant", "content": reply})
 
             # 可能なら Plan を実行
             run_plan_and_show(reply)
@@ -117,16 +126,7 @@ def app():
         print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
         print("context: ", context)
-        # final_answer = extract_between("FinalAnswer", reply)
-        # if final_answer:
-        #     context.append({"role": "assistant", "content": "現在の情報に基づく計画: " + final_answer})
-        # else:
-        #     context.append({"role": "assistant", "content": "現在の情報に基づく計画: ありません"})
-        # clarification = extract_between("Clarification", reply)
-        # if clarification:
-        #     context.append({"role": "assistant", "content": clarification})
-        # else:
-        #     context.append({"role": "assistant", "content": reply})
+
         run_plan_and_show(reply)
 
     # 4) 画面下部に履歴を全表示（systemは省く）
@@ -138,30 +138,23 @@ def app():
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
-        # 最後のアシスタント直後に「final_answer + ボタン」を出す
+        # 最後のアシスタント直後にボタンを出す
         if i == last_assistant_idx:
-            # FinalAnswer があれば表示
-            # 表示は常にタグを外しています（strip_tags）。Plan 実行・FinalAnswer 抽出はタグで行います。
-            # メモ：<FinalAnswer> ... </FinalAnswer> を LLM が返すよう、SYSTEM_PROMPT に「最終結論は <FinalAnswer> で包む」等を1行足しておくと常に表示されます。
-            # FinalAnswerと追加質問は<>のタグ付きで両方出力するようにする
-            
-            # ボタン（最後のassistantの直後だけ）
+            st.write("この計画はロボットが実行するのに十分ですか？")
             col1, col2 = st.columns(2)
+            
             with col1:
                 if st.button("十分", key=f"enough_{i}"):
+                    save_jsonl_entry("sufficient")
                     st.session_state.active = False
-                    st.success("会話を終了しました。ありがとうございました！")
-                    finalize_and_render_json("sufficient")
-                    st.stop()
             with col2:
                 if st.button("不十分", key=f"not_enough_{i}"):
-                    # 継続フラグを立てる
-                    st.session_state.awaiting_feedback = True
-                    
-                    clarification = extract_between("Clarification", msg["content"])
-                    if clarification:
-                        context.append({"role": "assistant", "content": clarification})
-                    else:
-                        context.append({"role": "assistant", "content": msg["content"]})
+                    save_jsonl_entry("insufficient")
+                    st.success("jsonl形式でデータを1行保存しました！")
+
+            if st.session_state.active == False:
+                show_jsonl_block()
+                st.warning("会話を終了しました。ありがとうございました！")
+                st.stop()
 
 app()
