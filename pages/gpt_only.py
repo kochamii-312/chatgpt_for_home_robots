@@ -57,7 +57,7 @@ def finalize_and_render_plan(label: str):
 
 def app():
     st.title("LLMATCHデモアプリ")
-    st.subheader("GPT")
+    st.subheader("Chat GPT")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:

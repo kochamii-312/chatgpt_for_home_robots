@@ -10,8 +10,8 @@ def load_jsonl(path):
     with open(path, "r", encoding="utf-8") as f:
         return [json.loads(line) for line in f]
 
-train_data = load_jsonl(".json/critic_dataset_train.jsonl")
-valid_data = load_jsonl(".json/critic_dataset_valid.jsonl")
+train_data = load_jsonl("./json/critic_dataset_train.jsonl")
+valid_data = load_jsonl("./json/critic_dataset_valid.jsonl")
 
 # テキストとラベルを作成
 def prepare_data(data):

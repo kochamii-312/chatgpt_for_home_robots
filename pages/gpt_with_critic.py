@@ -77,7 +77,7 @@ def get_critic_label(context):
 
 def app():
     st.title("LLMATCHデモアプリ")
-    st.subheader("GPT with 'Critic'")
+    st.subheader("ChatGPT with 'Critic'")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:
