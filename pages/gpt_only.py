@@ -2,37 +2,13 @@ import streamlit as st
 from openai import OpenAI
 import re
 import json
-import move_functions
+from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from dotenv import load_dotenv
 from api import client, SYSTEM_PROMPT
+from strips import strip_tags, extract_between
+from run_and_show import show_provisional_output, run_plan_and_show
 
 load_dotenv()
-
-TAG_RE = re.compile(r"</?([A-Za-z0-9_]+)(\s[^>]*)?>")
-
-def strip_tags(text: str) -> str:
-    return TAG_RE.sub("", text or "").strip()
-
-def extract_between(tag: str, text: str) -> str | None:
-    m = re.search(fr"<{tag}>([\s\S]*?)</{tag}>", text or "", re.IGNORECASE)
-    return m.group(1).strip() if m else None
-
-def run_plan_and_show(reply: str):
-    """<Plan> ... </Plan> を見つけて実行し、結果を表示"""
-    plan_match = re.search(r"<Plan>(.*?)</Plan>", reply, re.S)
-    if not plan_match:
-        return
-    steps = re.findall(r"<Step>(.*?)</Step>", plan_match.group(1))
-    if not steps:
-        return
-
-    with st.expander("Plan 実行ログ", expanded=True):
-        for step in steps:
-            try:
-                result = eval(step)  # 例: move_to(1.0, 2.0)
-                st.write(f"✅ `{step}` → **{result}**")
-            except Exception as e:
-                st.write(f"⚠️ `{step}` の実行でエラー: {e}")
 
 def finalize_and_render_plan(label: str):
     """会話終了時に行動計画をまとめて画面表示"""
@@ -77,6 +53,7 @@ def app():
     message = st.chat_message("assistant")
     message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
     user_input = st.chat_input("ロボットへの回答を入力してください")
+    
     if user_input:
         context.append({"role": "user", "content": user_input})
         response = client.chat.completions.create(
@@ -88,11 +65,12 @@ def app():
         context.append({"role": "assistant", "content": reply})
         print("context: ", context)
 
-        run_plan_and_show(reply)
-
+    last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
+        
     # 画面下部に履歴を全表示（systemは省く）
     # iが14になったら会話終了
-    if len(context) - sum(1 for m in context if m["role"] == "system") >= 20:
+    # if last_assistant_idx == 14:
+    if len(context) - sum(1 for m in context if m["role"] == "system") >= 14:
         st.success("会話14ターンに達したため終了します。")
         finalize_and_render_plan(label="sufficient")  # 必要に応じてラベルを変更
         st.stop()
@@ -102,6 +80,9 @@ def app():
             continue
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
+        
+        if i == last_assistant_idx:
+            show_provisional_output
 
 
 app()

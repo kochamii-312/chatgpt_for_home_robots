@@ -43,6 +43,7 @@ IMAGE_CATALOG = {
 
 # 論文形式のシステムプロンプト
 # メモ：制約や要件、環境、現在の状態、目標、解決策
+# メモ：図面をどう指示するか？
 CREATING_DATA_SYSTEM_PROMPT = """
 <System>
   <Role>
@@ -61,7 +62,6 @@ CREATING_DATA_SYSTEM_PROMPT = """
     <Function name="place_object_on" args="target:str">Place the previously picked object on the target.</Function>
     <Function name="place_object_behind" args="target:str">Place the previously picked object behind the target.</Function>
     <Function name="yolo_detect_object" args="object:str">Detect the specified object using YOLO.</Function>
-    <Function name="show_room_image" args="room_name:str">Display a local room image in the app (no network required).</Function>
   </Functions>
 
   <PromptGuidelines>
@@ -169,9 +169,10 @@ SYSTEM_PROMPT = """
         <FinalAnswer>
           <!-- Final robot action plan, based on all gathered info -->
         </FinalAnswer>
-        <Plan>
-          <!-- Sequence of function calls representing the final executable plan -->
-        </Plan>
+        <FunctionSequence>
+          <!-- Sequence of function calls for the current provisional plan -->
+          <!-- Mark updated or newly added function calls with <Updated>...</Updated> -->
+        </FunctionSequence>
         <StateUpdate>
           <!-- Describe changes in robot state after plan execution -->
         </StateUpdate>
