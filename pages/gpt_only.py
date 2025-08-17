@@ -2,8 +2,9 @@ import streamlit as st
 from openai import OpenAI
 import re
 import json
+import move_functions
 from dotenv import load_dotenv
-from api import client, SYSTEM_PROMPT, move_to, pick_object, place_object
+from api import client, SYSTEM_PROMPT
 
 load_dotenv()
 
@@ -75,7 +76,7 @@ def app():
 
     message = st.chat_message("assistant")
     message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
-    user_input = st.chat_input("ロボットへの指示や回答を入力してください")
+    user_input = st.chat_input("ロボットへの回答を入力してください")
     if user_input:
         context.append({"role": "user", "content": user_input})
         response = client.chat.completions.create(
@@ -90,9 +91,9 @@ def app():
         run_plan_and_show(reply)
 
     # 画面下部に履歴を全表示（systemは省く）
-    # iが20になったら会話終了
+    # iが14になったら会話終了
     if len(context) - sum(1 for m in context if m["role"] == "system") >= 20:
-        st.success("会話が20ターンに達したため終了します。")
+        st.success("会話14ターンに達したため終了します。")
         finalize_and_render_plan(label="sufficient")  # 必要に応じてラベルを変更
         st.stop()
 

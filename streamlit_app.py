@@ -3,7 +3,8 @@ from openai import OpenAI
 import re
 import json
 from dotenv import load_dotenv
-from api import client, CREATING_DATA_SYSTEM_PROMPT, move_to, pick_object, place_object
+from api import client, build_system_message, IMAGE_CATALOG
+import move_functions
 
 load_dotenv()
 
@@ -16,21 +17,27 @@ def extract_between(tag: str, text: str) -> str | None:
     m = re.search(fr"<{tag}>([\s\S]*?)</{tag}>", text or "", re.IGNORECASE)
     return m.group(1).strip() if m else None
 
-def run_plan_and_show(reply: str):
-    """<Plan> ... </Plan> を見つけて実行し、結果を表示
-       <Provisional output> ... </Provosional output> をコードブロックで表示
+def show_provisional_output(reply: str):
+    """
+    <ProvisionalOutput> ... </ProvisionalOutput> をコードブロックで表示
     """
     # Provisional output の抽出と表示
-    prov_match = re.search(r"<Provisional output>([\s\S]*?)</Provosional output>", reply, re.IGNORECASE)
-    if prov_match:
-        st.subheader("Provisional output")
-        st.code(prov_match.group(0), language="xml")
+    prov_match = re.search(r"<ProvisionalOutput>([\s\S]*?)</ProvisionalOutput>", reply, re.IGNORECASE)
+    if not prov_match:
+        return
+    # メモ：会話の一番下に表示したい、できれば十分・不十分ボタンの上
+    st.subheader("Provisional output")
+    st.code(prov_match.group(0), language="xml")
 
+def run_plan_and_show(reply: str):
+    """
+    <Plan> ... </Plan> を見つけて実行し、結果を表示
+    """
     # Plan の抽出と実行
-    plan_match = re.search(r"<Sequence of function>(.*?)</Sequence of function>", reply, re.S)
+    plan_match = re.search(r"<FunctionSequence>(.*?)</FunctionSequence>", reply, re.S)
     if not plan_match:
         return
-    steps = re.findall(r"<Step>(.*?)</Step>", plan_match.group(1))
+    steps = re.findall(r"<Updated>(.*?)</Updated>", plan_match.group(1))
     if not steps:
         return
 
@@ -76,12 +83,11 @@ def app():
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:
-        st.session_state["context"] = [{"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT}]
+        st.session_state["context"] = [build_system_message()]
     if "active" not in st.session_state:
         st.session_state.active = True
     if "conv_log" not in st.session_state:
         st.session_state.conv_log = {
-            "final_answer": "",
             "label": "",
             "clarifying_steps": []
         }
@@ -140,6 +146,7 @@ def app():
 
         # 最後のアシスタント直後にボタンを出す
         if i == last_assistant_idx:
+            show_provisional_output(msg["content"])
             st.write("この計画はロボットが実行するのに十分ですか？")
             col1, col2 = st.columns(2)
             
@@ -155,6 +162,16 @@ def app():
             if st.session_state.active == False:
                 show_jsonl_block()
                 st.warning("会話を終了しました。ありがとうございました！")
+                if st.button("会話をリセット", key="reset_conv"):
+                    # セッション情報を初期化
+                    st.session_state.context = [{"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT}]
+                    st.session_state.active = True
+                    st.session_state.conv_log = {
+                        "label": "",
+                        "clarifying_steps": []
+                    }
+                    st.session_state.saved_jsonl = []
+                    st.experimental_rerun()
                 st.stop()
 
 app()

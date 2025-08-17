@@ -1,10 +1,11 @@
 import streamlit as st
-from openai import OpenAI
 import re
 import json
-from dotenv import load_dotenv
-from api import client, SYSTEM_PROMPT, move_to, pick_object, place_object
 import joblib
+import move_functions
+from openai import OpenAI
+from dotenv import load_dotenv
+from api import client, SYSTEM_PROMPT
 from two_classify import prepare_data  # 既存関数を利用
 
 load_dotenv()
