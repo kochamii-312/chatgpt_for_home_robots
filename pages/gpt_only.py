@@ -82,7 +82,7 @@ def app():
             st.write(msg["content"])
         
         if i == last_assistant_idx:
-            show_provisional_output
+            show_provisional_output(msg["content"])
 
 
 app()
