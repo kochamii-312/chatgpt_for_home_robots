@@ -4,8 +4,9 @@ import streamlit as st
 DEFAULT_IMAGE_DIR = "images"
 
 # 実際のロボットの代わりに動作をプリント
-def move_to(x, y):
-    return f"Moved to position ({x}, {y})"
+def move_to(room_name):
+    show_room_image(room_name)
+    return f"Moved to {room_name}"
 
 def pick_object(obj):
     return f"Picked up {obj}"

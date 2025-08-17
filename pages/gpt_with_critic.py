@@ -79,6 +79,7 @@ def get_critic_label(context):
 def app():
     st.title("LLMATCHデモアプリ")
     st.subheader("ChatGPT with 'Critic'")
+    st.warning("このページは、再読み込み時にモデルの学習が行われるため、起動に時間がかかります。")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:

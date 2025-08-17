@@ -2,6 +2,9 @@ import streamlit as st
 from openai import OpenAI
 import re
 import os
+import base64
+import mimetypes
+from typing import List, Dict
 
 try:
     from dotenv import load_dotenv
@@ -28,59 +31,27 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 IMAGE_CATALOG = {
-    "KITCHEN": {
-        "local": "images/kitchen.png",
-        "url": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/kitchen.png",
-    },
-    "DINING": {
-        "local": "images/dining.png",
-        "url": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/dining.png",
-    },
-    "LIVING": {
-        "local": "images/living.png",
-        "url": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/living.png",
-    },
-    "BEDROOM": {
-        "local": "images/bedroom.png",
-        "url": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/bedroom.png",
-    },
-    "BATHROOM": {
-        "local": "images/bathroom.png",
-        "url": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/bathroom.png",
-    },
-    "和室": {
-        "local": "images/japanese.png",
-        "url": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/japanese.png",
-    },
-    "HALL": {
-        "local": "images/laundry.png",
-        "url": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/laundry.png",
-    }
+    "MAP": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/map.png",
+    "KITCHEN": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/kitchen.png",
+    "DINING": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/dining.png",
+    "LIVING": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/living.png",
+    "BEDROOM": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/bedroom.png",
+    "BATHROOM": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/bathroom.png",
+    "和室": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/japanese.png",
+    "HALL": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/laundry.png",
 }
 
 # 論文形式のシステムプロンプト
 # メモ：制約や要件、環境、現在の状態、目標、解決策
-def build_system_message():
-    """
-    初期プロンプトを 'content=[{type:text}, {type:image_url}, ...]' 形式で返す。
-    ここで map.png と、参照用の部屋画像を一緒に“添付”する。
-    """
-    text_block = {
-        "type": "text",
-        "text": """
+CREATING_DATA_SYSTEM_PROMPT = """
 <System>
   <Role>
     You are a safe and reasoning robot planner powered by ChatGPT, following Microsoft Research's design principles.
     Your job is to interact with the user, collect all necessary information, and continually update an executable action plan.
     The attached image is the house map where you are currently operating.
-    You are currently near the sofa in the LDK room.
+    You are currently near the sofa in the LIVING room.
     When considering distances, assume that the hallway next to the ENTRY is 1m wide.
     Always refer to the map when reasoning about locations, distances, or paths.
-
-    # Image-use policy for rooms
-    - If moving to a specific room (e.g., KITCHEN), do two things:
-      (1) Call show_room_image("KITCHEN") so the app shows a local image to the user.
-      (2) In your conversation, refer to the attached room image (kitchen.png) as context for reasoning.
   </Role>
 
   <Functions>
@@ -97,8 +68,10 @@ def build_system_message():
     <Dialogue>
       Support free-form conversation to interpret user intent.
       Always start by attempting to generate a robot action plan — even if information is incomplete.
-      When details are missing, produce a <ProvisionalOutput> with <ProvisionalPlan> and <FunctionSequence>.
-      Ask only one focused question at a time; refine iteratively with <Updated>...</Updated>.
+      When details are missing, produce a **provisional plan** and clearly label it as provisional.
+      Ask only one question about missing information in a natural, conversational way (no numbering or rigid labels).
+      Update the provisional plan step-by-step as a new detail is provided.
+      Continue refining the plan infinitely.
 
       Information gathering flow (flexible order):
       - Task constraints and requirements
@@ -106,6 +79,10 @@ def build_system_message():
       - Current state
       - Goals
       - Possible solutions or preferences
+
+      For each missing point:
+      - Ask a single focused question.
+      - Wait for user's answer before updating the plan.
     </Dialogue>
 
     <OutputFormat>
@@ -128,6 +105,7 @@ def build_system_message():
           <!-- All clarification questions and answers asked so far -->
         </Clarification>
       </ProvisionalOutput>
+    </OutputFormat>
 
     <Plan>
       <Structure>
@@ -141,22 +119,7 @@ def build_system_message():
     </SafetyCheck>
   </PromptGuidelines>
 </System>
-        """.strip()
-    }
-
-    # 家の全体マップ
-    content = [
-        text_block,
-        {"type": "image_url", "image_url": {"url": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/map.png"}},
-    ]
-
-    # 部屋画像も“参照用”として先に添付しておく（LLMが「添付の中から取得して参照」できるようにする）
-    for room, meta in IMAGE_CATALOG.items():
-        if "url" in meta:
-            content.append({"type": "image_url", "image_url": {"url": meta["url"]}})
-
-    # Chat Completions 互換の system メッセージを返す
-    return {"role": "system", "content": content}
+"""
 
 SYSTEM_PROMPT = """
 <System>
@@ -224,3 +187,27 @@ SYSTEM_PROMPT = """
   </PromptGuidelines>
 </System>
 """
+
+def _file_to_data_url(path: str) -> str:
+    mime, _ = mimetypes.guess_type(path)
+    mime = mime or "application/octet-stream"
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:{mime};base64,{b64}"
+
+def build_bootstrap_user_message(
+    text: str,
+    image_urls: List[str] = None,
+    local_image_paths: List[str] = None,
+) -> Dict:
+    """
+    初期の 'user' メッセージをマルチモーダルで返す。
+    - image_urls: 公開URLの画像
+    - local_image_paths: ローカル画像（base64 Data URL化）
+    """
+    content = [{"type": "text", "text": text}]
+    for url in image_urls or []:
+        content.append({"type": "image_url", "image_url": {"url": url}})
+    for p in local_image_paths or []:
+        content.append({"type": "image_url", "image_url": {"url": _file_to_data_url(p)}})
+    return {"role": "user", "content": content}
