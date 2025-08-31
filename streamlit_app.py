@@ -152,21 +152,32 @@ def app():
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
-        # 最後のアシスタント直後にボタンを出す
-        if i == last_assistant_idx:
+        # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
+        if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
             run_plan_and_show(msg["content"])
             show_provisional_output(msg["content"])
             st.write("この計画はロボットが実行するのに十分ですか？")
             col1, col2 = st.columns(2)
-            
+
             with col1:
                 if st.button("十分", key=f"enough_{i}"):
                     save_jsonl_entry("sufficient")
                     st.session_state.active = False
             with col2:
                 if st.button("不十分", key=f"not_enough_{i}"):
-                    save_jsonl_entry("insufficient")
-                    st.success("jsonl形式でデータを1行保存しました！")
+                    clarify_prompt = {
+                        "role": "system",
+                        "content": "The previous plan was insufficient. Ask a clarifying question to the user to improve it."
+                    }
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=context + [clarify_prompt]
+                    )
+                    question = response.choices[0].message.content.strip()
+                    context.append({"role": "assistant", "content": question})
+                    rooms_from_assistant = detect_rooms_in_text(question)
+                    attach_images_for_rooms(rooms_from_assistant)
+                    st.rerun()
 
             if st.session_state.active == False:
                 show_jsonl_block()
