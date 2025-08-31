@@ -17,6 +17,9 @@ def place_object_next_to(obj):
 def place_object_on(target):
     return f"Placed object on {target}"
 
+def detect_object(obj):
+    return f"Detect {obj}"
+
 def _room_to_path(room_name: str) -> str:
     fname = f"{room_name.lower()}.png"  # "KITCHEN" -> "kitchen.png"
     return os.path.join(DEFAULT_IMAGE_DIR, fname)
@@ -34,3 +37,6 @@ def show_room_image(room_name: str) -> str:
         # ローカルに無い場合は控えめにメッセージ（必要なら公開URLのフォールバック実装も可能）
         st.warning(f"画像が見つかりません: {path}")
         return f"No local image found for {room_name}"
+    
+def get_room_image_path(room_name: str) -> str:
+    return _room_to_path(room_name)

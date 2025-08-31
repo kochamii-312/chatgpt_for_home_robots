@@ -1,44 +1,62 @@
 import streamlit as st
 import json
+import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, IMAGE_CATALOG, CREATING_DATA_SYSTEM_PROMPT
-from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image
+from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
 from run_and_show import show_provisional_output, run_plan_and_show
 from jsonl import save_jsonl_entry, show_jsonl_block
 
 load_dotenv()
+
+ROOM_TOKENS = ["BEDROOM","KITCHEN","DINING","LIVING","BATHROOM","和室","HALL","LDK"]
+
+def detect_rooms_in_text(text: str) -> set[str]:
+    found = set()
+    up = (text or "").upper()
+    for r in ROOM_TOKENS:
+        if r == "和室":
+            if "和室" in (text or ""):
+                found.add(r)
+        else:
+            if r in up:
+                found.add(r)
+    return found
+
+def attach_images_for_rooms(rooms: set[str], show_in_ui: bool = True):
+    """検出した部屋のうち、まだ送っていない分だけ画像をUI表示＆AIに添付"""
+    new_rooms = [r for r in rooms if r not in st.session_state.sent_room_images]
+    if not new_rooms:
+        return
+
+    local_paths = []
+    for room in new_rooms:
+        img_path = get_room_image_path(room)  # show_room_image と同じ規則:contentReference[oaicite:5]{index=5}
+        if os.path.exists(img_path):
+            if show_in_ui:
+                show_room_image(room)        # 画面にも表示（任意）:contentReference[oaicite:6]{index=6}
+            local_paths.append(img_path)
+            st.session_state.sent_room_images.add(room)
+        else:
+            st.warning(f"{room} の画像が見つかりません: {img_path}")
+
+    if local_paths:
+        st.session_state["context"].append(
+            build_bootstrap_user_message(
+                text=f"Here are room images for: {', '.join(new_rooms)}. Use them for scene understanding and disambiguation.",
+                local_image_paths=local_paths,  # ローカル画像をbase64添付:contentReference[oaicite:7]{index=7}
+            )
+        )
 
 def app():
     st.title("LLMATCHデモアプリ")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:
-        bootstrap_text = (
-            "Attached are reference images for the environment. "
-            "Please use them during reasoning. "
-            "When the plan moves to a room (e.g., KITCHEN, BATHROOM, LDK), "
-            "refer to the corresponding image in conversation."
-        )
-
-        # 画像カタログのすべてのURLをリストにまとめる
-        all_urls = [url for url in IMAGE_CATALOG.values() if url]
-
         st.session_state["context"] = [
             {"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT},
-            build_bootstrap_user_message(
-                text=bootstrap_text,
-                image_urls=all_urls,
-            ),
         ]
-
-        # 「全部送るとトークンがもったいない」「部屋が多すぎる」場合は、ユーザーが『KITCHENへ行け』と入力したタイミングで、その部屋画像を user メッセージとして追加する
-        # ユーザー指示に "KITCHEN" が含まれていたら、そのとき画像を追加
-        # if "KITCHEN" in instruction.upper():
-        #     context.append(build_bootstrap_user_message(
-        #         text="Here is the KITCHEN image for reference.",
-        #         image_urls=[IMAGE_CATALOG["KITCHEN"]],
-        #     ))
 
     if "active" not in st.session_state:
         st.session_state.active = True
@@ -47,6 +65,9 @@ def app():
             "label": "",
             "clarifying_steps": []
         }
+
+    if "sent_room_images" not in st.session_state:
+        st.session_state.sent_room_images = set()
 
     context = st.session_state["context"]
 
@@ -64,14 +85,50 @@ def app():
             st.success(f"ロボットへの指示がセットされました：**{instruction}**")
             context.append({"role": "user", "content": instruction})
 
-            # 最初のアシスタント応答を取得
+            def guess_room_from_instruction(text: str) -> str | None:
+                rooms = ["BEDROOM","KITCHEN","DINING","LIVING","BATHROOM","和室","HALL"]
+                up = text.upper()
+                for r in rooms:
+                    if r == "和室":
+                        if "和室" in text:
+                            return r
+                    else:
+                        if r in up:
+                            return r
+                return None
+
+            room = guess_room_from_instruction(instruction)
+            if room:
+                img_path = get_room_image_path(room)  # show_room_image と同じパス規則:contentReference[oaicite:5]{index=5}
+                if os.path.exists(img_path):
+                    # UIにも表示（任意）
+                    show_room_image(room)             # 既存関数で画像を画面に表示:contentReference[oaicite:6]{index=6}
+                    # AIには“この部屋の画像だけ”を添付
+                    st.session_state["context"].append(
+                        build_bootstrap_user_message(
+                            text=f"Here is the latest image for {room}. Use it for scene understanding and disambiguation.",
+                            local_image_paths=[img_path],  # ←ローカル画像をbase64で添付:contentReference[oaicite:7]{index=7}
+                        )
+                    )
+                else:
+                    st.warning(f"{room} の画像が見つかりません: {img_path}")
+            
+            # 1) ユーザー発話から部屋名を検出 → 新規なら画像添付
+            rooms_from_user = detect_rooms_in_text(instruction)
+            attach_images_for_rooms(rooms_from_user)
+
+            # 2) 最初のアシスタント応答を取得（画像を添えた状態で）
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=context
+                messages=st.session_state["context"]
             )
             reply = (response.choices[0].message.content).strip()
-            print("Assistant:", reply)
-            context.append({"role": "assistant", "content": reply})
+            st.session_state["context"].append({"role": "assistant", "content": reply})
+
+            # 3) アシスタント応答からも部屋名を検出 → 新規なら画像添付（次の推論に活かす）
+            rooms_from_assistant = detect_rooms_in_text(reply)
+            attach_images_for_rooms(rooms_from_assistant)
+
 
     # 3) 追加の自由入力（会話継続用）
     user_input = st.chat_input("入力してください")

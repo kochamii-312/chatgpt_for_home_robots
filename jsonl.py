@@ -2,7 +2,7 @@ import streamlit as st
 import json
 from pathlib import Path
 
-DATASET_PATH = Path(__file__).parent / "json" / "dataset.jsonl"
+DATASET_PATH = Path(__file__).parent / "json" / "critic_dataset_train.jsonl"
 
 def save_jsonl_entry(label: str):
     """会話ログをjsonl形式で1行保存"""
