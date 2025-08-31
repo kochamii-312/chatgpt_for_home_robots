@@ -2,7 +2,8 @@ import streamlit as st
 from openai import OpenAI
 import re
 import json
-from move_functions import move_to, pick_object, place_object_next_to, place_object_on
+import os
+from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
 from dotenv import load_dotenv
 from api import client, SYSTEM_PROMPT
 from strips import strip_tags, extract_between
@@ -35,6 +36,15 @@ def finalize_and_render_plan(label: str):
 def app():
     st.title("LLMATCHデモアプリ")
     st.subheader("Chat GPT")
+
+    image_root = "images"
+    house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
+    default_label = "(default)"
+    options = [default_label] + house_dirs
+    current_house = st.session_state.get("selected_house", "")
+    current_label = current_house if current_house else default_label
+    selected_label = st.selectbox("想定する家", options, index=options.index(current_label) if current_label in options else 0)
+    st.session_state["selected_house"] = "" if selected_label == default_label else selected_label
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:
