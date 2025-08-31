@@ -144,6 +144,8 @@ def app():
     user_input = st.chat_input("入力してください")
     if user_input:
         context.append({"role": "user", "content": user_input})
+        rooms_from_user = detect_rooms_in_text(user_input)
+        attach_images_for_rooms(rooms_from_user)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=context
@@ -152,6 +154,8 @@ def app():
         print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
         print("context: ", context)
+        rooms_from_assistant = detect_rooms_in_text(reply)
+        attach_images_for_rooms(rooms_from_assistant)
         save_jsonl_entry("insufficient")
 
     # 4) 画面下部に履歴を全表示（systemは省く）
