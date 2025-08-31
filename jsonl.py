@@ -1,5 +1,8 @@
 import streamlit as st
 import json
+from pathlib import Path
+
+DATASET_PATH = Path(__file__).parent / "json" / "dataset.jsonl"
 
 def save_jsonl_entry(label: str):
     """会話ログをjsonl形式で1行保存"""
@@ -22,6 +25,10 @@ def save_jsonl_entry(label: str):
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
+
+    DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with DATASET_PATH.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 def show_jsonl_block():
     """保存済みjsonlデータをコードブロックで表示"""
