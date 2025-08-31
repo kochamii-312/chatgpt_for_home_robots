@@ -27,7 +27,7 @@ def _room_to_path(room_name: str) -> str:
 def show_room_image(room_name: str) -> str:
     """
     Plan 実行時に呼ばれる表示関数。
-    ローカルにある部屋画像（例: images/kitchen.png）を表示する。
+    ローカルにある部屋画像（例: images/house1/kitchen.png）を表示する。
     """
     path = _room_to_path(room_name)
     if os.path.exists(path):

@@ -31,14 +31,14 @@ if not api_key:
 client = OpenAI(api_key=api_key)
 
 IMAGE_CATALOG = {
-    "MAP": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/map.png",
-    "KITCHEN": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/kitchen.png",
-    "DINING": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/dining.png",
-    "LIVING": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/living.png",
-    "BEDROOM": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/bedroom.png",
-    "BATHROOM": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/bathroom.png",
-    "和室": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/japanese.png",
-    "HALL": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/laundry.png",
+    "MAP": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/house1/map.png",
+    "KITCHEN": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/house1/kitchen.png",
+    "DINING": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/house1/dining.png",
+    "LIVING": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/house1/living.png",
+    "BEDROOM": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/house1/bedroom.png",
+    "BATHROOM": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/house1/bathroom.png",
+    "和室": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/house1/japanese.png",
+    "HALL": "https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/main/images/house1/laundry.png",
 }
 
 # 論文形式のシステムプロンプト
@@ -126,7 +126,7 @@ SYSTEM_PROMPT = """
   </Role>
 
   <Image>
-    https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/refs/heads/main/images/map.png
+    https://raw.githubusercontent.com/kochamii-312/chatgpt_for_home_robots/refs/heads/main/images/house1/map.png
   </Image>
 
   <Functions>
