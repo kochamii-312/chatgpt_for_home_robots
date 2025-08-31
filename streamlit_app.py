@@ -7,47 +7,10 @@ from api import client, build_bootstrap_user_message, IMAGE_CATALOG, CREATING_DA
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
 from run_and_show import show_provisional_output, run_plan_and_show
 from jsonl import save_jsonl_entry, show_jsonl_block
+from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
 
-ROOM_TOKENS = ["BEDROOM","KITCHEN","DINING","LIVING","BATHROOM","和室","HALL","LDK"]
-
-def detect_rooms_in_text(text: str) -> set[str]:
-    found = set()
-    up = (text or "").upper()
-    for r in ROOM_TOKENS:
-        if r == "和室":
-            if "和室" in (text or ""):
-                found.add(r)
-        else:
-            if r in up:
-                found.add(r)
-    return found
-
-def attach_images_for_rooms(rooms: set[str], show_in_ui: bool = True):
-    """検出した部屋のうち、まだ送っていない分だけ画像をUI表示＆AIに添付"""
-    new_rooms = [r for r in rooms if r not in st.session_state.sent_room_images]
-    if not new_rooms:
-        return
-
-    local_paths = []
-    for room in new_rooms:
-        img_path = get_room_image_path(room)  # show_room_image と同じ規則:contentReference[oaicite:5]{index=5}
-        if os.path.exists(img_path):
-            if show_in_ui:
-                show_room_image(room)        # 画面にも表示（任意）:contentReference[oaicite:6]{index=6}
-            local_paths.append(img_path)
-            st.session_state.sent_room_images.add(room)
-        else:
-            st.warning(f"{room} の画像が見つかりません: {img_path}")
-
-    if local_paths:
-        st.session_state["context"].append(
-            build_bootstrap_user_message(
-                text=f"Here are room images for: {', '.join(new_rooms)}. Use them for scene understanding and disambiguation.",
-                local_image_paths=local_paths,  # ローカル画像をbase64添付:contentReference[oaicite:7]{index=7}
-            )
-        )
 
 def app():
     st.title("LLMATCHデモアプリ")
