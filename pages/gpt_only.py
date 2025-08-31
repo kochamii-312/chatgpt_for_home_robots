@@ -5,7 +5,12 @@ import json
 import os
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
 from dotenv import load_dotenv
-from api import client, SYSTEM_PROMPT
+from api import (
+    client,
+    SYSTEM_PROMPT_STANDARD,
+    SYSTEM_PROMPT_FRIENDLY,
+    SYSTEM_PROMPT_PRATFALL,
+)
 from strips import strip_tags, extract_between
 from run_and_show import show_provisional_output, run_plan_and_show
 
@@ -37,6 +42,14 @@ def app():
     st.title("LLMATCHデモアプリ")
     st.subheader("Chat GPT")
 
+    prompt_options = {
+        "Standard": SYSTEM_PROMPT_STANDARD,
+        "Friendly": SYSTEM_PROMPT_FRIENDLY,
+        "Pratfall": SYSTEM_PROMPT_PRATFALL,
+    }
+    prompt_label = st.selectbox("プロンプト", list(prompt_options.keys()))
+    system_prompt = prompt_options[prompt_label]
+
     image_root = "images"
     house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
     default_label = "(default)"
@@ -47,16 +60,19 @@ def app():
     st.session_state["selected_house"] = "" if selected_label == default_label else selected_label
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
-    if "context" not in st.session_state:
-        st.session_state["context"] = [{"role": "system", "content": SYSTEM_PROMPT}]
-    if "active" not in st.session_state:
-        st.session_state.active = True
-    if "conv_log" not in st.session_state:
+    if (
+        "context" not in st.session_state
+        or st.session_state.get("system_prompt") != system_prompt
+    ):
+        st.session_state["context"] = [{"role": "system", "content": system_prompt}]
+        st.session_state["system_prompt"] = system_prompt
         st.session_state.conv_log = {
             "final_answer": "",
             "label": "",
             "clarifying_steps": []
         }
+    if "active" not in st.session_state:
+        st.session_state.active = True
 
     context = st.session_state["context"]
 
