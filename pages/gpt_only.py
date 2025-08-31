@@ -13,6 +13,7 @@ from api import (
 )
 from strips import strip_tags, extract_between
 from run_and_show import show_provisional_output, run_plan_and_show
+from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
 
@@ -73,6 +74,8 @@ def app():
         }
     if "active" not in st.session_state:
         st.session_state.active = True
+    if "sent_room_images" not in st.session_state:
+        st.session_state.sent_room_images = set()
 
     context = st.session_state["context"]
 
@@ -82,6 +85,8 @@ def app():
     
     if user_input:
         context.append({"role": "user", "content": user_input})
+        rooms_from_user = detect_rooms_in_text(user_input)
+        attach_images_for_rooms(rooms_from_user)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=context
@@ -89,6 +94,8 @@ def app():
         reply = response.choices[0].message.content.strip()
         print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
+        rooms_from_assistant = detect_rooms_in_text(reply)
+        attach_images_for_rooms(rooms_from_assistant)
         print("context: ", context)
 
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
