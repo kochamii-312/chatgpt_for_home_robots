@@ -22,7 +22,11 @@ def detect_object(obj):
 
 def _room_to_path(room_name: str) -> str:
     fname = f"{room_name.lower()}.png"  # "KITCHEN" -> "kitchen.png"
-    return os.path.join(DEFAULT_IMAGE_DIR, fname)
+    image_dir = DEFAULT_IMAGE_DIR
+    house = st.session_state.get("selected_house")
+    if house:
+        image_dir = os.path.join(image_dir, house)
+    return os.path.join(image_dir, fname)
 
 def show_room_image(room_name: str) -> str:
     """
