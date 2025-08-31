@@ -27,7 +27,14 @@ def save_jsonl_entry(label: str):
     st.session_state.saved_jsonl.append(entry)
 
     DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
+    need_newline = False
+    if DATASET_PATH.exists() and DATASET_PATH.stat().st_size > 0:
+        with DATASET_PATH.open("rb") as f:
+            f.seek(-1, 2)
+            need_newline = f.read(1) != b"\n"
     with DATASET_PATH.open("a", encoding="utf-8") as f:
+        if need_newline:
+            f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 def show_jsonl_block():

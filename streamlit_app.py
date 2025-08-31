@@ -128,6 +128,7 @@ def app():
             # 3) アシスタント応答からも部屋名を検出 → 新規なら画像添付（次の推論に活かす）
             rooms_from_assistant = detect_rooms_in_text(reply)
             attach_images_for_rooms(rooms_from_assistant)
+            save_jsonl_entry("insufficient")
 
 
     # 3) 追加の自由入力（会話継続用）
@@ -142,6 +143,7 @@ def app():
         print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
         print("context: ", context)
+        save_jsonl_entry("insufficient")
 
     # 4) 画面下部に履歴を全表示（systemは省く）
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
@@ -177,6 +179,7 @@ def app():
                     context.append({"role": "assistant", "content": question})
                     rooms_from_assistant = detect_rooms_in_text(question)
                     attach_images_for_rooms(rooms_from_assistant)
+                    save_jsonl_entry("insufficient")
                     st.rerun()
 
             if st.session_state.active == False:
