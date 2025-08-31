@@ -52,6 +52,15 @@ def attach_images_for_rooms(rooms: set[str], show_in_ui: bool = True):
 def app():
     st.title("LLMATCHデモアプリ")
 
+    image_root = "images"
+    house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
+    default_label = "(default)"
+    options = [default_label] + house_dirs
+    current_house = st.session_state.get("selected_house", "")
+    current_label = current_house if current_house else default_label
+    selected_label = st.selectbox("想定する家", options, index=options.index(current_label) if current_label in options else 0)
+    st.session_state["selected_house"] = "" if selected_label == default_label else selected_label
+
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:
         st.session_state["context"] = [
