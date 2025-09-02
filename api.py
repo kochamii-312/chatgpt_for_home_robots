@@ -107,6 +107,7 @@ CREATING_DATA_SYSTEM_PROMPT = """
       <ClarifyingQuestion>
         <!-- One short question in Japanese -->
       </ClarifyingQuestion>
+    </OutputFormat>
   </PromptGuidelines>
 </System>
 """
