@@ -5,7 +5,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, IMAGE_CATALOG, CREATING_DATA_SYSTEM_PROMPT
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
-from run_and_show import show_provisional_output, run_plan_and_show
+from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
 from jsonl import save_jsonl_entry, show_jsonl_block
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
@@ -129,11 +129,13 @@ def app():
             continue
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
+            if msg["role"] == "assistant":
+                show_function_sequence(msg["content"])
+                show_clarifying_question(msg["content"])
 
         # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
         if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
             run_plan_and_show(msg["content"])
-            show_provisional_output(msg["content"])
             st.write("この計画はロボットが実行するのに十分ですか？")
             col1, col2 = st.columns(2)
 

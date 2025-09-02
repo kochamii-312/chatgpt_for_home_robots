@@ -3,22 +3,26 @@ import re
 from strips import parse_step
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, detect_object
 
-def show_provisional_output(reply: str):
-    """
-    <ProvisionalOutput> ... </ProvisionalOutput> をコードブロックで表示
-    """
-    # Provisional output の抽出と表示
-    prov_match = re.search(r"<ProvisionalOutput>([\s\S]*?)</ProvisionalOutput>", reply, re.IGNORECASE)
-    if not prov_match:
+
+def show_function_sequence(reply: str):
+    """<FunctionSequence> ... </FunctionSequence> をコードブロックで表示"""
+    func_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", reply, re.IGNORECASE)
+    if not func_match:
         return
-    st.subheader("Provisional output")
-    st.code(prov_match.group(0), language="xml")
+    st.subheader("Function sequence")
+    st.code(func_match.group(0), language="xml")
+
+
+def show_clarifying_question(reply: str):
+    """<ClarifyingQuestion> ... </ClarifyingQuestion> を通常のテキストで表示"""
+    q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", reply, re.IGNORECASE)
+    if not q_match:
+        return
+    st.subheader("Clarifying question")
+    st.write(q_match.group(1).strip())
 
 def run_plan_and_show(reply: str):
-    """
-    <FunctionSequence> ... </FunctionSequence> を見つけて実行し、結果を表示
-    """
-    # FunctionSequence の抽出と実行
+    """<FunctionSequence> を見つけて実行し、結果を表示"""
     func_match = re.search(r"<FunctionSequence>(.*?)</FunctionSequence>", reply, re.S)
     if not func_match:
         return

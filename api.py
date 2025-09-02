@@ -97,22 +97,16 @@ CREATING_DATA_SYSTEM_PROMPT = """
     <OutputFormat>
       Use XML tags for output to support easy parsing.
 
-      For **provisional action plan**:
-      <ProvisionalOutput>
-        <SceneDescription> ... JSON ... </SceneDescription>
-        <ProvisionalPlan>
-          <!-- Partial plan -->
-        </ProvisionalPlan>
-        <FunctionSequence>
-          <!-- Sequence of function calls -->
-        </FunctionSequence>
-        <StateUpdate>
-          <!-- Expected robot state -->
-        </StateUpdate>
-        <ClarifyingQuestion>
-          <!-- One short question in Japanese -->
-        </ClarifyingQuestion>
-      </ProvisionalOutput>
+      <SceneDescription> ... JSON ... </SceneDescription>
+      <FunctionSequence>
+        <!-- Sequence of function calls -->
+      </FunctionSequence>
+      <Information>
+        <!-- Bullet list summarizing gathered details -->
+      </Information>
+      <ClarifyingQuestion>
+        <!-- One short question in Japanese -->
+      </ClarifyingQuestion>
     </OutputFormat>
   </PromptGuidelines>
 </System>

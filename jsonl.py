@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+import re
 from pathlib import Path
 
 DATASET_PATH = Path(__file__).parent / "json" / "critic_dataset_train.jsonl"
@@ -8,18 +9,18 @@ def save_jsonl_entry(label: str):
     """会話ログをjsonl形式で1行保存"""
     # instruction
     instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
-    # clarifying_steps: assistant→userのペア
-    clarifying_steps = []
-    msgs = st.session_state.context
-    for i in range(len(msgs) - 1):
-        if msgs[i]["role"] == "assistant" and msgs[i+1]["role"] == "user":
-            clarifying_steps.append({
-                "llm_question": msgs[i]["content"],
-                "user_answer": msgs[i+1]["content"]
-            })
+
+    # 最新のassistantメッセージから FunctionSequence と Information を抽出
+    last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
+    fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
+    info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
+    function_sequence = fs_match.group(1).strip() if fs_match else ""
+    information = info_match.group(1).strip() if info_match else ""
+
     entry = {
         "instruction": instruction,
-        "clarifying_steps": clarifying_steps,
+        "function_sequence": function_sequence,
+        "information": information,
         "label": label
     }
     if "saved_jsonl" not in st.session_state:
