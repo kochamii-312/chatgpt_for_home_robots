@@ -1,15 +1,33 @@
 import streamlit as st
 import json
 import os
+import re
 from openai import OpenAI
 from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, IMAGE_CATALOG, CREATING_DATA_SYSTEM_PROMPT
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
-from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
+from run_and_show import (
+    show_function_sequence,
+    show_clarifying_question,
+    show_information,
+    run_plan_and_show,
+)
 from jsonl import show_jsonl_block, save_experiment_result
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
+
+
+def accumulate_information(reply: str) -> str:
+    info_match = re.search(r"<Information>([\s\S]*?)</Information>", reply, re.IGNORECASE)
+    if not info_match:
+        return reply
+    if "information_items" not in st.session_state:
+        st.session_state.information_items = []
+    items = re.findall(r"<li>(.*?)</li>", info_match.group(1))
+    st.session_state.information_items.extend(items)
+    aggregated = "<Information>\n" + "\n".join(f"  <li>{item}</li>" for item in st.session_state.information_items) + "\n</Information>"
+    return re.sub(r"<Information>[\s\S]*?</Information>", aggregated, reply)
 
 
 def app():
@@ -40,6 +58,8 @@ def app():
 
     if "sent_room_images" not in st.session_state:
         st.session_state.sent_room_images = set()
+    if "information_items" not in st.session_state:
+        st.session_state.information_items = []
 
     context = st.session_state["context"]
 
@@ -95,6 +115,7 @@ def app():
                 messages=st.session_state["context"]
             )
             reply = (response.choices[0].message.content).strip()
+            reply = accumulate_information(reply)
             st.session_state["context"].append({"role": "assistant", "content": reply})
 
             # 3) アシスタント応答からも部屋名を検出 → 新規なら画像添付（次の推論に活かす）
@@ -113,6 +134,7 @@ def app():
             messages=context
         )
         reply = response.choices[0].message.content.strip()
+        reply = accumulate_information(reply)
         print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
         print("context: ", context)
@@ -132,6 +154,7 @@ def app():
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
+                show_information(msg["content"])
 
         # Final output が出たら実行可能性を10段階で評価
         if i == last_assistant_idx and "<FinalOutput>" in msg["content"]:
@@ -152,6 +175,7 @@ def app():
                         "clarifying_steps": []
                     }
                     st.session_state.saved_jsonl = []
+                    st.session_state.information_items = []
                     st.rerun()
                 st.stop()
 
