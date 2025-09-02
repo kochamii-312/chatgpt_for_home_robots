@@ -5,10 +5,17 @@ from move_functions import move_to, pick_object, place_object_next_to, place_obj
 from dotenv import load_dotenv
 from api import client, SYSTEM_PROMPT
 from strips import strip_tags, extract_between
+from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
+from jsonl import save_jsonl_entry_with_model
 from run_and_show import show_provisional_output
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
+
+def show_provisional_output(reply: str):
+    show_function_sequence(reply)
+    show_clarifying_question(reply)
+    run_plan_and_show(reply)
 
 def finalize_and_render_plan(label: str):
     """会話終了時に行動計画をまとめて画面表示"""
@@ -87,16 +94,15 @@ def app():
         rooms_from_assistant = detect_rooms_in_text(reply)
         attach_images_for_rooms(rooms_from_assistant)
         print("context: ", context)
+        label = save_jsonl_entry_with_model()
+        if label == "sufficient":
+            st.success("モデルがsufficientを出力したため終了します。")
+            finalize_and_render_plan(label)
+            st.stop()
 
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
         
     # 画面下部に履歴を全表示（systemは省く）
-    # iが14になったら会話終了
-    # if last_assistant_idx == 14:
-    if len(context) - sum(1 for m in context if m["role"] == "system") >= 14:
-        st.success("会話14ターンに達したため終了します。")
-        finalize_and_render_plan(label="sufficient")  # 必要に応じてラベルを変更
-        st.stop()
 
     for i, msg in enumerate(context):
         if msg["role"] == "system":
