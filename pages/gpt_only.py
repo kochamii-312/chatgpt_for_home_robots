@@ -109,6 +109,15 @@ def app():
         
         if i == last_assistant_idx:
             show_provisional_output(msg["content"])
-
+    if st.button("会話をリセット", key="reset_conv"):
+        # セッション情報を初期化
+        st.session_state.context = [{"role": "system", "content": system_prompt}]
+        st.session_state.active = True
+        st.session_state.conv_log = {
+            "label": "",
+            "clarifying_steps": []
+        }
+        st.session_state.saved_jsonl = []
+        st.rerun()
 
 app()
