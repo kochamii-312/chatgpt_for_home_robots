@@ -12,6 +12,7 @@ from api import (
     SYSTEM_PROMPT_FRIENDLY,
     SYSTEM_PROMPT_PRATFALL,
 )
+from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
 from two_classify import prepare_data  # 既存関数を利用
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 

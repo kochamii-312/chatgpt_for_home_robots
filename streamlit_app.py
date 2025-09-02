@@ -130,12 +130,13 @@ def app():
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
             if msg["role"] == "assistant":
+                if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
+                    run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
 
         # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
         if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
-            run_plan_and_show(msg["content"])
             st.write("この計画はロボットが実行するのに十分ですか？")
             col1, col2 = st.columns(2)
 

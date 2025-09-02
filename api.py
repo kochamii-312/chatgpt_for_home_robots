@@ -151,42 +151,40 @@ SYSTEM_PROMPT = """
   </Functions>
 
   <PromptGuidelines>
-    <Dialogue>
+  <Dialogue>
       Support free-form conversation to interpret user intent.
-      Always start by working toward generating the robot's action plan.
-      Ask about necessary details in a natural, conversational way without numbering or labeling them.
-      Progress step-by-step through:
-      - Task constraints and requirements  
-      - Environment information  
-      - Current state  
-      - Goals  
-      - Possible solutions or preferences  
-
-      For each type of information:
-      - If something is missing, ask a single focused question about that point in a natural tone.
-      - Wait for the user's answer before moving on.
-      - Continue until all needed details are gathered.
+      First, always generate:
+        1. A **Scene Description JSON** if images are present.
+      Second, if the Scene Description shows ambiguity (e.g., multiple tables or multiple books),
+      always ask exactly **one short clarifying question in Japanese** in a natural tone.
+      Generate a **Final action plan** if information is complete.
+      The system automatically attaches room images when a room name appears in conversation. Use them to build a Scene Description and, if needed, ask at most one short clarifying question in Japanese.
     </Dialogue>
 
     <OutputFormat>
       Use XML tags for output to support easy parsing.
-      Always output the final plan in code form using the provided functions.
-    </OutputFormat>
+      Output the final plan in code form using the provided functions.
 
-    <Plan>
-      <Structure>
-        <FinalAnswer>
-          <!-- Final robot action plan, based on all gathered info -->
-        </FinalAnswer>
+      <ProvisionalOutput>
+        <SceneDescription> ... JSON ... </SceneDescription>
+        <FunctionSequence>
+          <!-- Sequence of function calls -->
+        </FunctionSequence>
+        <Information>
+          <!-- Bullet list summarizing gathered details -->
+        </Information>
+        <ClarifyingQuestion>
+          <!-- One short question in Japanese -->
+        </ClarifyingQuestion>
+      <ProvisionalOutput>
+
+      <FinalOutput>
         <FunctionSequence>
           <!-- Sequence of function calls for the current provisional plan -->
           <!-- Mark updated or newly added function calls with <Updated>...</Updated> -->
         </FunctionSequence>
-        <Clarification>
-          <!-- All clarification questions and answers asked before the plan -->
-        </Clarification>
-      </Structure>
-    </Plan>
+      </FinalOutput>
+    </OutputFormat>
   </PromptGuidelines>
 </System>
 """

@@ -12,7 +12,7 @@ from api import (
     SYSTEM_PROMPT_PRATFALL,
 )
 from strips import strip_tags, extract_between
-from run_and_show import show_provisional_output, run_plan_and_show
+from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
@@ -41,7 +41,10 @@ def finalize_and_render_plan(label: str):
 
 def app():
     st.title("LLMATCHデモアプリ")
-    st.subheader("Chat GPT")
+    st.subheader("プレ実験")
+    st.write("目的：GPT with Criticの学習の効果を図る。")
+    st.write("定量的評価：人間が作った行動計画の正解と、対話によって最終的に生成されたロボットの行動計画を比較し、どれくらい一致するかを検証する。")
+    st.write("定性的評価：対話によって最終的に生成されたロボットの行動計画が実行可能かを評価する。")
 
     prompt_options = {
         "Standard": SYSTEM_PROMPT_STANDARD,
