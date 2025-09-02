@@ -1,19 +1,13 @@
 import streamlit as st
-from openai import OpenAI
-import re
 import json
 import os
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
 from dotenv import load_dotenv
-from api import (
-    client,
-    SYSTEM_PROMPT_STANDARD,
-    SYSTEM_PROMPT_FRIENDLY,
-    SYSTEM_PROMPT_PRATFALL,
-)
+from api import client, SYSTEM_PROMPT
 from strips import strip_tags, extract_between
 from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
 from jsonl import save_jsonl_entry_with_model
+from run_and_show import show_provisional_output
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
@@ -52,13 +46,7 @@ def app():
     st.write("定量的評価：人間が作った行動計画の正解と、対話によって最終的に生成されたロボットの行動計画を比較し、どれくらい一致するかを検証する。")
     st.write("定性的評価：対話によって最終的に生成されたロボットの行動計画が実行可能かを評価する。")
 
-    prompt_options = {
-        "Standard": SYSTEM_PROMPT_STANDARD,
-        "Friendly": SYSTEM_PROMPT_FRIENDLY,
-        "Pratfall": SYSTEM_PROMPT_PRATFALL,
-    }
-    prompt_label = st.selectbox("プロンプト", list(prompt_options.keys()))
-    system_prompt = prompt_options[prompt_label]
+    system_prompt = SYSTEM_PROMPT
 
     image_root = "images"
     house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
