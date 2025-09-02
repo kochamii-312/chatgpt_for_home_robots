@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, IMAGE_CATALOG, CREATING_DATA_SYSTEM_PROMPT
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
 from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
-from jsonl import save_jsonl_entry, show_jsonl_block
+from jsonl import show_jsonl_block, save_experiment_result
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
@@ -100,7 +100,6 @@ def app():
             # 3) アシスタント応答からも部屋名を検出 → 新規なら画像添付（次の推論に活かす）
             rooms_from_assistant = detect_rooms_in_text(reply)
             attach_images_for_rooms(rooms_from_assistant)
-            save_jsonl_entry("insufficient")
 
 
     # 3) 追加の自由入力（会話継続用）
@@ -119,7 +118,6 @@ def app():
         print("context: ", context)
         rooms_from_assistant = detect_rooms_in_text(reply)
         attach_images_for_rooms(rooms_from_assistant)
-        save_jsonl_entry("insufficient")
 
     # 4) 画面下部に履歴を全表示（systemは省く）
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
@@ -135,37 +133,18 @@ def app():
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
 
-        # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
-        if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
-            st.write("この計画はロボットが実行するのに十分ですか？")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("十分", key=f"enough_{i}"):
-                    save_jsonl_entry("sufficient")
+        # Final output が出たら実行可能性を10段階で評価
+        if i == last_assistant_idx and "<FinalOutput>" in msg["content"]:
+            st.write("どれくらい実行可能か？（1-10）")
+            cols = st.columns(10)
+            for idx, col in enumerate(cols, start=1):
+                if col.button(str(idx), key=f"feasibility_{i}_{idx}"):
+                    save_experiment_result(idx)
                     st.session_state.active = False
-            with col2:
-                if st.button("不十分", key=f"not_enough_{i}"):
-                    clarify_prompt = {
-                        "role": "system",
-                        "content": "The previous plan was insufficient. Ask a clarifying question to the user to improve it."
-                    }
-                    response = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=context + [clarify_prompt]
-                    )
-                    question = response.choices[0].message.content.strip()
-                    context.append({"role": "assistant", "content": question})
-                    rooms_from_assistant = detect_rooms_in_text(question)
-                    attach_images_for_rooms(rooms_from_assistant)
-                    save_jsonl_entry("insufficient")
-                    st.rerun()
-
             if st.session_state.active == False:
                 show_jsonl_block()
                 st.warning("会話を終了しました。ありがとうございました！")
                 if st.button("会話をリセット", key="reset_conv"):
-                    # セッション情報を初期化
                     st.session_state.context = [{"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT}]
                     st.session_state.active = True
                     st.session_state.conv_log = {
