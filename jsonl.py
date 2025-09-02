@@ -6,6 +6,7 @@ import joblib
 
 DATASET_PATH = Path(__file__).parent / "json" / "critic_dataset_train.jsonl"
 MODEL_PATH = Path(__file__).parent / "critic_model.joblib"
+EXPERIMENT_PATH = Path(__file__).parent / "json" / "experiment_results.jsonl"
 
 def save_jsonl_entry(label: str):
     """会話ログをjsonl形式で1行保存"""
@@ -76,6 +77,60 @@ def save_jsonl_entry_with_model():
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     return label
+
+def save_experiment_result(human_score: int):
+    """保存済みコンテキストから実験結果をjsonl形式で保存"""
+    instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
+    last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
+
+    fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
+    info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
+    fo_match = re.search(r"<FinalOutput>([\s\S]*?)</FinalOutput>", last_assistant, re.IGNORECASE)
+
+    function_sequence = fs_match.group(1).strip() if fs_match else ""
+    information = info_match.group(1).strip() if info_match else ""
+    final_output = fo_match.group(1).strip() if fo_match else ""
+
+    clarifications = []
+    for m in st.session_state.context:
+        if m["role"] == "assistant":
+            q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", m["content"], re.IGNORECASE)
+            if q_match:
+                clarifications.append(q_match.group(1).strip())
+
+    text = f"instruction: {instruction} \nfs: {function_sequence} \nfo: {final_output}"
+    similarity = None
+    if MODEL_PATH.exists():
+        try:
+            model = joblib.load(MODEL_PATH)
+            similarity = float(model.predict_proba([text])[0][1])
+        except Exception:
+            similarity = None
+
+    entry = {
+        "instruction": instruction,
+        "function_sequence": function_sequence,
+        "information": information,
+        "clarification_question": clarifications,
+        "final_output": final_output,
+        "similarity": similarity,
+        "human_score": human_score,
+    }
+
+    if "saved_jsonl" not in st.session_state:
+        st.session_state.saved_jsonl = []
+    st.session_state.saved_jsonl.append(entry)
+
+    EXPERIMENT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    need_newline = False
+    if EXPERIMENT_PATH.exists() and EXPERIMENT_PATH.stat().st_size > 0:
+        with EXPERIMENT_PATH.open("rb") as f:
+            f.seek(-1, 2)
+            need_newline = f.read(1) != b"\n"
+    with EXPERIMENT_PATH.open("a", encoding="utf-8") as f:
+        if need_newline:
+            f.write("\n")
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
 def show_jsonl_block():
     """保存済みjsonlデータをコードブロックで表示"""
