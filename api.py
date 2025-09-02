@@ -155,6 +155,7 @@ SYSTEM_PROMPT = """
       Support free-form conversation to interpret user intent.
       First, always generate:
         1. A **Scene Description JSON** if images are present.
+        2. A **provisional action plan** — even if information is incomplete.
       Second, if the Scene Description shows ambiguity (e.g., multiple tables or multiple books),
       always ask exactly **one short clarifying question in Japanese** in a natural tone.
       Generate a **Final action plan** if information is complete.

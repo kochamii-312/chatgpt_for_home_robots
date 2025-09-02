@@ -8,7 +8,8 @@ from sklearn.metrics import classification_report
 # データ読み込み
 def load_jsonl(path):
     with open(path, "r", encoding="utf-8") as f:
-        return [json.loads(line) for line in f]
+        # 空行を除外して読み込む
+        return [json.loads(line) for line in f if line.strip()]
 
 train_data = load_jsonl("./json/critic_dataset_train.jsonl")
 valid_data = load_jsonl("./json/critic_dataset_valid.jsonl")
@@ -18,10 +19,13 @@ def prepare_data(data):
     texts = []
     labels = []
     for ex in data:
-        clarifying_text = " ".join([f"Q:{s['llm_question']} A:{s['user_answer']}" for s in ex["clarifying_steps"]])
-        text = f"指示: {ex['instruction']} || {clarifying_text}"
+        # instruction, function_sequence, information を連結して特徴とする
+        parts = [ex.get("instruction", ""),
+                 ex.get("function_sequence", ""),
+                 ex.get("information", "")]
+        text = " | ".join(parts)
         texts.append(text)
-        labels.append(1 if ex["label"] == "sufficient" else 0)
+        labels.append(1 if ex.get["label"] == "sufficient" else 0)
     return texts, labels
 
 X_train, y_train = prepare_data(train_data)
