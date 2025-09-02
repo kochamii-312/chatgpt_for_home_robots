@@ -1,16 +1,47 @@
 import streamlit as st
 import json
 import os
-from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
+from difflib import SequenceMatcher
+from move_functions import (
+    move_to,
+    pick_object,
+    place_object_next_to,
+    place_object_on,
+    show_room_image,
+    get_room_image_path,
+)
 from dotenv import load_dotenv
 from api import client, SYSTEM_PROMPT
 from strips import strip_tags, extract_between
-from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
+from run_and_show import (
+    show_function_sequence,
+    show_clarifying_question,
+    run_plan_and_show,
+)
 from jsonl import save_jsonl_entry_with_model
 from run_and_show import show_provisional_output
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
+from pathlib import Path
 
 load_dotenv()
+
+@st.cache_data
+def load_ground_truth_map():
+    """Load instruction to function_sequence mapping from dataset."""
+    dataset_path = Path(__file__).resolve().parents[1] / "json" / "critic_dataset_train.jsonl"
+    mapping = {}
+    if dataset_path.exists():
+        with dataset_path.open(encoding="utf-8") as f:
+            for line in f:
+                try:
+                    obj = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                fs = obj.get("function_sequence")
+                inst = obj.get("instruction")
+                if fs and inst and inst not in mapping:
+                    mapping[inst] = fs
+    return mapping
 
 def show_provisional_output(reply: str):
     show_function_sequence(reply)
@@ -20,24 +51,49 @@ def show_provisional_output(reply: str):
 def finalize_and_render_plan(label: str):
     """会話終了時に行動計画をまとめて画面表示"""
     # final_answer の決定
-    last_assistant = next((m for m in reversed(st.session_state.context) if m["role"] == "assistant"), None)
-    final_answer = extract_between("FinalAnswer", last_assistant["content"]) if last_assistant else None
+    last_assistant = next(
+        (m for m in reversed(st.session_state.context) if m['role'] == 'assistant'),
+        None,
+    )
+    final_answer = (
+        extract_between('FinalAnswer', last_assistant['content'])
+        if last_assistant
+        else None
+    )
     if not final_answer and last_assistant:
-        final_answer = strip_tags(last_assistant["content"])
+        final_answer = strip_tags(last_assistant['content'])
 
-    st.session_state.conv_log["final_answer"] = final_answer or ""
-    st.session_state.conv_log["label"] = "sufficient" if label == "sufficient" else "insufficient"
+    final_output = (
+        extract_between('FinalOutput', last_assistant['content'])
+        if last_assistant
+        else None
+    )
+    generated_fs = (
+        extract_between('FunctionSequence', final_output) if final_output else ''
+    )
+
+    st.session_state.conv_log['final_answer'] = final_answer or ''
+    st.session_state.conv_log['label'] = (
+        'sufficient' if label == 'sufficient' else 'insufficient'
+    )
+    st.session_state.conv_log['generated_function_sequence'] = generated_fs
 
     # question_label が None のステップは継続が無ければ insufficient で埋める
-    for s in st.session_state.conv_log["clarifying_steps"]:
-        if s["question_label"] is None:
-            s["question_label"] = "insufficient"
+    for s in st.session_state.conv_log['clarifying_steps']:
+        if s['question_label'] is None:
+            s['question_label'] = 'insufficient'
 
-    st.subheader("会話サマリ（JSON）")
+    st.subheader('会話サマリ（JSON）')
     st.code(
         json.dumps(st.session_state.conv_log, ensure_ascii=False, indent=2),
-        language="json"
+        language='json',
     )
+
+    gt_fs = st.session_state.get('correct_function_sequence', '')
+    if gt_fs and generated_fs:
+        sim = SequenceMatcher(None, generated_fs, gt_fs).ratio()
+        st.subheader('Function sequence 類似度')
+        st.write(f"{sim:.2f}")
 
 def app():
     st.title("LLMATCHデモアプリ")
@@ -74,11 +130,27 @@ def app():
     if "sent_room_images" not in st.session_state:
         st.session_state.sent_room_images = set()
 
+    gt_map = load_ground_truth_map()
+    inst_options = ["(未選択)"] + list(gt_map.keys())
+    selected_inst = st.selectbox(
+        "評価用命令を選択",
+        inst_options,
+        index=inst_options.index(st.session_state.get("selected_instruction", "(未選択)"))
+        if st.session_state.get("selected_instruction", "(未選択)") in inst_options
+        else 0,
+    )
+    if selected_inst != "(未選択)":
+        st.session_state["selected_instruction"] = selected_inst
+        st.session_state["correct_function_sequence"] = gt_map[selected_inst]
+    if st.button("命令を送信") and selected_inst != "(未選択)":
+        st.session_state["pending_user_input"] = selected_inst
+
     context = st.session_state["context"]
 
     message = st.chat_message("assistant")
     message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
-    user_input = st.chat_input("ロボットへの回答を入力してください")
+    input_box = st.chat_input("ロボットへの回答を入力してください")
+    user_input = st.session_state.pop("pending_user_input", None) or input_box
     
     if user_input:
         context.append({"role": "user", "content": user_input})
