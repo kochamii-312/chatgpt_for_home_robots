@@ -21,6 +21,18 @@ def show_clarifying_question(reply: str):
     st.subheader("Clarifying question")
     st.write(q_match.group(1).strip())
 
+
+def show_provisional_output(reply: str):
+    """<ProvisionalOutput> 内の関数列と確認質問のみを表示"""
+    prov_match = re.search(
+        r"<ProvisionalOutput>([\s\S]*?)</ProvisionalOutput>", reply, re.IGNORECASE
+    )
+    if not prov_match:
+        return
+    provisional = prov_match.group(1)
+    show_function_sequence(provisional)
+    show_clarifying_question(provisional)
+
 def run_plan_and_show(reply: str):
     """<FunctionSequence> を見つけて実行し、結果を表示"""
     func_match = re.search(r"<FunctionSequence>(.*?)</FunctionSequence>", reply, re.S)
