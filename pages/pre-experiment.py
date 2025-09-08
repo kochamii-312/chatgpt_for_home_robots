@@ -18,7 +18,7 @@ from run_and_show import (
     show_clarifying_question,
     run_plan_and_show,
 )
-from jsonl import save_jsonl_entry_with_model
+from jsonl import save_jsonl_entry_with_model, save_pre_experiment_result
 from run_and_show import show_provisional_output
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 from pathlib import Path
@@ -28,7 +28,7 @@ load_dotenv()
 @st.cache_data
 def load_ground_truth_map():
     """Load instruction to function_sequence mapping from dataset."""
-    dataset_path = Path(__file__).resolve().parents[1] / "json" / "critic_dataset_train.jsonl"
+    dataset_path = Path(__file__).resolve().parents[1] / "json" / "function_sequence_truth.jsonl"
     mapping = {}
     if dataset_path.exists():
         with dataset_path.open(encoding="utf-8") as f:
@@ -170,7 +170,19 @@ def app():
         if label == "sufficient":
             st.success("モデルがsufficientを出力したため終了します。")
             finalize_and_render_plan(label)
-            st.stop()
+            if st.session_state.active == False:
+                show_jsonl_block()
+                st.warning("会話を終了しました。ありがとうございました！")
+                if st.button("会話をリセット", key="reset_conv"):
+                    st.session_state.context = [{"role": "system", "content": SYSTEM_PROMPT}]
+                    st.session_state.active = True
+                    st.session_state.conv_log = {
+                        "label": "",
+                        "clarifying_steps": []
+                    }
+                    st.session_state.saved_jsonl = []
+                    st.rerun()
+                st.stop()
 
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
         
@@ -182,8 +194,11 @@ def app():
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
         
-        if i == last_assistant_idx:
-            show_provisional_output(msg["content"])
+        # if i == last_assistant_idx:
+        #     show_provisional_output(msg["content"])
+
+        # if i == last_assistant_idx: #and "<FinalOutput>" in msg["content"]:
+            
     if st.button("会話をリセット", key="reset_conv"):
         # セッション情報を初期化
         st.session_state.context = [{"role": "system", "content": system_prompt}]

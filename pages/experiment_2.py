@@ -67,7 +67,7 @@ def finalize_and_render_plan(label: str):
     )
 
 # 事前に two_classify.py で学習済みモデルを保存しておく（例: joblib.dump(model, "critic_model.joblib")）
-model = joblib.load("critic_model.joblib")
+model = joblib.load("models/critic_model_20250903_053907.joblib")
 
 def get_critic_label(context):
     # contextから判定用テキストを生成
