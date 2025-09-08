@@ -6,18 +6,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, IMAGE_CATALOG, CREATING_DATA_SYSTEM_PROMPT
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
-<<<<<<< HEAD
-from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
+from run_and_show import show_function_sequence, show_clarifying_question, show_information, run_plan_and_show
 from jsonl import save_jsonl_entry, show_jsonl_block, save_pre_experiment_result
-=======
-from run_and_show import (
-    show_function_sequence,
-    show_clarifying_question,
-    show_information,
-    run_plan_and_show,
-)
-from jsonl import show_jsonl_block, save_experiment_result
->>>>>>> c97465c8da0fd1a42dde23c9c25625712a77f5fc
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
@@ -161,14 +151,10 @@ def app():
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
-<<<<<<< HEAD
         # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
         if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
             st.write("この計画はロボットが実行するのに十分ですか？")
             col1, col2 = st.columns(2)
-=======
-                show_information(msg["content"])
->>>>>>> c97465c8da0fd1a42dde23c9c25625712a77f5fc
 
             with col1:
                 if st.button("十分", key=f"enough_{i}"):
