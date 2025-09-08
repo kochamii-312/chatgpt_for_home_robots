@@ -22,6 +22,15 @@ def show_clarifying_question(reply: str):
     st.write(q_match.group(1).strip())
 
 
+def show_information(reply: str):
+    """<Information> ... </Information> の内容を箇条書きで表示"""
+    info_match = re.search(r"<Information>([\s\S]*?)</Information>", reply, re.IGNORECASE)
+    if not info_match:
+        return
+    st.subheader("Information")
+    st.markdown("<ul>" + info_match.group(1).strip() + "</ul>", unsafe_allow_html=True)
+
+
 def show_provisional_output(reply: str):
     """<ProvisionalOutput> 内の関数列と確認質問のみを表示"""
     prov_match = re.search(
