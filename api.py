@@ -74,12 +74,15 @@ CREATING_DATA_SYSTEM_PROMPT = """
   </Vision>
 
   <Functions>
-    <Function name="move_to" args="room_name:str">Move robot to the specified position.</Function>
+    <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
-    <Function name="place_object_next_to" args="target:str">Place the previously picked object next to the target.</Function>
-    <Function name="place_object_on" args="target:str">Place the previously picked object on the target.</Function>
-    <Function name="place_object_behind" args="target:str">Place the previously picked object behind the target.</Function>
+    <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
+    <Function name="place_object_on" args="object:str, target:str">Place the object on the target.</Function>
+    <Function name="place_object_in" args="object:str, target:str">Place the object in the target.</Function>
     <Function name="detect_object" args="object:str">Detect the specified object using YOLO.</Function>
+    <Function name="search_about" args="object:str">Search information about the specified object.</Function>
+    <Function name="push" args="object:str">Push the specified object.</Function>
+    <Function name="say" args="text:str">Speak the specified text.</Function>
   </Functions>
 
   <PromptGuidelines>
@@ -142,12 +145,15 @@ SYSTEM_PROMPT = """
   </Vision>
 
   <Functions>
-    <Function name="move_to" args="room_name:str">Move robot to the specified position.</Function>
+    <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
-    <Function name="place_object_next_to" args="target:str">Place the previously picked object next to the target.</Function>
-    <Function name="place_object_on" args="target:str">Place the previously picked object on the target.</Function>
-    <Function name="place_object_behind" args="target:str">Place the previously picked object behind the target.</Function>
+    <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
+    <Function name="place_object_on" args="object:str, target:str">Place the object on the target.</Function>
+    <Function name="place_object_in" args="object:str, target:str">Place the object in the target.</Function>
     <Function name="detect_object" args="object:str">Detect the specified object using YOLO.</Function>
+    <Function name="search_about" args="object:str">Search information about the specified object.</Function>
+    <Function name="push" args="object:str">Push the specified object.</Function>
+    <Function name="say" args="text:str">Speak the specified text.</Function>
   </Functions>
 
   <PromptGuidelines>
@@ -221,12 +227,15 @@ SYSTEM_PROMPT_STANDARD = """
   </Vision>
 
   <Functions>
-    <Function name="move_to" args="room_name:str">Move robot to the specified position.</Function>
+    <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
-    <Function name="place_object_next_to" args="target:str">Place the previously picked object next to the target.</Function>
-    <Function name="place_object_on" args="target:str">Place the previously picked object on the target.</Function>
-    <Function name="place_object_behind" args="target:str">Place the previously picked object behind the target.</Function>
+    <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
+    <Function name="place_object_on" args="object:str, target:str">Place the object on the target.</Function>
+    <Function name="place_object_in" args="object:str, target:str">Place the object in the target.</Function>
     <Function name="detect_object" args="object:str">Detect the specified object using YOLO.</Function>
+    <Function name="search_about" args="object:str">Search information about the specified object.</Function>
+    <Function name="push" args="object:str">Push the specified object.</Function>
+    <Function name="say" args="text:str">Speak the specified text.</Function>
   </Functions>
 
   <PromptGuidelines>
@@ -304,12 +313,15 @@ SYSTEM_PROMPT_FRIENDLY = """
   </Vision>
 
   <Functions>
-    <Function name="move_to" args="room_name:str">Move robot to the specified position.</Function>
+    <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
-    <Function name="place_object_next_to" args="target:str">Place the previously picked object next to the target.</Function>
-    <Function name="place_object_on" args="target:str">Place the previously picked object on the target.</Function>
-    <Function name="place_object_behind" args="target:str">Place the previously picked object behind the target.</Function>
+    <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
+    <Function name="place_object_on" args="object:str, target:str">Place the object on the target.</Function>
+    <Function name="place_object_in" args="object:str, target:str">Place the object in the target.</Function>
     <Function name="detect_object" args="object:str">Detect the specified object using YOLO.</Function>
+    <Function name="search_about" args="object:str">Search information about the specified object.</Function>
+    <Function name="push" args="object:str">Push the specified object.</Function>
+    <Function name="say" args="text:str">Speak the specified text.</Function>
   </Functions>
 
   <PromptGuidelines>
@@ -389,12 +401,15 @@ SYSTEM_PROMPT_PRATFALL = """
   </Vision>
 
   <Functions>
-    <Function name="move_to" args="room_name:str">Move robot to the specified position.</Function>
+    <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
-    <Function name="place_object_next_to" args="target:str">Place the previously picked object next to the target.</Function>
-    <Function name="place_object_on" args="target:str">Place the previously picked object on the target.</Function>
-    <Function name="place_object_behind" args="target:str">Place the previously picked object behind the target.</Function>
+    <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
+    <Function name="place_object_on" args="object:str, target:str">Place the object on the target.</Function>
+    <Function name="place_object_in" args="object:str, target:str">Place the object in the target.</Function>
     <Function name="detect_object" args="object:str">Detect the specified object using YOLO.</Function>
+    <Function name="search_about" args="object:str">Search information about the specified object.</Function>
+    <Function name="push" args="object:str">Push the specified object.</Function>
+    <Function name="say" args="text:str">Speak the specified text.</Function>
   </Functions>
 
   <PromptGuidelines>

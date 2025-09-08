@@ -11,14 +11,26 @@ def move_to(room_name):
 def pick_object(obj):
     return f"Picked up {obj}"
 
-def place_object_next_to(obj):
-    return f"Placed object next to {obj}"
+def place_object_next_to(obj, target):
+    return f"Placed {obj} next to {target}"
 
-def place_object_on(target):
-    return f"Placed object on {target}"
+def place_object_on(obj, target):
+    return f"Placed {obj} on {target}"
+
+def place_object_in(obj, target):
+    return f"Placed {obj} in {target}"
 
 def detect_object(obj):
     return f"Detect {obj}"
+
+def search_about(obj):
+    return f"Searched about {obj}"
+
+def push(obj):
+    return f"Pushed {obj}"
+
+def say(text):
+    return f"Said {text}"
 
 def _room_to_path(room_name: str) -> str:
     fname = f"{room_name.lower()}.png"  # "KITCHEN" -> "kitchen.png"
