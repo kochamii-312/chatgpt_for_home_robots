@@ -34,7 +34,10 @@ from typing import List, Optional
 import json
 from pathlib import Path
 import datetime
+import os
 import re
+
+from firebase_utils import save_document
 
 
 @dataclass
@@ -105,12 +108,19 @@ class ClarifyLogger:
         return asdict(self.current)
 
     def save(self, jsonl_path: str):
-        """Append the current sample to a JSONL file."""
+        """Append the current sample to a JSONL file and optionally Firestore."""
         if self.current is None:
             raise RuntimeError("No current dialogue to save.")
-        Path(jsonl_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(jsonl_path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(self.to_dict(), ensure_ascii=False) + "\n")
+
+        if jsonl_path:
+            Path(jsonl_path).parent.mkdir(parents=True, exist_ok=True)
+            with open(jsonl_path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(self.to_dict(), ensure_ascii=False) + "\n")
+
+        firebase_collection = os.getenv("FIREBASE_COLLECTION")
+        firebase_credentials = os.getenv("FIREBASE_CREDENTIALS")
+        if firebase_collection and firebase_credentials:
+            save_document(firebase_collection, self.to_dict(), firebase_credentials)
 
     # ---- Helpers to parse XML-style assistant outputs and automate logging ----
 
