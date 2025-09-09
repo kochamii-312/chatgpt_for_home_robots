@@ -184,13 +184,6 @@ SYSTEM_PROMPT = """
           <!-- One short question in Japanese -->
         </ClarifyingQuestion>
       <ProvisionalOutput>
-
-      <FinalOutput>
-        <FunctionSequence>
-          <!-- Sequence of function calls for the current provisional plan -->
-          <!-- Mark updated or newly added function calls with <Updated>...</Updated> -->
-        </FunctionSequence>
-      </FinalOutput>
     </OutputFormat>
   </PromptGuidelines>
 </System>

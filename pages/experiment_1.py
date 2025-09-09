@@ -109,9 +109,9 @@ def app():
             should_stop = True
             end_message = "モデルがsufficientを出力したため終了します。"
     else:
-        if st.session_state.turn_count >= 7:
+        if st.session_state.turn_count >= 4:
             should_stop = True
-            end_message = "7回の会話に達したため終了します。"
+            end_message = "4回の会話に達したため終了します。"
 
     if should_stop:
         st.success(end_message)

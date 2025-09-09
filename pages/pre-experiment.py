@@ -63,21 +63,12 @@ def finalize_and_render_plan(label: str):
     if not final_answer and last_assistant:
         final_answer = strip_tags(last_assistant['content'])
 
-    final_output = (
-        extract_between('FinalOutput', last_assistant['content'])
-        if last_assistant
-        else None
-    )
-    generated_fs = (
-        extract_between('FunctionSequence', final_output) if final_output else ''
-    )
-
     st.session_state.conv_log['final_answer'] = final_answer or ''
     st.session_state.conv_log['label'] = (
         'sufficient' if label == 'sufficient' else 'insufficient'
     )
-    st.session_state.conv_log['generated_function_sequence'] = generated_fs
-
+    generated_fs = extract_between('FunctionSequence', last_assistant['content']) if last_assistant else ''
+    
     # question_label が None のステップは継続が無ければ insufficient で埋める
     for s in st.session_state.conv_log['clarifying_steps']:
         if s['question_label'] is None:
