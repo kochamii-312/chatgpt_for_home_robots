@@ -55,9 +55,38 @@ def show_room_image(room_name: str) -> str:
         return f"No local image found for {room_name}"
 
 def get_room_image_path(room_name: str) -> str:
+    """Return path to a room image, searching available image folders.
+
+    The user may choose a specific house via ``selected_house`` in the
+    session state.  When not specified (or when the requested image does
+    not exist for the selected house), the function now searches all
+    subdirectories under ``images`` and falls back to the first match.
+    This allows images to be displayed even when no house is selected in
+    the UI.
+    """
+
+    file_name = f"{room_name.lower()}.png"
     house = st.session_state.get("selected_house")
+
+    # Directories to search, in order of priority
+    search_dirs = []
     if house:
-        candidate = os.path.join(DEFAULT_IMAGE_DIR, house, f"{room_name.lower()}.png")
+        search_dirs.append(os.path.join(DEFAULT_IMAGE_DIR, house))
+
+    # If no house is selected, search all house directories first
+    if not house:
+        for d in os.listdir(DEFAULT_IMAGE_DIR):
+            subdir = os.path.join(DEFAULT_IMAGE_DIR, d)
+            if os.path.isdir(subdir):
+                search_dirs.append(subdir)
+
+    # Finally, look in the top-level images directory
+    search_dirs.append(DEFAULT_IMAGE_DIR)
+
+    for directory in search_dirs:
+        candidate = os.path.join(directory, file_name)
         if os.path.exists(candidate):
             return candidate
-    return _room_to_path(room_name)
+
+    # Return the default path even if it doesn't exist; caller will warn
+    return os.path.join(search_dirs[0] if search_dirs else DEFAULT_IMAGE_DIR, file_name)
