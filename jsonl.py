@@ -22,7 +22,8 @@ def save_jsonl_entry(label: str):
         "instruction": instruction,
         "function_sequence": function_sequence,
         "information": information,
-        "label": label
+        "label": label,
+        "mode": st.session_state.get("mode", "")
     }
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
@@ -60,7 +61,8 @@ def save_jsonl_entry_with_model():
         "instruction": instruction,
         "function_sequence": function_sequence,
         "final_output": final_output,
-        "label": label
+        "label": label,
+        "mode": st.session_state.get("mode", "")
     }
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
@@ -119,6 +121,7 @@ def save_pre_experiment_result(human_score: int):
         "final_output": final_output,
         "similarity": similarity,
         "human_score": human_score,
+        "mode": st.session_state.get("mode", "")
     }
 
     if "saved_jsonl" not in st.session_state:
@@ -182,6 +185,7 @@ def save_experiment_1_result(human_scores: dict):
         "final_output": final_output,
         "similarity": similarity,
         "human_scores": human_scores,
+        "mode": st.session_state.get("mode", "")
     }
 
     if "saved_jsonl" not in st.session_state:
