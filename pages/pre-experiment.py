@@ -101,8 +101,44 @@ def app():
     options = [default_label] + house_dirs
     current_house = st.session_state.get("selected_house", "")
     current_label = current_house if current_house else default_label
-    selected_label = st.selectbox("想定する家", options, index=options.index(current_label) if current_label in options else 0)
+    selected_label = st.selectbox(
+        "想定する家",
+        options,
+        index=options.index(current_label) if current_label in options else 0,
+    )
     st.session_state["selected_house"] = "" if selected_label == default_label else selected_label
+
+    image_dir = image_root
+    subdirs = []
+    if st.session_state["selected_house"]:
+        image_dir = os.path.join(image_dir, st.session_state["selected_house"])
+        subdirs = [d for d in os.listdir(image_dir) if os.path.isdir(os.path.join(image_dir, d))]
+    sub_default = "(default)"
+    if subdirs:
+        current_sub = st.session_state.get("selected_subfolder", "")
+        current_sub_label = current_sub if current_sub else sub_default
+        sub_options = [sub_default] + subdirs
+        sub_label = st.selectbox(
+            "フォルダ",
+            sub_options,
+            index=sub_options.index(current_sub_label) if current_sub_label in sub_options else 0,
+        )
+        st.session_state["selected_subfolder"] = "" if sub_label == sub_default else sub_label
+        if st.session_state["selected_subfolder"]:
+            image_dir = os.path.join(image_dir, st.session_state["selected_subfolder"])
+    else:
+        st.session_state["selected_subfolder"] = ""
+
+    if os.path.isdir(image_dir):
+        image_files = [
+            f
+            for f in os.listdir(image_dir)
+            if os.path.isfile(os.path.join(image_dir, f))
+            and f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp"))
+        ]
+        if image_files:
+            selected_img = st.selectbox("表示する画像", image_files)
+            st.image(os.path.join(image_dir, selected_img), caption=selected_img)
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if (
