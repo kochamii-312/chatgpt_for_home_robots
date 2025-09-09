@@ -18,7 +18,7 @@ from run_and_show import (
     show_clarifying_question,
     run_plan_and_show,
 )
-from jsonl import save_jsonl_entry_with_model, save_pre_experiment_result
+from jsonl import predict_with_model, save_pre_experiment_result
 from run_and_show import show_provisional_output
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 from pathlib import Path
@@ -157,7 +157,7 @@ def app():
         rooms_from_assistant = detect_rooms_in_text(reply)
         attach_images_for_rooms(rooms_from_assistant)
         print("context: ", context)
-        label = save_jsonl_entry_with_model()
+        label = predict_with_model()
         if label == "sufficient":
             st.success("モデルがsufficientを出力したため終了します。")
             finalize_and_render_plan(label)

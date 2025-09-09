@@ -18,7 +18,7 @@ from run_and_show import (
     show_clarifying_question,
     run_plan_and_show,
 )
-from jsonl import save_jsonl_entry_with_model, save_experiment_1_result
+from jsonl import predict_with_model, save_experiment_1_result
 from run_and_show import show_provisional_output
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 from pathlib import Path
@@ -101,7 +101,7 @@ def app():
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
-    label = save_jsonl_entry_with_model()
+    label = predict_with_model()
     should_stop = False
     end_message = ""
     if st.session_state.get("mode") == "GPT with critic":

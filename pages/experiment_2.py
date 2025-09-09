@@ -12,6 +12,7 @@ from api import (
     SYSTEM_PROMPT_FRIENDLY,
     SYSTEM_PROMPT_PRATFALL,
 )
+from jsonl import predict_with_model, save_experiment_2_result
 from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
 from two_classify import prepare_data  # 既存関数を利用
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
@@ -96,6 +97,7 @@ def app():
     }
     prompt_label = st.selectbox("プロンプト", list(prompt_options.keys()))
     system_prompt = prompt_options[prompt_label]
+    st.session_state["mode"] = prompt_label
 
     image_root = "images"
     house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
@@ -153,17 +155,85 @@ def app():
         st.stop()
 
     # 画面下部に履歴を全表示（systemは省く）
-    # iが20になったら会話終了
-    if len(context) - sum(1 for m in context if m["role"] == "system") >= 20:
-        st.success("会話が20ターンに達したため終了します。")
-        finalize_and_render_plan(label="sufficient")  # 必要に応じてラベルを変更
-        st.stop()
-
+    last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
+    
     for i, msg in enumerate(context):
         if msg["role"] == "system":
             continue
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
+            if msg["role"] == "assistant":
+                if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
+                    run_plan_and_show(msg["content"])
+                show_function_sequence(msg["content"])
+                show_clarifying_question(msg["content"])
+    label = predict_with_model()
+    should_stop = False
+    end_message = ""
+    
+    if label == "sufficient":
+        should_stop = True
+        end_message = "モデルがsufficientを出力したため終了します。"
+
+    if should_stop:
+        st.success(end_message)
+        if st.session_state.active:
+            with st.form("evaluation_form"):
+                feasibility = st.radio(
+                    "使う関数は適切か（不要なものが含まれている / 違う関数の方が適切）（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                variables = st.radio(
+                    "関数の変数は適切か（間違ったオブジェクトが入っている / もっと良い変数がある）（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                specificity = st.radio(
+                    "関数の変数の具体性（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                hallucination = st.radio(
+                    "実際にはないもの・伝えていない情報を含めていないか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                coverage = st.radio(
+                    "聞いたことがすべて盛り込まれているか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                obstacle = st.radio(
+                    "障害物があれば、避けられるか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                selection = st.radio(
+                    "複数のものがある中で適切なものが選べるか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                extra_question = st.radio(
+                    "会話の中で余計な質問・不自然な質問があったか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                submitted = st.form_submit_button("評価を保存")
+
+            if submitted:
+                scores = {
+                    "feasibility": feasibility,
+                    "variables": variables,
+                    "specificity": specificity,
+                    "hallucination": hallucination,
+                    "coverage": coverage,
+                    "obstacle": obstacle,
+                    "selection": selection,
+                    "extra_question": extra_question,
+                }
+                save_experiment_2_result(scores)
+                st.session_state.active = False
     
     if st.button("会話をリセット", key="reset_conv"):
         # セッション情報を初期化

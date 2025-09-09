@@ -8,6 +8,7 @@ DATASET_PATH = Path(__file__).parent / "json" / "critic_dataset_train.jsonl"
 MODEL_PATH = Path(__file__).parent / "models" / "critic_model_20250903_053907.joblib"
 PRE_EXPERIMENT_PATH = Path(__file__).parent / "json" / "pre_experiment_results.jsonl"
 EXPERIMENT_1_PATH = Path(__file__).parent / "json" / "experiment_1_results.jsonl"
+EXPERIMENT_2_PATH = Path(__file__).parent / "json" / "experiment_2_results.jsonl"
 
 def save_jsonl_entry(label: str):
     """会話ログをjsonl形式で1行保存"""
@@ -23,7 +24,6 @@ def save_jsonl_entry(label: str):
         "function_sequence": function_sequence,
         "information": information,
         "label": label,
-        "mode": st.session_state.get("mode", "")
     }
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
@@ -40,17 +40,17 @@ def save_jsonl_entry(label: str):
             f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-def save_jsonl_entry_with_model():
-    """会話ログをjsonl形式で1行保存し、学習済みモデルでラベルを推論"""
+def predict_with_model():
+    """学習済みモデルでラベルを推論"""
     # instruction
     instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
 
-    # 最新のassistantメッセージから FunctionSequence と FinalOutput を抽出
+    # 最新のassistantメッセージから FunctionSequence と Information を抽出
     last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
     fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
-    fo_match = re.search(r"<FinalOutput>([\s\S]*?)</FinalOutput>", last_assistant, re.IGNORECASE)
+    info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
     function_sequence = fs_match.group(1).strip() if fs_match else ""
-    final_output = fo_match.group(1).strip() if fo_match else ""
+    final_output = info_match.group(1).strip() if info_match else ""
 
     text = f"instruction: {instruction} \nfs: {function_sequence} \nfo: {final_output}"
     model = joblib.load(MODEL_PATH)
@@ -88,11 +88,9 @@ def save_pre_experiment_result(human_score: int):
 
     fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
     info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
-    fo_match = re.search(r"<FinalOutput>([\s\S]*?)</FinalOutput>", last_assistant, re.IGNORECASE)
 
     function_sequence = fs_match.group(1).strip() if fs_match else ""
     information = info_match.group(1).strip() if info_match else ""
-    final_output = fo_match.group(1).strip() if fo_match else ""
 
     clarifications = []
     user_answers = []
@@ -107,7 +105,7 @@ def save_pre_experiment_result(human_score: int):
                 # Join list items into a single string
                 content = " ".join(map(str, content))
             user_answers.append(content.strip())
-    text = f"instruction: {instruction} \nfs: {function_sequence} \nfo: {final_output}"
+    text = f"instruction: {instruction} \nfs: {function_sequence}"
     similarity = None
     if MODEL_PATH.exists():
         try:
@@ -122,7 +120,6 @@ def save_pre_experiment_result(human_score: int):
         "information": information,
         "clarification_question": clarifications,
         "user_answers": user_answers,
-        "final_output": final_output,
         "similarity": similarity,
         "human_score": human_score,
         "mode": st.session_state.get("mode", "")
@@ -156,11 +153,9 @@ def save_experiment_1_result(human_scores: dict):
 
     fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
     info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
-    fo_match = re.search(r"<FinalOutput>([\s\S]*?)</FinalOutput>", last_assistant, re.IGNORECASE)
 
     function_sequence = fs_match.group(1).strip() if fs_match else ""
     information = info_match.group(1).strip() if info_match else ""
-    final_output = fo_match.group(1).strip() if fo_match else ""
 
     clarifications = []
     user_answers = []
@@ -175,7 +170,7 @@ def save_experiment_1_result(human_scores: dict):
                 # Join list items into a single string
                 content = " ".join(map(str, content))
             user_answers.append(content.strip())
-    text = f"instruction: {instruction} \nfs: {function_sequence} \nfo: {final_output}"
+    text = f"instruction: {instruction} \nfs: {function_sequence}"
     # TODO: 類似度どうするか考える。プレ実験にしか含めないか、experiment_1にも含めるか
     similarity = None
     if MODEL_PATH.exists():
@@ -192,7 +187,6 @@ def save_experiment_1_result(human_scores: dict):
         "clarification_question": clarifications,
         # TODO: user_answersは保存しないか、image_urlを除いて保存するか考える
         # "user_answers": user_answers,
-        "final_output": final_output,
         "similarity": similarity,
         "human_scores": human_scores,
         "mode": st.session_state.get("mode", "")
@@ -209,6 +203,64 @@ def save_experiment_1_result(human_scores: dict):
             f.seek(-1, 2)
             need_newline = f.read(1) != b"\n"
     with EXPERIMENT_1_PATH.open("a", encoding="utf-8") as f:
+        if need_newline:
+            f.write("\n")
+        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+
+def save_experiment_2_result(human_scores: dict):
+    """保存済みコンテキストから実験結果をjsonl形式で保存
+
+    Parameters
+    ----------
+    human_scores: dict
+        4段階評価の結果を格納した辞書。各質問項目をキー、評価を値として渡す。
+    """
+    instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
+    last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
+
+    fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
+    info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
+
+    function_sequence = fs_match.group(1).strip() if fs_match else ""
+    information = info_match.group(1).strip() if info_match else ""
+
+    clarifications = []
+    user_answers = []
+    for m in st.session_state.context:
+        if m["role"] == "assistant":
+            q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", m["content"], re.IGNORECASE)
+            if q_match:
+                clarifications.append(q_match.group(1).strip())
+        if m["role"] == "user":
+            content = m["content"]
+            if isinstance(content, list):
+                # Join list items into a single string
+                content = " ".join(map(str, content))
+            user_answers.append(content.strip())
+    text = f"instruction: {instruction} \nfs: {function_sequence}"
+
+    entry = {
+        "instruction": instruction,
+        "function_sequence": function_sequence,
+        "information": information,
+        "clarification_question": clarifications,
+        # TODO: user_answersは保存しないか、image_urlを除いて保存するか考える
+        # "user_answers": user_answers,
+        "human_scores": human_scores,
+        "mode": st.session_state.get("mode", "")
+    }
+
+    if "saved_jsonl" not in st.session_state:
+        st.session_state.saved_jsonl = []
+    st.session_state.saved_jsonl.append(entry)
+
+    EXPERIMENT_2_PATH.parent.mkdir(parents=True, exist_ok=True)
+    need_newline = False
+    if EXPERIMENT_2_PATH.exists() and EXPERIMENT_2_PATH.stat().st_size > 0:
+        with EXPERIMENT_2_PATH.open("rb") as f:
+            f.seek(-1, 2)
+            need_newline = f.read(1) != b"\n"
+    with EXPERIMENT_2_PATH.open("a", encoding="utf-8") as f:
         if need_newline:
             f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
