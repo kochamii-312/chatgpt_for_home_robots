@@ -29,6 +29,11 @@ def app():
     st.title("LLMATCHデモアプリ")
     st.subheader("実験① GPTとGPT with Criticの比較")
 
+    mode_options = ["GPT", "GPT with critic"]
+    default_mode = st.session_state.get("mode", "GPT with critic")
+    mode = st.radio("モード選択", mode_options, index=mode_options.index(default_mode), horizontal=True)
+    st.session_state["mode"] = mode
+
     system_prompt = SYSTEM_PROMPT
 
     image_root = "images"
@@ -52,10 +57,13 @@ def app():
             "label": "",
             "clarifying_steps": []
         }
+        st.session_state.turn_count = 0
     if "active" not in st.session_state:
         st.session_state.active = True
     if "sent_room_images" not in st.session_state:
         st.session_state.sent_room_images = set()
+    if "turn_count" not in st.session_state:
+        st.session_state.turn_count = 0
 
     context = st.session_state["context"]
 
@@ -78,6 +86,7 @@ def app():
         rooms_from_assistant = detect_rooms_in_text(reply)
         attach_images_for_rooms(rooms_from_assistant)
         print("context: ", context)
+        st.session_state.turn_count += 1
         
     # 画面下部に履歴を全表示（systemは省く）
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
@@ -93,65 +102,76 @@ def app():
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
     label = save_jsonl_entry_with_model()
-    if label == "sufficient":
-        st.success("モデルがsufficientを出力したため終了します。")
+    should_stop = False
+    end_message = ""
+    if st.session_state.get("mode") == "GPT with critic":
+        if label == "sufficient":
+            should_stop = True
+            end_message = "モデルがsufficientを出力したため終了します。"
+    else:
+        if st.session_state.turn_count >= 7:
+            should_stop = True
+            end_message = "7回の会話に達したため終了します。"
 
-        with st.form("evaluation_form"):
-            feasibility = st.radio(
-                "使う関数は適切か（不要なものが含まれている / 違う関数の方が適切）（1-4）",
-                [1, 2, 3, 4],
-                horizontal=True,
-            )
-            variables = st.radio(
-                "関数の変数は適切か（間違ったオブジェクトが入っている / もっと良い変数がある）（1-4）",
-                [1, 2, 3, 4],
-                horizontal=True,
-            )
-            specificity = st.radio(
-                "関数の変数の具体性（1-4）",
-                [1, 2, 3, 4],
-                horizontal=True,
-            )
-            hallucination = st.radio(
-                "実際にはないもの・伝えていない情報を含めていないか（1-4）",
-                [1, 2, 3, 4],
-                horizontal=True,
-            )
-            coverage = st.radio(
-                "聞いたことがすべて盛り込まれているか（1-4）",
-                [1, 2, 3, 4],
-                horizontal=True,
-            )
-            obstacle = st.radio(
-                "障害物があれば、避けられるか（1-4）",
-                [1, 2, 3, 4],
-                horizontal=True,
-            )
-            selection = st.radio(
-                "複数のものがある中で適切なものが選べるか（1-4）",
-                [1, 2, 3, 4],
-                horizontal=True,
-            )
-            extra_question = st.radio(
-                "会話の中で余計な質問・不自然な質問があったか（1-4）",
-                [1, 2, 3, 4],
-                horizontal=True,
-            )
-            submitted = st.form_submit_button("評価を保存")
+    if should_stop:
+        st.success(end_message)
+        if st.session_state.active:
+            with st.form("evaluation_form"):
+                feasibility = st.radio(
+                    "使う関数は適切か（不要なものが含まれている / 違う関数の方が適切）（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                variables = st.radio(
+                    "関数の変数は適切か（間違ったオブジェクトが入っている / もっと良い変数がある）（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                specificity = st.radio(
+                    "関数の変数の具体性（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                hallucination = st.radio(
+                    "実際にはないもの・伝えていない情報を含めていないか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                coverage = st.radio(
+                    "聞いたことがすべて盛り込まれているか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                obstacle = st.radio(
+                    "障害物があれば、避けられるか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                selection = st.radio(
+                    "複数のものがある中で適切なものが選べるか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                extra_question = st.radio(
+                    "会話の中で余計な質問・不自然な質問があったか（1-4）",
+                    [1, 2, 3, 4],
+                    horizontal=True,
+                )
+                submitted = st.form_submit_button("評価を保存")
 
-        if submitted:
-            scores = {
-                "feasibility": feasibility,
-                "variables": variables,
-                "specificity": specificity,
-                "hallucination": hallucination,
-                "coverage": coverage,
-                "obstacle": obstacle,
-                "selection": selection,
-                "extra_question": extra_question,
-            }
-            save_experiment_1_result(scores)
-            st.session_state.active = False
+            if submitted:
+                scores = {
+                    "feasibility": feasibility,
+                    "variables": variables,
+                    "specificity": specificity,
+                    "hallucination": hallucination,
+                    "coverage": coverage,
+                    "obstacle": obstacle,
+                    "selection": selection,
+                    "extra_question": extra_question,
+                }
+                save_experiment_1_result(scores)
+                st.session_state.active = False
 
         if st.session_state.active == False:
             st.warning("会話を終了しました。ありがとうございました！")
@@ -163,6 +183,7 @@ def app():
                     "clarifying_steps": []
                 }
                 st.session_state.saved_jsonl = []
+                st.session_state.turn_count = 0
                 st.rerun()
             st.stop()
     
@@ -174,6 +195,7 @@ def app():
             "clarifying_steps": []
         }
         st.session_state.saved_jsonl = []
+        st.session_state.turn_count = 0
         st.rerun()
 
 app()
