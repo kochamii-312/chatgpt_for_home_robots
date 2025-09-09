@@ -7,11 +7,9 @@ from move_functions import (
     pick_object,
     place_object_next_to,
     place_object_on,
-    show_room_image,
-    get_room_image_path,
 )
 from dotenv import load_dotenv
-from api import client, SYSTEM_PROMPT
+from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
 from strips import strip_tags, extract_between
 from run_and_show import (
     show_function_sequence,
@@ -20,7 +18,6 @@ from run_and_show import (
 )
 from jsonl import predict_with_model, save_experiment_1_result
 from run_and_show import show_provisional_output
-from room_utils import detect_rooms_in_text, attach_images_for_rooms
 from pathlib import Path
 
 load_dotenv()
@@ -79,7 +76,9 @@ def app():
         ]
         if image_files:
             selected_img = st.selectbox("表示する画像", image_files)
-            st.image(os.path.join(image_dir, selected_img), caption=selected_img)
+            selected_path = os.path.join(image_dir, selected_img)
+            st.session_state["selected_image_path"] = selected_path
+            st.image(selected_path, caption=selected_img)
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if (
@@ -96,8 +95,6 @@ def app():
         st.session_state.turn_count = 0
     if "active" not in st.session_state:
         st.session_state.active = True
-    if "sent_room_images" not in st.session_state:
-        st.session_state.sent_room_images = set()
     if "turn_count" not in st.session_state:
         st.session_state.turn_count = 0
 
@@ -110,8 +107,14 @@ def app():
     
     if user_input:
         context.append({"role": "user", "content": user_input})
-        rooms_from_user = detect_rooms_in_text(user_input)
-        attach_images_for_rooms(rooms_from_user)
+        selected_path = st.session_state.get("selected_image_path")
+        if selected_path:
+            context.append(
+                build_bootstrap_user_message(
+                    text="Here is the selected image. Use it for scene understanding and disambiguation.",
+                    local_image_paths=[selected_path],
+                )
+            )
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=context
@@ -119,8 +122,6 @@ def app():
         reply = response.choices[0].message.content.strip()
         print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
-        rooms_from_assistant = detect_rooms_in_text(reply)
-        attach_images_for_rooms(rooms_from_assistant)
         print("context: ", context)
         st.session_state.turn_count += 1
         
