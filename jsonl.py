@@ -66,16 +66,16 @@ def save_jsonl_entry_with_model():
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
 
-    DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
-    need_newline = False
-    if DATASET_PATH.exists() and DATASET_PATH.stat().st_size > 0:
-        with DATASET_PATH.open("rb") as f:
-            f.seek(-1, 2)
-            need_newline = f.read(1) != b"\n"
-    with DATASET_PATH.open("a", encoding="utf-8") as f:
-        if need_newline:
-            f.write("\n")
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    # DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
+    # need_newline = False
+    # if DATASET_PATH.exists() and DATASET_PATH.stat().st_size > 0:
+    #     with DATASET_PATH.open("rb") as f:
+    #         f.seek(-1, 2)
+    #         need_newline = f.read(1) != b"\n"
+    # with DATASET_PATH.open("a", encoding="utf-8") as f:
+    #     if need_newline:
+    #         f.write("\n")
+    #     f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
     return label
 
@@ -100,7 +100,11 @@ def save_pre_experiment_result(human_score: int):
             if q_match:
                 clarifications.append(q_match.group(1).strip())
         if m["role"] == "user":
-            user_answers.append(m["content"].strip())
+            content = m["content"]
+            if isinstance(content, list):
+                # Join list items into a single string
+                content = " ".join(map(str, content))
+            user_answers.append(content.strip())
     text = f"instruction: {instruction} \nfs: {function_sequence} \nfo: {final_output}"
     similarity = None
     if MODEL_PATH.exists():
@@ -163,8 +167,13 @@ def save_experiment_1_result(human_scores: dict):
             if q_match:
                 clarifications.append(q_match.group(1).strip())
         if m["role"] == "user":
-            user_answers.append(m["content"].strip())
+            content = m["content"]
+            if isinstance(content, list):
+                # Join list items into a single string
+                content = " ".join(map(str, content))
+            user_answers.append(content.strip())
     text = f"instruction: {instruction} \nfs: {function_sequence} \nfo: {final_output}"
+    # TODO: 類似度どうするか考える。プレ実験にしか含めないか、experiment_1にも含めるか
     similarity = None
     if MODEL_PATH.exists():
         try:
@@ -178,7 +187,8 @@ def save_experiment_1_result(human_scores: dict):
         "function_sequence": function_sequence,
         "information": information,
         "clarification_question": clarifications,
-        "user_answers": user_answers,
+        # TODO: user_answersは保存しないか、image_urlを除いて保存するか考える
+        # "user_answers": user_answers,
         "final_output": final_output,
         "similarity": similarity,
         "human_scores": human_scores,

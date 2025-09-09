@@ -171,7 +171,6 @@ def app():
             st.success("モデルがsufficientを出力したため終了します。")
             finalize_and_render_plan(label)
             if st.session_state.active == False:
-                show_jsonl_block()
                 st.warning("会話を終了しました。ありがとうございました！")
                 if st.button("会話をリセット", key="reset_conv"):
                     st.session_state.context = [{"role": "system", "content": SYSTEM_PROMPT}]

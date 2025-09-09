@@ -103,9 +103,3 @@
 {"instruction": "この鉢植え（スパティフィラム）に水をあげて", "function_sequence": "<pick_object>water</pick_object>\n    <place_object_next_to>water</place_object>", "final_output": "", "label": "sufficient"}
 {"instruction": "この鉢植え（スパティフィラム）に水をあげて", "function_sequence": "<move_to room_name=\"LIVING\"/>\n    <detect_object object=\"スパティフィラム\"/>\n    <pick_object object=\"水\"/>\n    <place_object_in object=\"水\" target=\"スパティフィラム\"/>", "final_output": "", "label": "sufficient"}
 {"instruction": "この鉢植え（スパティフィラム）に水をあげて", "function_sequence": "<move_to room_name=\"LIVING\"/>\n    <detect_object object=\"スパティフィラム\"/>\n    <pick_object object=\"水\"/>\n    <place_object_in object=\"水\" target=\"スパティフィラム\"/>", "final_output": "", "label": "sufficient"}
-{"instruction": "", "function_sequence": "", "final_output": "", "label": "insufficient"}
-{"instruction": "", "function_sequence": "", "final_output": "", "label": "insufficient"}
-{"instruction": "", "function_sequence": "", "final_output": "", "label": "insufficient"}
-{"instruction": "鉢植えに水をあげて", "function_sequence": "<move_to>リビング</move_to>\n    <detect_object>鉢植え</detect_object>", "final_output": "", "label": "insufficient"}
-{"instruction": "鉢植えに水をあげて", "function_sequence": "<move_to>リビング</move_to>\n    <pick_object>鉢植え</pick_object>\n    <place_object_on>鉢植え</place_object_on>テーブル", "final_output": "", "label": "sufficient"}
-{"instruction": "鉢植えに水をあげて", "function_sequence": "<move_to>リビング</move_to>\n    <pick_object>鉢植え</pick_object>\n    <place_object_on>鉢植え</place_object_on>テーブル", "final_output": "", "label": "sufficient"}
