@@ -3,12 +3,22 @@ import json
 import re
 from pathlib import Path
 import joblib
+import os
+
+from firebase_utils import save_document
 
 DATASET_PATH = Path(__file__).parent / "json" / "critic_dataset_train.jsonl"
 MODEL_PATH = Path(__file__).parent / "models" / "critic_model_20250903_053907.joblib"
 PRE_EXPERIMENT_PATH = Path(__file__).parent / "json" / "pre_experiment_results.jsonl"
 EXPERIMENT_1_PATH = Path(__file__).parent / "json" / "experiment_1_results.jsonl"
 EXPERIMENT_2_PATH = Path(__file__).parent / "json" / "experiment_2_results.jsonl"
+
+
+def _save_to_firestore(entry):
+    collection = os.getenv("FIREBASE_COLLECTION")
+    credentials = os.getenv("FIREBASE_CREDENTIALS")
+    if collection and credentials:
+        save_document(collection, entry, credentials)
 
 def save_jsonl_entry(label: str):
     """会話ログをjsonl形式で1行保存"""
@@ -39,6 +49,7 @@ def save_jsonl_entry(label: str):
         if need_newline:
             f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    _save_to_firestore(entry)
 
 def predict_with_model():
     """学習済みモデルでラベルを推論"""
@@ -79,6 +90,7 @@ def predict_with_model():
     #         f.write("\n")
     #     f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
+    _save_to_firestore(entry)
     return label
 
 def save_pre_experiment_result(human_score: int):
@@ -139,6 +151,7 @@ def save_pre_experiment_result(human_score: int):
         if need_newline:
             f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    _save_to_firestore(entry)
 
 def save_experiment_1_result(human_scores: dict):
     """保存済みコンテキストから実験結果をjsonl形式で保存
@@ -206,6 +219,7 @@ def save_experiment_1_result(human_scores: dict):
         if need_newline:
             f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    _save_to_firestore(entry)
 
 def save_experiment_2_result(human_scores: dict):
     """保存済みコンテキストから実験結果をjsonl形式で保存
@@ -264,6 +278,7 @@ def save_experiment_2_result(human_scores: dict):
         if need_newline:
             f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    _save_to_firestore(entry)
 
 def show_jsonl_block():
     """保存済みjsonlデータをコードブロックで表示"""
