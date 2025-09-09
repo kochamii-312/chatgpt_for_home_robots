@@ -18,7 +18,7 @@ from run_and_show import (
     show_clarifying_question,
     run_plan_and_show,
 )
-from jsonl import save_jsonl_entry_with_model, save_pre_experiment_result
+from jsonl import save_jsonl_entry_with_model, save_experiment_1_result
 from run_and_show import show_provisional_output
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
 from pathlib import Path
@@ -96,54 +96,63 @@ def app():
     if label == "sufficient":
         st.success("モデルがsufficientを出力したため終了します。")
 
-        st.write("使う関数は適切か（不要なものが含まれている / 違う関数の方が適切）（1-4）")
-        cols = st.columns(4)
-        for idx, col in enumerate(cols, start=1):
-            if col.button(str(idx), key=f"feasibility_{idx}"):
-                save_pre_experiment_result(idx)
-                st.session_state.active = False
-        st.write("関数の変数は適切か（間違ったオブジェクトが入っている / もっと良い変数がある）（1-4）")
-        cols = st.columns(4)
-        for idx, col in enumerate(cols, start=1):
-            if col.button(str(idx), key=f"variables_{idx}"):
-                save_pre_experiment_result(idx)
-                st.session_state.active = False
-        st.write("関数の変数の具体性（1-4）")
-        cols = st.columns(4)
-        for idx, col in enumerate(cols, start=1):
-            if col.button(str(idx), key=f"specificity_{idx}"):
-                save_pre_experiment_result(idx)
-                st.session_state.active = False
-        st.write("実際にはないもの・伝えていない情報を含めていないか（1-4）")
-        cols = st.columns(4)
-        for idx, col in enumerate(cols, start=1):
-            if col.button(str(idx), key=f"hallucination_{idx}"):
-                save_pre_experiment_result(idx)
-                st.session_state.active = False
-        st.write("聞いたことがすべて盛り込まれているか（1-4）")
-        cols = st.columns(4)
-        for idx, col in enumerate(cols, start=1):
-            if col.button(str(idx), key=f"coverage_{idx}"):
-                save_pre_experiment_result(idx)
-                st.session_state.active = False
-        st.write("障害物があれば、避けられるか（1-4）")
-        cols = st.columns(4)
-        for idx, col in enumerate(cols, start=1):
-            if col.button(str(idx), key=f"obstacle_{idx}"):
-                save_pre_experiment_result(idx)
-                st.session_state.active = False
-        st.write("複数のものがある中で適切なものが選べるか（1-4）")
-        cols = st.columns(4)
-        for idx, col in enumerate(cols, start=1):
-            if col.button(str(idx), key=f"selection_{idx}"):
-                save_pre_experiment_result(idx)
-                st.session_state.active = False
-        st.write("会話の中で余計な質問・不自然な質問があったか（1-4）")
-        cols = st.columns(4)
-        for idx, col in enumerate(cols, start=1):
-            if col.button(str(idx), key=f"extra_question_{idx}"):
-                save_pre_experiment_result(idx)
-                st.session_state.active = False
+        with st.form("evaluation_form"):
+            feasibility = st.radio(
+                "使う関数は適切か（不要なものが含まれている / 違う関数の方が適切）（1-4）",
+                [1, 2, 3, 4],
+                horizontal=True,
+            )
+            variables = st.radio(
+                "関数の変数は適切か（間違ったオブジェクトが入っている / もっと良い変数がある）（1-4）",
+                [1, 2, 3, 4],
+                horizontal=True,
+            )
+            specificity = st.radio(
+                "関数の変数の具体性（1-4）",
+                [1, 2, 3, 4],
+                horizontal=True,
+            )
+            hallucination = st.radio(
+                "実際にはないもの・伝えていない情報を含めていないか（1-4）",
+                [1, 2, 3, 4],
+                horizontal=True,
+            )
+            coverage = st.radio(
+                "聞いたことがすべて盛り込まれているか（1-4）",
+                [1, 2, 3, 4],
+                horizontal=True,
+            )
+            obstacle = st.radio(
+                "障害物があれば、避けられるか（1-4）",
+                [1, 2, 3, 4],
+                horizontal=True,
+            )
+            selection = st.radio(
+                "複数のものがある中で適切なものが選べるか（1-4）",
+                [1, 2, 3, 4],
+                horizontal=True,
+            )
+            extra_question = st.radio(
+                "会話の中で余計な質問・不自然な質問があったか（1-4）",
+                [1, 2, 3, 4],
+                horizontal=True,
+            )
+            submitted = st.form_submit_button("評価を保存")
+
+        if submitted:
+            scores = {
+                "feasibility": feasibility,
+                "variables": variables,
+                "specificity": specificity,
+                "hallucination": hallucination,
+                "coverage": coverage,
+                "obstacle": obstacle,
+                "selection": selection,
+                "extra_question": extra_question,
+            }
+            save_experiment_1_result(scores)
+            st.session_state.active = False
+
         if st.session_state.active == False:
             st.warning("会話を終了しました。ありがとうございました！")
             if st.button("会話をリセット", key="reset_conv"):

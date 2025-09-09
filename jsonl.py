@@ -136,8 +136,14 @@ def save_pre_experiment_result(human_score: int):
             f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-def save_experiment_1_result(human_score: int):
-    """保存済みコンテキストから実験結果をjsonl形式で保存"""
+def save_experiment_1_result(human_scores: dict):
+    """保存済みコンテキストから実験結果をjsonl形式で保存
+
+    Parameters
+    ----------
+    human_scores: dict
+        4段階評価の結果を格納した辞書。各質問項目をキー、評価を値として渡す。
+    """
     instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
     last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
 
@@ -175,7 +181,7 @@ def save_experiment_1_result(human_score: int):
         "user_answers": user_answers,
         "final_output": final_output,
         "similarity": similarity,
-        "human_score": human_score,
+        "human_scores": human_scores,
     }
 
     if "saved_jsonl" not in st.session_state:
