@@ -36,8 +36,11 @@ def _room_to_path(room_name: str) -> str:
     fname = f"{room_name.lower()}.png"  # "KITCHEN" -> "kitchen.png"
     image_dir = DEFAULT_IMAGE_DIR
     house = st.session_state.get("selected_house")
+    subfolder = st.session_state.get("selected_subfolder")
     if house:
         image_dir = os.path.join(image_dir, house)
+        if subfolder:
+            image_dir = os.path.join(image_dir, subfolder)
     return os.path.join(image_dir, fname)
 
 def show_room_image(room_name: str) -> str:
@@ -67,11 +70,15 @@ def get_room_image_path(room_name: str) -> str:
 
     file_name = f"{room_name.lower()}.png"
     house = st.session_state.get("selected_house")
+    subfolder = st.session_state.get("selected_subfolder")
 
     # Directories to search, in order of priority
     search_dirs = []
     if house:
-        search_dirs.append(os.path.join(DEFAULT_IMAGE_DIR, house))
+        base_dir = os.path.join(DEFAULT_IMAGE_DIR, house)
+        if subfolder:
+            search_dirs.append(os.path.join(base_dir, subfolder))
+        search_dirs.append(base_dir)
 
     # If no house is selected, search all house directories first
     if not house:
