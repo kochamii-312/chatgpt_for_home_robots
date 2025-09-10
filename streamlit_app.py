@@ -107,23 +107,6 @@ def app():
             st.success(f"ロボットへの指示がセットされました：**{instruction}**")
             context.append({"role": "user", "content": instruction})
 
-<<<<<<< HEAD
-            def guess_room_from_instruction(text: str) -> str | None:
-                rooms = ["BEDROOM","KITCHEN","DINING","LIVING","BATHROOM","和室","HALL"]
-                up = text.upper()
-                for r in rooms:
-                    if r == "和室":
-                        if "和室" in text:
-                            return r
-                    else:
-                        if r in up:
-                            return r
-                return None
-
-            # 1) ユーザー発話から部屋名を検出 → 新規なら画像添付
-            rooms_from_user = detect_rooms_in_text(instruction)
-            attach_images_for_rooms(rooms_from_user)
-=======
             selected_path = st.session_state.get("selected_image_path")
             if selected_path:
                 context.append(
@@ -132,7 +115,6 @@ def app():
                         local_image_paths=[selected_path],
                     )
                 )
->>>>>>> 1815cfee4424f0309d97715fac9486aea3e1c2b3
 
             # 2) 最初のアシスタント応答を取得（画像を添えた状態で）
             response = client.chat.completions.create(
