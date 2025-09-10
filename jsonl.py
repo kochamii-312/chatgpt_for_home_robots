@@ -25,6 +25,9 @@ def _save_to_firestore(entry, collection_override=None):
     if not credentials:
         print("[Firestore] skipped: no FIREBASE_CREDENTIALS")
         return
+    if not Path(credentials).exists():
+        print(f"[Firestore] skipped: credentials file not found at {credentials}")
+        return
     try:
         save_document(collection, entry, credentials)
         print(f"[Firestore] saved to {collection}")
