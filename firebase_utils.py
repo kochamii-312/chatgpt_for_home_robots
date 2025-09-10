@@ -6,11 +6,10 @@ _db = None
 
 def _get_db(credentials_path: str) -> firestore.Client:
     global _db
-    if _db is None:
+    if not firebase_admin._apps:  # check if already initialized
         cred = credentials.Certificate(credentials_path)
         firebase_admin.initialize_app(cred)
-        _db = firestore.client()
-    return _db
+    return firestore.client()
 
 def save_document(collection: str, data: Dict[str, Any], credentials_path: str) -> None:
     """Save a document to a Firestore collection."""

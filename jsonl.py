@@ -274,7 +274,7 @@ def save_experiment_2_result(human_scores: dict):
         # TODO: user_answersは保存しないか、image_urlを除いて保存するか考える
         # "user_answers": user_answers,
         "human_scores": human_scores,
-        "mode": st.session_state.get("mode", "")
+        "prompt_label": st.session_state.get("prompt_label", "")
     }
 
     if "saved_jsonl" not in st.session_state:

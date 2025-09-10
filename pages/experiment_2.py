@@ -3,7 +3,7 @@ import re
 import json
 import os
 import joblib
-from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
+from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from openai import OpenAI
 from dotenv import load_dotenv
 from api import (
@@ -97,7 +97,7 @@ def app():
     }
     prompt_label = st.selectbox("プロンプト", list(prompt_options.keys()))
     system_prompt = prompt_options[prompt_label]
-    st.session_state["mode"] = prompt_label
+    st.session_state["prompt_label"] = prompt_label
 
     image_root = "images"
     house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]

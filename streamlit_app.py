@@ -5,7 +5,7 @@ import re
 from openai import OpenAI
 from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, IMAGE_CATALOG, CREATING_DATA_SYSTEM_PROMPT
-from move_functions import move_to, pick_object, place_object_next_to, place_object_on, show_room_image, get_room_image_path
+from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import show_function_sequence, show_clarifying_question, show_information, run_plan_and_show
 from jsonl import save_jsonl_entry, show_jsonl_block, save_pre_experiment_result
 from room_utils import detect_rooms_in_text, attach_images_for_rooms
@@ -120,22 +120,6 @@ def app():
                             return r
                 return None
 
-            room = guess_room_from_instruction(instruction)
-            if room:
-                img_path = get_room_image_path(room)  # show_room_image と同じパス規則:contentReference[oaicite:5]{index=5}
-                if os.path.exists(img_path):
-                    # UIにも表示（任意）
-                    show_room_image(room)             # 既存関数で画像を画面に表示:contentReference[oaicite:6]{index=6}
-                    # AIには“この部屋の画像だけ”を添付
-                    st.session_state["context"].append(
-                        build_bootstrap_user_message(
-                            text=f"Here is the latest image for {room}. Use it for scene understanding and disambiguation.",
-                            local_image_paths=[img_path],  # ←ローカル画像をbase64で添付:contentReference[oaicite:7]{index=7}
-                        )
-                    )
-                else:
-                    st.warning(f"{room} の画像が見つかりません: {img_path}")
-            
             # 1) ユーザー発話から部屋名を検出 → 新規なら画像添付
             rooms_from_user = detect_rooms_in_text(instruction)
             attach_images_for_rooms(rooms_from_user)

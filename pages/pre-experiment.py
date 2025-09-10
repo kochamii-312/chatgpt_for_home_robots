@@ -7,8 +7,6 @@ from move_functions import (
     pick_object,
     place_object_next_to,
     place_object_on,
-    show_room_image,
-    get_room_image_path,
 )
 from dotenv import load_dotenv
 from api import client, SYSTEM_PROMPT
