@@ -33,6 +33,16 @@ def app():
 
     system_prompt = SYSTEM_PROMPT
 
+    model_files = [f for f in os.listdir("models") if f.endswith(".joblib")]
+    if model_files:
+        current_model = os.path.basename(st.session_state.get("model_path", model_files[0]))
+        selected_model = st.selectbox(
+            "評価モデル",
+            model_files,
+            index=model_files.index(current_model) if current_model in model_files else 0,
+        )
+        st.session_state["model_path"] = os.path.join("models", selected_model)
+
     image_root = "images"
     house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
     default_label = "(default)"

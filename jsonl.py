@@ -77,7 +77,8 @@ def predict_with_model():
     final_output = info_match.group(1).strip() if info_match else ""
 
     text = f"instruction: {instruction} \nfs: {function_sequence} \nfo: {final_output}"
-    model = joblib.load(MODEL_PATH)
+    model_path = Path(st.session_state.get("model_path", MODEL_PATH))
+    model = joblib.load(model_path)
     pred = model.predict([text])[0]
     label = "sufficient" if pred == 1 else "insufficient"
 
@@ -132,9 +133,10 @@ def save_pre_experiment_result(human_score: int):
             user_answers.append(content.strip())
     text = f"instruction: {instruction} \nfs: {function_sequence}"
     similarity = None
-    if MODEL_PATH.exists():
+    model_path = Path(st.session_state.get("model_path", MODEL_PATH))
+    if model_path.exists():
         try:
-            model = joblib.load(MODEL_PATH)
+            model = joblib.load(model_path)
             similarity = float(model.predict_proba([text])[0][1])
         except Exception:
             similarity = None
@@ -199,9 +201,10 @@ def save_experiment_1_result(human_scores: dict):
     text = f"instruction: {instruction} \nfs: {function_sequence}"
     # TODO: 類似度どうするか考える。プレ実験にしか含めないか、experiment_1にも含めるか
     similarity = None
-    if MODEL_PATH.exists():
+    model_path = Path(st.session_state.get("model_path", MODEL_PATH))
+    if model_path.exists():
         try:
-            model = joblib.load(MODEL_PATH)
+            model = joblib.load(model_path)
             similarity = float(model.predict_proba([text])[0][1])
         except Exception:
             similarity = None

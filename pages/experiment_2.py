@@ -67,9 +67,6 @@ def finalize_and_render_plan(label: str):
         language="json"
     )
 
-# 事前に two_classify.py で学習済みモデルを保存しておく（例: joblib.dump(model, "critic_model.joblib")）
-model = joblib.load("models/critic_model_20250903_053907.joblib")
-
 def get_critic_label(context):
     # contextから判定用テキストを生成
     instruction = next((m["content"] for m in context if m["role"] == "user"), "")
@@ -82,6 +79,8 @@ def get_critic_label(context):
                 clarifying_steps.append({"llm_question": q, "user_answer": a})
     ex = {"instruction": instruction, "clarifying_steps": clarifying_steps, "label": "unknown"}
     texts, _ = prepare_data([ex])
+    model_path = st.session_state.get("model_path", "models/critic_model_20250903_053907.joblib")
+    model = joblib.load(model_path)
     pred = model.predict(texts)
     return "sufficient" if pred[0] == 1 else "insufficient"
 
@@ -98,6 +97,16 @@ def app():
     prompt_label = st.selectbox("プロンプト", list(prompt_options.keys()))
     system_prompt = prompt_options[prompt_label]
     st.session_state["mode"] = prompt_label
+
+    model_files = [f for f in os.listdir("models") if f.endswith(".joblib")]
+    if model_files:
+        current_model = os.path.basename(st.session_state.get("model_path", model_files[0]))
+        selected_model = st.selectbox(
+            "評価モデル",
+            model_files,
+            index=model_files.index(current_model) if current_model in model_files else 0,
+        )
+        st.session_state["model_path"] = os.path.join("models", selected_model)
 
     image_root = "images"
     house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
