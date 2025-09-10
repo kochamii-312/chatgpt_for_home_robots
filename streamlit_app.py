@@ -4,11 +4,10 @@ import os
 import re
 from openai import OpenAI
 from dotenv import load_dotenv
-from api import client, build_bootstrap_user_message, IMAGE_CATALOG, CREATING_DATA_SYSTEM_PROMPT
+from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import show_function_sequence, show_clarifying_question, show_information, run_plan_and_show
 from jsonl import save_jsonl_entry, show_jsonl_block, save_pre_experiment_result
-from room_utils import detect_rooms_in_text, attach_images_for_rooms
 
 load_dotenv()
 
@@ -71,7 +70,9 @@ def app():
         ]
         if image_files:
             selected_img = st.selectbox("表示する画像", image_files)
-            st.image(os.path.join(image_dir, selected_img), caption=selected_img)
+            selected_path = os.path.join(image_dir, selected_img)
+            st.session_state["selected_image_path"] = selected_path
+            st.image(selected_path, caption=selected_img)
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if "context" not in st.session_state:
@@ -87,8 +88,6 @@ def app():
             "clarifying_steps": []
         }
 
-    if "sent_room_images" not in st.session_state:
-        st.session_state.sent_room_images = set()
     if "information_items" not in st.session_state:
         st.session_state.information_items = []
 
@@ -108,6 +107,7 @@ def app():
             st.success(f"ロボットへの指示がセットされました：**{instruction}**")
             context.append({"role": "user", "content": instruction})
 
+<<<<<<< HEAD
             def guess_room_from_instruction(text: str) -> str | None:
                 rooms = ["BEDROOM","KITCHEN","DINING","LIVING","BATHROOM","和室","HALL"]
                 up = text.upper()
@@ -123,6 +123,16 @@ def app():
             # 1) ユーザー発話から部屋名を検出 → 新規なら画像添付
             rooms_from_user = detect_rooms_in_text(instruction)
             attach_images_for_rooms(rooms_from_user)
+=======
+            selected_path = st.session_state.get("selected_image_path")
+            if selected_path:
+                context.append(
+                    build_bootstrap_user_message(
+                        text="Here is the selected image. Use it for scene understanding and disambiguation.",
+                        local_image_paths=[selected_path],
+                    )
+                )
+>>>>>>> 1815cfee4424f0309d97715fac9486aea3e1c2b3
 
             # 2) 最初のアシスタント応答を取得（画像を添えた状態で）
             response = client.chat.completions.create(
@@ -132,10 +142,6 @@ def app():
             reply = (response.choices[0].message.content).strip()
             reply = accumulate_information(reply)
             st.session_state["context"].append({"role": "assistant", "content": reply})
-
-            # 3) アシスタント応答からも部屋名を検出 → 新規なら画像添付（次の推論に活かす）
-            rooms_from_assistant = detect_rooms_in_text(reply)
-            attach_images_for_rooms(rooms_from_assistant)
             save_jsonl_entry("insufficient")
 
 
@@ -143,8 +149,14 @@ def app():
     user_input = st.chat_input("入力してください")
     if user_input:
         context.append({"role": "user", "content": user_input})
-        rooms_from_user = detect_rooms_in_text(user_input)
-        attach_images_for_rooms(rooms_from_user)
+        selected_path = st.session_state.get("selected_image_path")
+        if selected_path:
+            context.append(
+                build_bootstrap_user_message(
+                    text="Here is the selected image. Use it for scene understanding and disambiguation.",
+                    local_image_paths=[selected_path],
+                )
+            )
         response = client.chat.completions.create(
             model="gpt-4o-mini",
             messages=context
@@ -154,8 +166,6 @@ def app():
         print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
         print("context: ", context)
-        rooms_from_assistant = detect_rooms_in_text(reply)
-        attach_images_for_rooms(rooms_from_assistant)
         save_jsonl_entry("insufficient")  # ←この行を追加
 
     # 4) 画面下部に履歴を全表示（systemは省く）
@@ -171,6 +181,7 @@ def app():
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
+                show_information(msg["content"])
         # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
         if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
             st.write("この計画はロボットが実行するのに十分ですか？")
@@ -193,8 +204,6 @@ def app():
                     )
                     question = response.choices[0].message.content.strip()
                     context.append({"role": "assistant", "content": question})
-                    rooms_from_assistant = detect_rooms_in_text(question)
-                    attach_images_for_rooms(rooms_from_assistant)
                     save_jsonl_entry("insufficient")
                     st.rerun()
             if st.session_state.active == False:
