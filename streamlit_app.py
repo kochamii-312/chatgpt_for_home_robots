@@ -6,7 +6,7 @@ from openai import OpenAI
 from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
-from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show
+from run_and_show import show_function_sequence, show_clarifying_question, run_plan_and_show, show_information
 from jsonl import save_jsonl_entry, show_jsonl_block, save_pre_experiment_result
 
 load_dotenv()
@@ -163,6 +163,7 @@ def app():
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
+                show_information(msg["content"])
         # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
         if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
             st.write("この計画はロボットが実行するのに十分ですか？")
