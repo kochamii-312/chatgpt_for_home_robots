@@ -110,13 +110,20 @@ def app():
         st.session_state.active = True
     if "turn_count" not in st.session_state:
         st.session_state.turn_count = 0
+    if "force_end" not in st.session_state:
+        st.session_state.force_end = False
+    if "end_reason" not in st.session_state:
+        st.session_state.end_reason = ""
 
     context = st.session_state["context"]
 
     message = st.chat_message("assistant")
     message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
-    input_box = st.chat_input("ロボットへの回答を入力してください")
-    user_input = st.session_state.pop("pending_user_input", None) or input_box
+    if st.session_state.get("force_end"):
+        user_input = None
+    else:
+        input_box = st.chat_input("ロボットへの回答を入力してください")
+        user_input = st.session_state.pop("pending_user_input", None) or input_box
     
     if user_input:
         context.append({"role": "user", "content": user_input})
@@ -154,7 +161,10 @@ def app():
     label = predict_with_model()
     should_stop = False
     end_message = ""
-    if st.session_state.get("mode") == "GPT with critic":
+    if st.session_state.get("force_end"):
+        should_stop = True
+        end_message = "ユーザーが会話を強制的に終了しました。"
+    elif st.session_state.get("mode") == "GPT with critic":
         if label == "sufficient":
             should_stop = True
             end_message = "モデルがsufficientを出力したため終了します。"
@@ -220,32 +230,56 @@ def app():
                     "selection": selection,
                     "extra_question": extra_question,
                 }
-                save_experiment_1_result(scores)
+                termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
+                save_experiment_1_result(
+                    scores,
+                    st.session_state.get("end_reason", ""),
+                    termination_label,
+                )
                 st.session_state.active = False
 
         if st.session_state.active == False:
             st.warning("会話を終了しました。ありがとうございました！")
-            if st.button("会話をリセット", key="reset_conv"):
-                st.session_state.context = [{"role": "system", "content": system_prompt}]
-                st.session_state.active = True
-                st.session_state.conv_log = {
-                    "label": "",
-                    "clarifying_steps": []
-                }
-                st.session_state.saved_jsonl = []
-                st.session_state.turn_count = 0
-                st.rerun()
+            cols_end = st.columns([1, 1, 2])
+            with cols_end[0]:
+                if st.button("会話をリセット", key="reset_conv_end"):
+                    st.session_state.context = [{"role": "system", "content": system_prompt}]
+                    st.session_state.active = True
+                    st.session_state.conv_log = {
+                        "label": "",
+                        "clarifying_steps": []
+                    }
+                    st.session_state.saved_jsonl = []
+                    st.session_state.turn_count = 0
+                    st.session_state.force_end = False
+                    st.session_state.end_reason = ""
+                    st.rerun()
+            with cols_end[1]:
+                st.button("会話を強制的に終了", key="force_end_disabled", disabled=True)
+            with cols_end[2]:
+                st.text_input("会話を終了したい理由", key="end_reason", disabled=True)
             st.stop()
-    
-    if st.button("会話をリセット", key="reset_conv"):
-        st.session_state.context = [{"role": "system", "content": system_prompt}]
-        st.session_state.active = True
-        st.session_state.conv_log = {
-            "label": "",
-            "clarifying_steps": []
-        }
-        st.session_state.saved_jsonl = []
-        st.session_state.turn_count = 0
-        st.rerun()
+
+    cols = st.columns([1, 1, 2])
+    with cols[0]:
+        if st.button("会話をリセット", key="reset_conv"):
+            st.session_state.context = [{"role": "system", "content": system_prompt}]
+            st.session_state.active = True
+            st.session_state.conv_log = {
+                "label": "",
+                "clarifying_steps": []
+            }
+            st.session_state.saved_jsonl = []
+            st.session_state.turn_count = 0
+            st.session_state.force_end = False
+            st.session_state.end_reason = ""
+            st.rerun()
+    with cols[1]:
+        if st.button("会話を強制的に終了", key="force_end_button"):
+            st.session_state.force_end = True
+            st.session_state.end_reason = st.session_state.get("end_reason", "")
+            st.rerun()
+    with cols[2]:
+        st.text_input("会話を終了したい理由", key="end_reason")
 
 app()

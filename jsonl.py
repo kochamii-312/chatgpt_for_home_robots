@@ -171,7 +171,11 @@ def save_pre_experiment_result(human_score: int):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     _save_to_firestore(entry, collection_override="pre_experiment_results")
 
-def save_experiment_1_result(human_scores: dict):
+def save_experiment_1_result(
+    human_scores: dict,
+    termination_reason: str = "",
+    termination_label: str = "",
+):
     """保存済みコンテキストから実験結果をjsonl形式で保存
 
     Parameters
@@ -221,8 +225,12 @@ def save_experiment_1_result(human_scores: dict):
         # "user_answers": user_answers,
         "similarity": similarity,
         "human_scores": human_scores,
-        "mode": st.session_state.get("mode", "")
+        "mode": st.session_state.get("mode", ""),
     }
+    if termination_label:
+        entry["termination_label"] = termination_label
+    if termination_reason:
+        entry["termination_reason"] = termination_reason
 
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
@@ -240,7 +248,11 @@ def save_experiment_1_result(human_scores: dict):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     _save_to_firestore(entry, collection_override="experiment_1_results")
 
-def save_experiment_2_result(human_scores: dict):
+def save_experiment_2_result(
+    human_scores: dict,
+    termination_reason: str = "",
+    termination_label: str = "",
+):
     """保存済みコンテキストから実験結果をjsonl形式で保存
 
     Parameters
@@ -280,8 +292,12 @@ def save_experiment_2_result(human_scores: dict):
         # TODO: user_answersは保存しないか、image_urlを除いて保存するか考える
         # "user_answers": user_answers,
         "human_scores": human_scores,
-        "prompt_label": st.session_state.get("prompt_label", "")
+        "prompt_label": st.session_state.get("prompt_label", ""),
     }
+    if termination_label:
+        entry["termination_label"] = termination_label
+    if termination_reason:
+        entry["termination_reason"] = termination_reason
 
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
