@@ -77,9 +77,9 @@ def predict_with_model():
     fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
     info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
     function_sequence = fs_match.group(1).strip() if fs_match else ""
-    final_output = info_match.group(1).strip() if info_match else ""
+    information = info_match.group(1).strip() if info_match else ""
 
-    text = f"instruction: {instruction} \nfs: {function_sequence} \nfo: {final_output}"
+    text = f"instruction: {instruction} \nfs: {function_sequence} \ninfo: {information}"
     model_path = Path(st.session_state.get("model_path", MODEL_PATH))
     model = joblib.load(model_path)
     pred = model.predict([text])[0]
@@ -88,7 +88,7 @@ def predict_with_model():
     entry = {
         "instruction": instruction,
         "function_sequence": function_sequence,
-        "final_output": final_output,
+        "information": information,
         "label": label,
         "mode": st.session_state.get("mode", "")
     }
@@ -107,7 +107,7 @@ def predict_with_model():
     #         f.write("\n")
     #     f.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
-    _save_to_firestore(entry)
+    _save_to_firestore(entry, collection_override="predict_with_model")
     return label
 
 def save_pre_experiment_result(human_score: int):

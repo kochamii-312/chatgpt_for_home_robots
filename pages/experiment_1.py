@@ -25,6 +25,38 @@ load_dotenv()
 def app():
     st.title("LLMATCHデモアプリ")
     st.subheader("実験① GPTとGPT with Criticの比較")
+    
+    st.sidebar.title("使用できる関数")
+    st.sidebar.markdown(
+    """
+    - **move_to(room_name:str)**  
+    指定した部屋へロボットを移動します。
+
+    - **pick_object(object:str)**  
+    指定した物体をつかみます。
+
+    - **place_object_next_to(object:str, target:str)**  
+    指定した物体をターゲットの横に置きます。
+
+    - **place_object_on(object:str, target:str)**  
+    指定した物体をターゲットの上に置きます。
+
+    - **place_object_in(object:str, target:str)**  
+    指定した物体をターゲットの中に入れます。
+
+    - **detect_object(object:str)**  
+    YOLOで指定した物体を検出します。
+
+    - **search_about(object:str)**  
+    指定した物体に関する情報を検索します。
+
+    - **push(object:str)**  
+    指定した物体を押します。
+
+    - **say(text:str)**  
+    指定したテキストを発話します。
+    """
+    )
 
     mode_options = ["GPT", "GPT with critic"]
     default_mode = st.session_state.get("mode", "GPT with critic")
@@ -98,7 +130,7 @@ def app():
         st.session_state["context"] = [{"role": "system", "content": system_prompt}]
         st.session_state["system_prompt"] = system_prompt
         st.session_state.conv_log = {
-            "final_answer": "",
+            "information": "",
             "label": "",
             "clarifying_steps": []
         }
@@ -216,6 +248,7 @@ def app():
                     "obstacle": obstacle,
                     "selection": selection,
                     "extra_question": extra_question,
+                    "reason_to_end": reason_to_end,
                 }
                 save_experiment_1_result(scores)
                 st.session_state.active = False

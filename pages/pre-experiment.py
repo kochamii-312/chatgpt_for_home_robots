@@ -90,6 +90,38 @@ def app():
     st.write("定量的評価：人間が作った行動計画の正解と、対話によって最終的に生成されたロボットの行動計画を比較し、どれくらい一致するかを検証する。")
     st.write("定性的評価：対話によって最終的に生成されたロボットの行動計画が実行可能かを評価する。")
 
+    st.sidebar.title("使用できる関数")
+    st.sidebar.markdown(
+    """
+    - **move_to(room_name:str)**  
+    指定した部屋へロボットを移動します。
+
+    - **pick_object(object:str)**  
+    指定した物体をつかみます。
+
+    - **place_object_next_to(object:str, target:str)**  
+    指定した物体をターゲットの横に置きます。
+
+    - **place_object_on(object:str, target:str)**  
+    指定した物体をターゲットの上に置きます。
+
+    - **place_object_in(object:str, target:str)**  
+    指定した物体をターゲットの中に入れます。
+
+    - **detect_object(object:str)**  
+    YOLOで指定した物体を検出します。
+
+    - **search_about(object:str)**  
+    指定した物体に関する情報を検索します。
+
+    - **push(object:str)**  
+    指定した物体を押します。
+
+    - **say(text:str)**  
+    指定したテキストを発話します。
+    """
+    )
+
     system_prompt = SYSTEM_PROMPT
 
     model_files = [f for f in os.listdir("models") if f.endswith(".joblib")]
