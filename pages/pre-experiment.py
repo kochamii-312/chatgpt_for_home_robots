@@ -176,10 +176,13 @@ def app():
             and f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp"))
         ]
         if image_files:
-            selected_img = st.selectbox("表示する画像", image_files)
-            selected_path = os.path.join(image_dir, selected_img)
-            st.session_state["selected_image_path"] = selected_path
-            st.image(selected_path, caption=selected_img)
+            selected_imgs = st.multiselect("表示する画像", image_files)
+            selected_paths = [os.path.join(image_dir, img) for img in selected_imgs]
+            st.session_state["selected_image_paths"] = selected_paths
+            for path, img in zip(selected_paths, selected_imgs):
+                st.image(path, caption=img)
+        else:
+            st.session_state["selected_image_paths"] = []
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if (
@@ -220,12 +223,12 @@ def app():
     
     if user_input:
         context.append({"role": "user", "content": user_input})
-        selected_path = st.session_state.get("selected_image_path")
-        if selected_path:
+        selected_paths = st.session_state.get("selected_image_paths", [])
+        if selected_paths:
             context.append(
                 build_bootstrap_user_message(
-                    text="Here is the selected image. Use it for scene understanding and disambiguation.",
-                    local_image_paths=[selected_path],
+                    text="Here are the selected images. Use them for scene understanding and disambiguation.",
+                    local_image_paths=selected_paths,
                 )
             )
         response = client.chat.completions.create(
