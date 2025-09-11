@@ -26,6 +26,39 @@ def accumulate_information(reply: str) -> str:
 
 def app():
     st.title("LLMATCHデモアプリ")
+    
+    st.sidebar.title("使用できる関数")
+    st.sidebar.markdown(
+    """
+    - **move_to(room_name:str)**  
+    指定した部屋へロボットを移動します。
+
+    - **pick_object(object:str)**  
+    指定した物体をつかみます。
+
+    - **place_object_next_to(object:str, target:str)**  
+    指定した物体をターゲットの横に置きます。
+
+    - **place_object_on(object:str, target:str)**  
+    指定した物体をターゲットの上に置きます。
+
+    - **place_object_in(object:str, target:str)**  
+    指定した物体をターゲットの中に入れます。
+
+    - **detect_object(object:str)**  
+    YOLOで指定した物体を検出します。
+
+    - **search_about(object:str)**  
+    指定した物体に関する情報を検索します。
+
+    - **push(object:str)**  
+    指定した物体を押します。
+
+    - **say(text:str)**  
+    指定したテキストを発話します。
+    """
+    )
+
 
     image_root = "images"
     house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
