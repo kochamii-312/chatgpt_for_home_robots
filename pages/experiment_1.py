@@ -9,6 +9,7 @@ from move_functions import (
     place_object_on,
 )
 from dotenv import load_dotenv
+from session_state_utils import PrefixedSessionState
 from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
 from strips import strip_tags, extract_between
 from run_and_show import (
@@ -21,6 +22,8 @@ from run_and_show import show_provisional_output
 from pathlib import Path
 
 load_dotenv()
+base_state = getattr(st.session_state, "_PrefixedSessionState__base", st.session_state)
+st.session_state = PrefixedSessionState(base_state, "exp1_")
 
 def app():
     st.title("LLMATCHデモアプリ")
