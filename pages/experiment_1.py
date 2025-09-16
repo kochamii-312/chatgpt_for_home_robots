@@ -261,7 +261,6 @@ def app():
                     "obstacle": obstacle,
                     "selection": selection,
                     "extra_question": extra_question,
-                    "reason_to_end": reason_to_end,
                 }
                 termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
                 save_experiment_1_result(

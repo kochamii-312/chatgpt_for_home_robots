@@ -284,6 +284,11 @@ def save_experiment_2_result(
             user_answers.append(content.strip())
     text = f"instruction: {instruction} \nfs: {function_sequence}"
 
+    if termination_label:
+        entry["termination_label"] = termination_label
+    if termination_reason:
+        entry["termination_reason"] = termination_reason
+
     entry = {
         "instruction": instruction,
         "function_sequence": function_sequence,
@@ -293,11 +298,9 @@ def save_experiment_2_result(
         # "user_answers": user_answers,
         "human_scores": human_scores,
         "prompt_label": st.session_state.get("prompt_label", ""),
+        "termination_label": termination_label,
+        "termination_reason": termination_reason,
     }
-    if termination_label:
-        entry["termination_label"] = termination_label
-    if termination_reason:
-        entry["termination_reason"] = termination_reason
 
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
