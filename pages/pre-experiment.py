@@ -124,13 +124,22 @@ def app():
 
     system_prompt = SYSTEM_PROMPT
 
-    model_files = [f for f in os.listdir("models") if f.endswith(".joblib")]
+    model_files = sorted(
+        f for f in os.listdir("models") if f.endswith(".joblib")
+    )
     if model_files:
-        current_model = os.path.basename(st.session_state.get("model_path", model_files[0]))
+        latest_model = max(
+            model_files,
+            key=lambda f: os.path.getmtime(os.path.join("models", f)),
+        )
+        stored_model = st.session_state.get("model_path")
+        current_model = os.path.basename(stored_model) if stored_model else None
+        if current_model not in model_files:
+            current_model = latest_model
         selected_model = st.selectbox(
             "評価モデル",
             model_files,
-            index=model_files.index(current_model) if current_model in model_files else 0,
+            index=model_files.index(current_model),
         )
         st.session_state["model_path"] = os.path.join("models", selected_model)
 
