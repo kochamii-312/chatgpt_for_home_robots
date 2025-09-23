@@ -4,12 +4,15 @@ import os
 import re
 from openai import OpenAI
 from dotenv import load_dotenv
+from session_state_utils import PrefixedSessionState
 from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import show_function_sequence, show_clarifying_question, show_information, run_plan_and_show
 from jsonl import save_jsonl_entry, show_jsonl_block, save_pre_experiment_result
 
 load_dotenv()
+base_state = getattr(st.session_state, "_PrefixedSessionState__base", st.session_state)
+st.session_state = PrefixedSessionState(base_state, "app_")
 
 
 def accumulate_information(reply: str) -> str:

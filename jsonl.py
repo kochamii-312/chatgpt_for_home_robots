@@ -4,8 +4,10 @@ import re
 from pathlib import Path
 import joblib
 import os
+from typing import Any, List, Optional, Tuple
 from dotenv import load_dotenv
 from firebase_utils import save_document
+from api import client
 
 load_dotenv()
 
@@ -14,6 +16,147 @@ MODEL_PATH = Path(__file__).parent / "models" / "critic_model_20250903_053907.jo
 PRE_EXPERIMENT_PATH = Path(__file__).parent / "json" / "pre_experiment_results.jsonl"
 EXPERIMENT_1_PATH = Path(__file__).parent / "json" / "experiment_1_results.jsonl"
 EXPERIMENT_2_PATH = Path(__file__).parent / "json" / "experiment_2_results.jsonl"
+
+PLAN_SUCCESS_PROMPT_TEMPLATE = """Here is the conversation history with the user and the resulting action plan.  
+Evaluate the **probability of success (0–100%)** if this plan were executed.  
+
+- "Success" means the plan matches the user’s intent, is feasible, safe, and logically consistent.  
+- Consider the entire conversation history when making your judgment.  
+- Output only the number (e.g., 75). Do not include any explanation.  
+
+[Conversation History]  
+{conversation_history}  
+
+[Action Plan]  
+{action_plan}  
+"""
+
+
+def _analyze_function_sequence(function_sequence: str) -> Tuple[int, List[int]]:
+    """関数数と各関数の変数文字数を取得する"""
+
+    if not function_sequence:
+        return 0, []
+
+    function_pattern = re.compile(r"<\s*(?!/)([\w_]+)([^>]*)>")
+    attr_pattern = re.compile(r"=\s*\"([^\"]*)\"")
+
+    function_count = 0
+    variable_lengths: List[int] = []
+
+    for match in function_pattern.finditer(function_sequence):
+        tag_name = match.group(1)
+        if tag_name.lower() == "functionsequence":
+            continue
+        attributes = match.group(2) or ""
+        matched_text = match.group(0)
+        is_self_closing = matched_text.rstrip().endswith("/>")
+
+        values = [v.strip() for v in attr_pattern.findall(attributes)]
+
+        inner_text = ""
+        if not is_self_closing:
+            closing_tag = f"</{tag_name}>"
+            start_index = match.end()
+            end_index = function_sequence.find(closing_tag, start_index)
+            if end_index != -1:
+                inner_text = function_sequence[start_index:end_index]
+                inner_text = inner_text.strip()
+
+        if inner_text:
+            values.append(inner_text)
+
+        total_length = sum(len(value) for value in values)
+
+        function_count += 1
+        variable_lengths.append(total_length)
+
+    return function_count, variable_lengths
+
+
+def _stringify_content(content: Any) -> str:
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts: List[str] = []
+        for item in content:
+            if isinstance(item, dict):
+                item_type = item.get("type")
+                if item_type == "text":
+                    text = item.get("text", "")
+                    if text:
+                        parts.append(text)
+                elif item_type == "image_url":
+                    url = ""
+                    image_payload = item.get("image_url")
+                    if isinstance(image_payload, dict):
+                        url = image_payload.get("url", "")
+                    if url:
+                        parts.append(f"[image: {url}]")
+                else:
+                    parts.append(json.dumps(item, ensure_ascii=False))
+            else:
+                parts.append(str(item))
+        return " ".join(p for p in parts if p)
+    if isinstance(content, dict):
+        return json.dumps(content, ensure_ascii=False)
+    if content is None:
+        return ""
+    return str(content)
+
+
+def _format_conversation_history(context: Optional[List[dict[str, Any]]]) -> str:
+    if not context:
+        return ""
+    lines: List[str] = []
+    for message in context:
+        role = message.get("role", "") if isinstance(message, dict) else ""
+        if role == "system":
+            continue
+        content = _stringify_content(message.get("content")) if isinstance(message, dict) else str(message)
+        if not content:
+            continue
+        role_label = role.capitalize() if role else "Unknown"
+        lines.append(f"{role_label}: {content}")
+    return "\n".join(lines).strip()
+
+
+def evaluate_plan_success_probability(
+    context: Optional[List[dict[str, Any]]],
+    action_plan: Optional[str],
+) -> Optional[float]:
+    formatted_history = _format_conversation_history(context)
+    action_plan = (action_plan or "").strip()
+    if not formatted_history or not action_plan:
+        return None
+
+    prompt = PLAN_SUCCESS_PROMPT_TEMPLATE.format(
+        conversation_history=formatted_history,
+        action_plan=action_plan,
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except Exception as e:
+        print(f"[PlanEval] Failed to call evaluation model: {e}")
+        return None
+
+    result_text = response.choices[0].message.content.strip()
+    match = re.search(r"\d+(?:\.\d+)?", result_text)
+    if not match:
+        print(f"[PlanEval] Unexpected response: {result_text}")
+        return None
+
+    try:
+        value = float(match.group(0))
+    except ValueError:
+        print(f"[PlanEval] Unable to parse probability from response: {result_text}")
+        return None
+
+    return max(0.0, min(100.0, value))
 
 
 def _save_to_firestore(entry, collection_override=None):
@@ -155,6 +298,13 @@ def save_pre_experiment_result(human_score: int):
         "mode": st.session_state.get("mode", "")
     }
 
+    success_probability = evaluate_plan_success_probability(
+        st.session_state.context,
+        function_sequence,
+    )
+    if success_probability is not None:
+        entry["plan_success_probability"] = success_probability
+
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
@@ -192,6 +342,16 @@ def save_experiment_1_result(
     function_sequence = fs_match.group(1).strip() if fs_match else ""
     information = info_match.group(1).strip() if info_match else ""
 
+    function_count, variable_lengths = _analyze_function_sequence(function_sequence)
+
+    human_scores = dict(human_scores)
+    success_probability = evaluate_plan_success_probability(
+        st.session_state.context,
+        function_sequence,
+    )
+    if success_probability is not None:
+        human_scores["plan_success_probability"] = success_probability
+
     clarifications = []
     user_answers = []
     for m in st.session_state.context:
@@ -226,7 +386,11 @@ def save_experiment_1_result(
         "similarity": similarity,
         "human_scores": human_scores,
         "mode": st.session_state.get("mode", ""),
+        "function_count": function_count,
+        "function_variable_lengths": variable_lengths,
     }
+    if success_probability is not None:
+        entry["plan_success_probability"] = success_probability
     if termination_label:
         entry["termination_label"] = termination_label
     if termination_reason:
@@ -269,6 +433,16 @@ def save_experiment_2_result(
     function_sequence = fs_match.group(1).strip() if fs_match else ""
     information = info_match.group(1).strip() if info_match else ""
 
+    function_count, variable_lengths = _analyze_function_sequence(function_sequence)
+
+    human_scores = dict(human_scores)
+    success_probability = evaluate_plan_success_probability(
+        st.session_state.context,
+        function_sequence,
+    )
+    if success_probability is not None:
+        human_scores["plan_success_probability"] = success_probability
+
     clarifications = []
     user_answers = []
     for m in st.session_state.context:
@@ -284,11 +458,6 @@ def save_experiment_2_result(
             user_answers.append(content.strip())
     text = f"instruction: {instruction} \nfs: {function_sequence}"
 
-    if termination_label:
-        entry["termination_label"] = termination_label
-    if termination_reason:
-        entry["termination_reason"] = termination_reason
-
     entry = {
         "instruction": instruction,
         "function_sequence": function_sequence,
@@ -300,7 +469,16 @@ def save_experiment_2_result(
         "prompt_label": st.session_state.get("prompt_label", ""),
         "termination_label": termination_label,
         "termination_reason": termination_reason,
+        "function_count": function_count,
+        "function_variable_lengths": variable_lengths,
     }
+    if success_probability is not None:
+        entry["plan_success_probability"] = success_probability
+
+    if termination_label:
+        entry["termination_label"] = termination_label
+    if termination_reason:
+        entry["termination_reason"] = termination_reason
 
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
