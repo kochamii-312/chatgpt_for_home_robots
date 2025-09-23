@@ -4,7 +4,8 @@ import re
 from pathlib import Path
 import joblib
 import os
-from typing import List, Optional, Tuple
+
+from typing import Any, List, Optional, Tuple
 from dotenv import load_dotenv
 from firebase_utils import save_document
 from api import client

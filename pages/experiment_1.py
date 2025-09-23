@@ -9,7 +9,6 @@ from move_functions import (
     place_object_on,
 )
 from dotenv import load_dotenv
-from session_state_utils import PrefixedSessionState
 from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
 from strips import strip_tags, extract_between
 from run_and_show import (
@@ -22,8 +21,6 @@ from run_and_show import show_provisional_output
 from pathlib import Path
 
 load_dotenv()
-base_state = getattr(st.session_state, "_PrefixedSessionState__base", st.session_state)
-st.session_state = PrefixedSessionState(base_state, "exp1_")
 
 def app():
     st.title("LLMATCHデモアプリ")
@@ -212,58 +209,63 @@ def app():
         st.success(end_message)
         if st.session_state.active:
             with st.form("evaluation_form"):
-                feasibility = st.radio(
-                    "使う関数は適切か（不要なものが含まれている / 違う関数の方が適切）（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                name = st.text_input(
+                    "あなたの名前やユーザーネーム等（被験者区別用）"
                 )
-                variables = st.radio(
-                    "関数の変数は適切か（間違ったオブジェクトが入っている / もっと良い変数がある）（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                success = st.radio(
+                    "行動計画が実行されたとして、ロボットは成功しますか？", 
+                    ["成功する", "成功しない"], 
+                    horizontal=True
                 )
-                specificity = st.radio(
-                    "関数の変数の具体性（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                failure_reason = st.multiselect(
+                    "成功しない場合、その理由を教えてください。（複数選択可）",
+                    [
+                        "関数が不適切・不足している",
+                        "変数が不適切・具体的でない",
+                        "虚偽の情報が含まれている",
+                        "会話の中で出てきた必要な情報を含んでいない",
+                        "複数のものがある中で適切なものが選べない",
+                        "以上の理由以外", 
+                        "成功する"
+                    ]
                 )
-                hallucination = st.radio(
-                    "実際にはないもの・伝えていない情報を含めていないか（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                failure_reason_others = st.text_input(
+                    "前の質問で「以上の理由以外」を選んだ方はその内容を書いてください。"
                 )
-                coverage = st.radio(
-                    "聞いたことがすべて盛り込まれているか（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                grices_maxim = st.multiselect(
+                    "ロボットの発言に関して、以下の内容の中で当てはまるものがあれば選んでください。（複数選択可）",
+                    [
+                        "嘘や虚偽の情報を述べた",
+                        "質問・情報提供が多すぎるまたは少なすぎる",
+                        "タスクを実行するのに関係のない発言があった",
+                        "コミュニケーションが明確でなかった（何と答えればいいかわからない質問があった等）"
+                    ]
                 )
-                obstacle = st.radio(
-                    "障害物があれば、避けられるか（1-4）",
+                familiarity = st.radio(
+                    "ロボットにどれくらい親近感を持ちましたか？（1-4）",
                     [1, 2, 3, 4],
-                    horizontal=True,
+                    horizontal=True
                 )
-                selection = st.radio(
-                    "複数のものがある中で適切なものが選べるか（1-4）",
+                social_presence = st.radio(
+                    "対話の相手がそこに存在し、自分と同じ空間を共有している、あるいは自分と関わっている感覚（ソーシャルプレゼンス）をどれくらい持ちましたか？（1-4）",
                     [1, 2, 3, 4],
-                    horizontal=True,
+                    horizontal=True
                 )
-                extra_question = st.radio(
-                    "会話の中で余計な質問・不自然な質問があったか（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                free = st.text_input(
+                    "その他に何か感じたことがあればお願いします。"
                 )
                 submitted = st.form_submit_button("評価を保存")
 
             if submitted:
                 scores = {
-                    "feasibility": feasibility,
-                    "variables": variables,
-                    "specificity": specificity,
-                    "hallucination": hallucination,
-                    "coverage": coverage,
-                    "obstacle": obstacle,
-                    "selection": selection,
-                    "extra_question": extra_question,
+                    "name": name,
+                    "success": success,
+                    "failure_reason": failure_reason,
+                    "failure_reason_others": failure_reason_others,
+                    "grices_maxim": grices_maxim,
+                    "familiarity": familiarity,
+                    "social_presence": social_presence,
+                    "free": free,
                 }
                 termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
                 save_experiment_1_result(
@@ -277,7 +279,7 @@ def app():
             st.warning("会話を終了しました。ありがとうございました！")
             cols_end = st.columns([1, 1, 2])
             with cols_end[0]:
-                if st.button("会話をリセット", key="reset_conv_end"):
+                if st.button("⚠️会話をリセット", key="reset_conv_end"):
                     st.session_state.context = [{"role": "system", "content": system_prompt}]
                     st.session_state.active = True
                     st.session_state.conv_log = {
@@ -290,14 +292,14 @@ def app():
                     st.session_state.end_reason = ""
                     st.rerun()
             with cols_end[1]:
-                st.button("会話を強制的に終了", key="force_end_disabled", disabled=True)
+                st.button("🚨会話を強制的に終了", key="force_end_disabled", disabled=True)
             with cols_end[2]:
                 st.text_input("会話を終了したい理由", key="end_reason", disabled=True)
             st.stop()
 
     cols = st.columns([1, 1, 2])
     with cols[0]:
-        if st.button("会話をリセット", key="reset_conv"):
+        if st.button("⚠️会話をリセット", key="reset_conv"):
             st.session_state.context = [{"role": "system", "content": system_prompt}]
             st.session_state.active = True
             st.session_state.conv_log = {
@@ -310,7 +312,7 @@ def app():
             st.session_state.end_reason = ""
             st.rerun()
     with cols[1]:
-        if st.button("会話を強制的に終了", key="force_end_button"):
+        if st.button("🚨会話を強制的に終了", key="force_end_button"):
             st.session_state.force_end = True
             st.session_state.end_reason = st.session_state.get("end_reason", "")
             st.rerun()
