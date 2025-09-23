@@ -273,58 +273,50 @@ def app():
         st.success(end_message)
         if st.session_state.active:
             with st.form("evaluation_form"):
-                feasibility = st.radio(
-                    "使う関数は適切か（不要なものが含まれている / 違う関数の方が適切）（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                name = st.text_input(
+                    "あなたの名前やユーザーネーム等（被験者区別用）"
                 )
-                variables = st.radio(
-                    "関数の変数は適切か（間違ったオブジェクトが入っている / もっと良い変数がある）（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                success = st.radio(
+                    "行動計画が実行されたとして、ロボットは成功しますか？", 
+                    ["成功する", "成功しない"], 
+                    horizontal=True
                 )
-                specificity = st.radio(
-                    "関数の変数の具体性（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                failure_reason = st.checkbox(
+                    "成功しない場合、その理由を教えてください。",
+                    ["関数が不適切・不足している", "変数が不適切・具体的でない", "虚偽の情報が含まれている", "会話の中で出てきた必要な情報を含んでいない", "複数のものがある中で適切なものが選べない", "以上の理由以外", "成功する"]
                 )
-                hallucination = st.radio(
-                    "実際にはないもの・伝えていない情報を含めていないか（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                failure_reason_others = st.text_input(
+                    "前の質問で「以上の理由以外」を選んだ方はその内容を書いてください。なければ「なし」と回答してください。"
                 )
-                coverage = st.radio(
-                    "聞いたことがすべて盛り込まれているか（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                grices_maxim = st.checkbox(
+                    "ロボットの発現に関して、以下の内容に当てはまるものがあればチェックをつけてください。",
+                    ["嘘や虚偽の情報を述べた", "質問・情報提供が多すぎるまたは少なすぎる", "タスクを実行するのに関係のない発言があった", "コミュニケーションが明確でなかった（何と答えればいいかわからない質問があった等）"]
                 )
-                obstacle = st.radio(
-                    "障害物があれば、避けられるか（1-4）",
+                familiarity = st.radio(
+                    "ロボットにどれくらい親近感を持ちましたか？（1-4）",
                     [1, 2, 3, 4],
-                    horizontal=True,
+                    horizontal=True
                 )
-                selection = st.radio(
-                    "複数のものがある中で適切なものが選べるか（1-4）",
+                social_presence = st.radio(
+                    "対話の相手がそこに存在し、自分と同じ空間を共有している、あるいは自分と関わっている感覚（ソーシャルプレゼンス）をどれくらい持ちましたか？（1-4）",
                     [1, 2, 3, 4],
-                    horizontal=True,
+                    horizontal=True
                 )
-                extra_question = st.radio(
-                    "会話の中で余計な質問・不自然な質問があったか（1-4）",
-                    [1, 2, 3, 4],
-                    horizontal=True,
+                free = st.text_input(
+                    "その他に何か感じたことがあればお願いします。"
                 )
                 submitted = st.form_submit_button("評価を保存")
 
             if submitted:
                 scores = {
-                    "feasibility": feasibility,
-                    "variables": variables,
-                    "specificity": specificity,
-                    "hallucination": hallucination,
-                    "coverage": coverage,
-                    "obstacle": obstacle,
-                    "selection": selection,
-                    "extra_question": extra_question,
+                    "name": name,
+                    "success": success,
+                    "failure_reason": failure_reason,
+                    "failure_reason_others": failure_reason_others,
+                    "grices_maxim": grices_maxim,
+                    "familiarity": familiarity,
+                    "social_presence": social_presence,
+                    "free": free,
                 }
                 termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
                 save_experiment_2_result(
