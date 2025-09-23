@@ -26,7 +26,7 @@ def app():
     st.title("LLMATCHデモアプリ")
     st.subheader("実験① GPTとGPT with Criticの比較")
     
-    st.sidebar.title("使用できる関数")
+    st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
     """
     - **move_to(room_name:str)**  
@@ -99,7 +99,7 @@ def app():
         current_sub_label = current_sub if current_sub else sub_default
         sub_options = [sub_default] + subdirs
         sub_label = st.selectbox(
-            "フォルダ",
+            "部屋",
             sub_options,
             index=sub_options.index(current_sub_label) if current_sub_label in sub_options else 0,
         )

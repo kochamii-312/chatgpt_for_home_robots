@@ -27,7 +27,7 @@ def accumulate_information(reply: str) -> str:
 def app():
     st.title("LLMATCHデモアプリ")
     
-    st.sidebar.title("使用できる関数")
+    st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
     """
     - **move_to(room_name:str)**  
@@ -84,7 +84,7 @@ def app():
         current_sub_label = current_sub if current_sub else sub_default
         sub_options = [sub_default] + subdirs
         sub_label = st.selectbox(
-            "フォルダ",
+            "部屋",
             sub_options,
             index=sub_options.index(current_sub_label) if current_sub_label in sub_options else 0,
         )
@@ -227,7 +227,7 @@ def app():
             if st.session_state.active == False:
                 show_jsonl_block()
                 st.warning("会話を終了しました。ありがとうございました！")
-                if st.button("会話をリセット", key="reset_conv"):
+                if st.button("⚠️会話をリセット", key="reset_conv"):
                     st.session_state.context = [{"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT}]
                     st.session_state.active = True
                     st.session_state.conv_log = {

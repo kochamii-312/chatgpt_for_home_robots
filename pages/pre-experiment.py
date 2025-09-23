@@ -90,7 +90,7 @@ def app():
     st.write("定量的評価：人間が作った行動計画の正解と、対話によって最終的に生成されたロボットの行動計画を比較し、どれくらい一致するかを検証する。")
     st.write("定性的評価：対話によって最終的に生成されたロボットの行動計画が実行可能かを評価する。")
 
-    st.sidebar.title("使用できる関数")
+    st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
     """
     - **move_to(room_name:str)**  
@@ -158,7 +158,7 @@ def app():
         current_sub_label = current_sub if current_sub else sub_default
         sub_options = [sub_default] + subdirs
         sub_label = st.selectbox(
-            "フォルダ",
+            "部屋",
             sub_options,
             index=sub_options.index(current_sub_label) if current_sub_label in sub_options else 0,
         )
@@ -245,7 +245,7 @@ def app():
             finalize_and_render_plan(label)
             if st.session_state.active == False:
                 st.warning("会話を終了しました。ありがとうございました！")
-                if st.button("会話をリセット", key="reset_conv"):
+                if st.button("⚠️会話をリセット", key="reset_conv"):
                     st.session_state.context = [{"role": "system", "content": SYSTEM_PROMPT}]
                     st.session_state.active = True
                     st.session_state.conv_log = {
@@ -271,7 +271,7 @@ def app():
 
         # if i == last_assistant_idx: #and "<FinalOutput>" in msg["content"]:
             
-    if st.button("会話をリセット", key="reset_conv"):
+    if st.button("⚠️会話をリセット", key="reset_conv"):
         # セッション情報を初期化
         st.session_state.context = [{"role": "system", "content": system_prompt}]
         st.session_state.active = True

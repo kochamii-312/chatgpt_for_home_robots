@@ -87,9 +87,8 @@ def get_critic_label(context):
 def app():
     st.title("LLMATCHデモアプリ")
     st.subheader("ChatGPT with 'Critic'")
-    st.warning("このページは、再読み込み時にモデルの学習が行われるため、起動に時間がかかります。")
     
-    st.sidebar.title("使用できる関数")
+    st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
     """
     - **move_to(room_name:str)**  
@@ -164,7 +163,7 @@ def app():
         current_sub_label = current_sub if current_sub else sub_default
         sub_options = [sub_default] + subdirs
         sub_label = st.selectbox(
-            "フォルダ",
+            "部屋",
             sub_options,
             index=sub_options.index(current_sub_label) if current_sub_label in sub_options else 0,
         )
@@ -328,7 +327,7 @@ def app():
     
     cols = st.columns([1, 1, 2])
     with cols[0]:
-        if st.button("会話をリセット", key="reset_conv"):
+        if st.button("⚠️会話をリセット", key="reset_conv"):
             # セッション情報を初期化
             st.session_state.context = [{"role": "system", "content": system_prompt}]
             st.session_state.active = True
@@ -341,7 +340,7 @@ def app():
             st.session_state.end_reason = ""
             st.rerun()
     with cols[1]:
-        if st.button("会話を強制的に終了", key="force_end_button"):
+        if st.button("🚨会話を強制的に終了", key="force_end_button"):
             st.session_state.force_end = True
             st.session_state.end_reason = st.session_state.get("end_reason", "")
             st.rerun()
