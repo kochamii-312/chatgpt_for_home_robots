@@ -1,70 +1,104 @@
-import json
-import joblib
 import datetime
+import json
+from pathlib import Path
+from typing import Iterable
+
+import joblib
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.pipeline import Pipeline
 from sklearn.metrics import classification_report, precision_recall_curve
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 
-# データ読み込み
-def load_jsonl(path):
+
+DATA_DIR = Path(__file__).parent / "json"
+DEFAULT_TRAIN_PATH = DATA_DIR / "critic_dataset_train.jsonl"
+DEFAULT_VALID_PATH = DATA_DIR / "critic_dataset_valid.jsonl"
+
+
+def load_jsonl(path: str | Path) -> list[dict]:
+    """jsonlファイルを読み込み、空行を除外して辞書のリストを返す。"""
+
     with open(path, "r", encoding="utf-8") as f:
-        # 空行を除外して読み込む
         return [json.loads(line) for line in f if line.strip()]
 
-train_data = load_jsonl("./json/critic_dataset_train.jsonl")
-valid_data = load_jsonl("./json/critic_dataset_valid.jsonl")
 
-# テキストとラベルを作成
-def prepare_data(data):
-    texts = []
-    labels = []
+def prepare_data(data: Iterable[dict]) -> tuple[list[str], list[int]]:
+    """学習・推論で利用するテキストとラベルを作成する。"""
+
+    texts: list[str] = []
+    labels: list[int] = []
     for ex in data:
-        # instruction, function_sequence, information を連結して特徴とする
-        parts = [ex.get("instruction", ""),
-                 ex.get("function_sequence", ""),
-                 ex.get("information", "")]
+        parts = [
+            ex.get("instruction", ""),
+            ex.get("function_sequence", ""),
+            ex.get("information", ""),
+        ]
         text = " | ".join(parts)
         texts.append(text)
         labels.append(1 if ex.get("label") == "sufficient" else 0)
     return texts, labels
 
-all_data = train_data + valid_data  # 全部まとめる
-X_all, y_all = prepare_data(all_data)
 
-X_train, X_valid, y_train, y_valid = train_test_split(
-    X_all, y_all, test_size=0.2, random_state=42, stratify=y_all
-)
+def build_pipeline() -> Pipeline:
+    """分類モデルの推論パイプラインを生成する。"""
 
-# 1) クラス重み + 2) n-gram/min_df を追加
-model = Pipeline([
-    ('tfidf', TfidfVectorizer(ngram_range=(1,2), min_df=2, max_df=0.95)),
-    ('clf', LogisticRegression(max_iter=1000, class_weight="balanced"))
-])
-
-# 学習
-model.fit(X_train, y_train)
+    return Pipeline(
+        [
+            ("tfidf", TfidfVectorizer(ngram_range=(1, 2), min_df=2, max_df=0.95)),
+            ("clf", LogisticRegression(max_iter=1000, class_weight="balanced")),
+        ]
+    )
 
 
-# 4) 閾値最適化（検証データでF1が最大の閾値を選ぶ）
-proba = model.predict_proba(X_valid)[:, 1]
-prec, rec, th = precision_recall_curve(y_valid, proba)
-f1 = (2*prec*rec)/(prec+rec+1e-9)
-best_idx = np.argmax(f1)
-best_th = th[best_idx] if best_idx < len(th) else 0.5  # 念のため
-y_pred_opt = (proba >= best_th).astype(int)
+def train_and_save_model(
+    train_path: str | Path = DEFAULT_TRAIN_PATH,
+    valid_path: str | Path = DEFAULT_VALID_PATH,
+    *,
+    test_size: float = 0.2,
+    random_state: int = 42,
+) -> Path:
+    """データセットを読み込みモデルを学習し、joblib形式で保存する。"""
 
-print(f"Best threshold ≈ {best_th:.3f}  (valid F1={f1[best_idx]:.3f})")
-print(classification_report(y_valid, y_pred_opt, zero_division=0))
+    train_data = load_jsonl(train_path)
+    valid_data = load_jsonl(valid_path)
 
-# 評価
-pred = model.predict(X_valid)
-print(classification_report(y_valid, pred))
+    all_data: list[dict] = list(train_data) + list(valid_data)
+    X_all, y_all = prepare_data(all_data)
 
-# モデル保存（タイムスタンプ付き）
-timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-filename = f"models/critic_model_{timestamp}.joblib"
-joblib.dump(model, filename)
-print(f"モデルを保存しました: {filename}")
+    X_train, X_valid, y_train, y_valid = train_test_split(
+        X_all,
+        y_all,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=y_all,
+    )
+
+    model = build_pipeline()
+    model.fit(X_train, y_train)
+
+    proba = model.predict_proba(X_valid)[:, 1]
+    prec, rec, th = precision_recall_curve(y_valid, proba)
+    f1 = (2 * prec * rec) / (prec + rec + 1e-9)
+    best_idx = int(np.argmax(f1))
+    best_th = th[best_idx] if best_idx < len(th) else 0.5
+    y_pred_opt = (proba >= best_th).astype(int)
+
+    print(f"Best threshold ≈ {best_th:.3f}  (valid F1={f1[best_idx]:.3f})")
+    print(classification_report(y_valid, y_pred_opt, zero_division=0))
+
+    pred = model.predict(X_valid)
+    print(classification_report(y_valid, pred))
+
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = Path("models") / f"critic_model_{timestamp}.joblib"
+    filename.parent.mkdir(parents=True, exist_ok=True)
+    joblib.dump(model, filename)
+    print(f"モデルを保存しました: {filename}")
+
+    return filename
+
+
+if __name__ == "__main__":
+    train_and_save_model()

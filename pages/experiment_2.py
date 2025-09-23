@@ -87,7 +87,7 @@ def get_critic_label(context):
 def app():
     st.title("LLMATCHデモアプリ")
     st.subheader("ChatGPT with 'Critic'")
-    st.warning("このページは、再読み込み時にモデルの学習が行われるため、起動に時間がかかります。")
+    st.info("評価モデルの学習は `two_classify.py` を直接実行して行ってください。")
     
     st.sidebar.title("使用できる関数")
     st.sidebar.markdown(
