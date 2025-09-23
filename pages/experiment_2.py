@@ -6,7 +6,6 @@ import joblib
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from openai import OpenAI
 from dotenv import load_dotenv
-from session_state_utils import PrefixedSessionState
 from api import (
     client,
     SYSTEM_PROMPT_STANDARD,
@@ -19,8 +18,6 @@ from run_and_show import show_function_sequence, show_clarifying_question, run_p
 from two_classify import prepare_data  # 既存関数を利用
 
 load_dotenv()
-base_state = getattr(st.session_state, "_PrefixedSessionState__base", st.session_state)
-st.session_state = PrefixedSessionState(base_state, "exp2_")
 
 TAG_RE = re.compile(r"</?([A-Za-z0-9_]+)(\s[^>]*)?>")
 
