@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 import joblib
 import os
+
 from typing import Any, List, Optional, Tuple
 from dotenv import load_dotenv
 from firebase_utils import save_document
@@ -17,18 +18,31 @@ PRE_EXPERIMENT_PATH = Path(__file__).parent / "json" / "pre_experiment_results.j
 EXPERIMENT_1_PATH = Path(__file__).parent / "json" / "experiment_1_results.jsonl"
 EXPERIMENT_2_PATH = Path(__file__).parent / "json" / "experiment_2_results.jsonl"
 
-PLAN_SUCCESS_PROMPT_TEMPLATE = """Here is the conversation history with the user and the resulting action plan.  
-Evaluate the **probability of success (0–100%)** if this plan were executed.  
+PLAN_SUCCESS_PROMPT_TEMPLATE = """Here is a home robot task instruction and the resulting action plan.
+Evaluate the **probability of success (0–100%)** if this plan were executed.
 
-- "Success" means the plan matches the user’s intent, is feasible, safe, and logically consistent.  
-- Consider the entire conversation history when making your judgment.  
-- Output only the number (e.g., 75). Do not include any explanation.  
+- "Success" means the plan matches the user’s intent, is feasible, safe, and logically consistent.
+- Base your judgment only on the provided instruction and function sequence.
+- Output only the number (e.g., 75). Do not include any explanation.
 
-[Conversation History]  
-{conversation_history}  
+[Instruction]
+{instruction}
 
-[Action Plan]  
-{action_plan}  
+[Available Functions]
+<Functions>
+    <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
+    <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
+    <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
+    <Function name="place_object_on" args="object:str, target:str">Place the object on the target.</Function>
+    <Function name="place_object_in" args="object:str, target:str">Place the object in the target.</Function>
+    <Function name="detect_object" args="object:str">Detect the specified object using YOLO.</Function>
+    <Function name="search_about" args="object:str">Search information about the specified object.</Function>
+    <Function name="push" args="object:str">Push the specified object.</Function>
+    <Function name="say" args="text:str">Speak the specified text.</Function>
+</Functions>
+
+[Function Sequence]
+{function_sequence}
 """
 
 
@@ -74,65 +88,18 @@ def _analyze_function_sequence(function_sequence: str) -> Tuple[int, List[int]]:
     return function_count, variable_lengths
 
 
-def _stringify_content(content: Any) -> str:
-    if isinstance(content, str):
-        return content
-    if isinstance(content, list):
-        parts: List[str] = []
-        for item in content:
-            if isinstance(item, dict):
-                item_type = item.get("type")
-                if item_type == "text":
-                    text = item.get("text", "")
-                    if text:
-                        parts.append(text)
-                elif item_type == "image_url":
-                    url = ""
-                    image_payload = item.get("image_url")
-                    if isinstance(image_payload, dict):
-                        url = image_payload.get("url", "")
-                    if url:
-                        parts.append(f"[image: {url}]")
-                else:
-                    parts.append(json.dumps(item, ensure_ascii=False))
-            else:
-                parts.append(str(item))
-        return " ".join(p for p in parts if p)
-    if isinstance(content, dict):
-        return json.dumps(content, ensure_ascii=False)
-    if content is None:
-        return ""
-    return str(content)
-
-
-def _format_conversation_history(context: Optional[List[dict[str, Any]]]) -> str:
-    if not context:
-        return ""
-    lines: List[str] = []
-    for message in context:
-        role = message.get("role", "") if isinstance(message, dict) else ""
-        if role == "system":
-            continue
-        content = _stringify_content(message.get("content")) if isinstance(message, dict) else str(message)
-        if not content:
-            continue
-        role_label = role.capitalize() if role else "Unknown"
-        lines.append(f"{role_label}: {content}")
-    return "\n".join(lines).strip()
-
-
 def evaluate_plan_success_probability(
-    context: Optional[List[dict[str, Any]]],
-    action_plan: Optional[str],
+    instruction: Optional[str],
+    function_sequence: Optional[str],
 ) -> Optional[float]:
-    formatted_history = _format_conversation_history(context)
-    action_plan = (action_plan or "").strip()
-    if not formatted_history or not action_plan:
+    instruction = (instruction or "").strip()
+    function_sequence = (function_sequence or "").strip()
+    if not instruction or not function_sequence:
         return None
 
     prompt = PLAN_SUCCESS_PROMPT_TEMPLATE.format(
-        conversation_history=formatted_history,
-        action_plan=action_plan,
+        instruction=instruction,
+        function_sequence=function_sequence,
     )
 
     try:
@@ -178,6 +145,47 @@ def _save_to_firestore(entry, collection_override=None):
         # Streamlit なら st.error でも良い
         print(f"[Firestore] ERROR saving to {collection}: {e}")
         raise
+
+
+def remove_last_jsonl_entry():
+    """Remove the last saved entry from the dataset file and session cache."""
+
+    if "saved_jsonl" in st.session_state and st.session_state.saved_jsonl:
+        st.session_state.saved_jsonl.pop()
+
+    if not DATASET_PATH.exists():
+        return
+
+    with DATASET_PATH.open("rb+") as f:
+        f.seek(0, os.SEEK_END)
+        file_end = f.tell()
+        if file_end == 0:
+            return
+
+        pos = file_end - 1
+
+        # Skip trailing newlines at the end of the file
+        while pos >= 0:
+            f.seek(pos)
+            if f.read(1) != b"\n":
+                break
+            pos -= 1
+
+        if pos < 0:
+            f.truncate(0)
+            return
+
+        # Find the newline that precedes the last line and truncate after it
+        while pos >= 0:
+            f.seek(pos)
+            if f.read(1) == b"\n":
+                f.truncate(pos + 1)
+                return
+            pos -= 1
+
+        # No newline found, meaning there was a single line
+        f.truncate(0)
+
 
 def save_jsonl_entry(label: str):
     """会話ログをjsonl形式で1行保存"""
@@ -299,7 +307,7 @@ def save_pre_experiment_result(human_score: int):
     }
 
     success_probability = evaluate_plan_success_probability(
-        st.session_state.context,
+        instruction,
         function_sequence,
     )
     if success_probability is not None:
@@ -346,7 +354,7 @@ def save_experiment_1_result(
 
     human_scores = dict(human_scores)
     success_probability = evaluate_plan_success_probability(
-        st.session_state.context,
+        instruction,
         function_sequence,
     )
     if success_probability is not None:
@@ -437,7 +445,7 @@ def save_experiment_2_result(
 
     human_scores = dict(human_scores)
     success_probability = evaluate_plan_success_probability(
-        st.session_state.context,
+        instruction,
         function_sequence,
     )
     if success_probability is not None:
