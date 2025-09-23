@@ -146,6 +146,47 @@ def _save_to_firestore(entry, collection_override=None):
         print(f"[Firestore] ERROR saving to {collection}: {e}")
         raise
 
+
+def remove_last_jsonl_entry():
+    """Remove the last saved entry from the dataset file and session cache."""
+
+    if "saved_jsonl" in st.session_state and st.session_state.saved_jsonl:
+        st.session_state.saved_jsonl.pop()
+
+    if not DATASET_PATH.exists():
+        return
+
+    with DATASET_PATH.open("rb+") as f:
+        f.seek(0, os.SEEK_END)
+        file_end = f.tell()
+        if file_end == 0:
+            return
+
+        pos = file_end - 1
+
+        # Skip trailing newlines at the end of the file
+        while pos >= 0:
+            f.seek(pos)
+            if f.read(1) != b"\n":
+                break
+            pos -= 1
+
+        if pos < 0:
+            f.truncate(0)
+            return
+
+        # Find the newline that precedes the last line and truncate after it
+        while pos >= 0:
+            f.seek(pos)
+            if f.read(1) == b"\n":
+                f.truncate(pos + 1)
+                return
+            pos -= 1
+
+        # No newline found, meaning there was a single line
+        f.truncate(0)
+
+
 def save_jsonl_entry(label: str):
     """会話ログをjsonl形式で1行保存"""
     instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")

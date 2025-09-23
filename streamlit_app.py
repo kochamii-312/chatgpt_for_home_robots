@@ -7,7 +7,12 @@ from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import show_function_sequence, show_clarifying_question, show_information, run_plan_and_show
-from jsonl import save_jsonl_entry, show_jsonl_block, save_pre_experiment_result
+from jsonl import (
+    save_jsonl_entry,
+    show_jsonl_block,
+    save_pre_experiment_result,
+    remove_last_jsonl_entry,
+)
 
 load_dotenv()
 
@@ -207,6 +212,7 @@ def app():
 
             with col1:
                 if st.button("十分", key=f"enough_{i}"):
+                    remove_last_jsonl_entry()
                     save_jsonl_entry("sufficient")
                     st.session_state.active = False
                     st.rerun()
