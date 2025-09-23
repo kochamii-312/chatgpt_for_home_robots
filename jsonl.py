@@ -4,9 +4,10 @@ import re
 from pathlib import Path
 import joblib
 import os
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from dotenv import load_dotenv
 from firebase_utils import save_document
+from api import client
 
 load_dotenv()
 
@@ -15,6 +16,33 @@ MODEL_PATH = Path(__file__).parent / "models" / "critic_model_20250903_053907.jo
 PRE_EXPERIMENT_PATH = Path(__file__).parent / "json" / "pre_experiment_results.jsonl"
 EXPERIMENT_1_PATH = Path(__file__).parent / "json" / "experiment_1_results.jsonl"
 EXPERIMENT_2_PATH = Path(__file__).parent / "json" / "experiment_2_results.jsonl"
+
+PLAN_SUCCESS_PROMPT_TEMPLATE = """Here is a home robot task instruction and the resulting action plan.
+Evaluate the **probability of success (0–100%)** if this plan were executed.
+
+- "Success" means the plan matches the user’s intent, is feasible, safe, and logically consistent.
+- Base your judgment only on the provided instruction and function sequence.
+- Output only the number (e.g., 75). Do not include any explanation.
+
+[Instruction]
+{instruction}
+
+[Available Functions]
+<Functions>
+    <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
+    <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
+    <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
+    <Function name="place_object_on" args="object:str, target:str">Place the object on the target.</Function>
+    <Function name="place_object_in" args="object:str, target:str">Place the object in the target.</Function>
+    <Function name="detect_object" args="object:str">Detect the specified object using YOLO.</Function>
+    <Function name="search_about" args="object:str">Search information about the specified object.</Function>
+    <Function name="push" args="object:str">Push the specified object.</Function>
+    <Function name="say" args="text:str">Speak the specified text.</Function>
+</Functions>
+
+[Function Sequence]
+{function_sequence}
+"""
 
 
 def _analyze_function_sequence(function_sequence: str) -> Tuple[int, List[int]]:
@@ -57,6 +85,44 @@ def _analyze_function_sequence(function_sequence: str) -> Tuple[int, List[int]]:
         variable_lengths.append(total_length)
 
     return function_count, variable_lengths
+
+
+def evaluate_plan_success_probability(
+    instruction: Optional[str],
+    function_sequence: Optional[str],
+) -> Optional[float]:
+    instruction = (instruction or "").strip()
+    function_sequence = (function_sequence or "").strip()
+    if not instruction or not function_sequence:
+        return None
+
+    prompt = PLAN_SUCCESS_PROMPT_TEMPLATE.format(
+        instruction=instruction,
+        function_sequence=function_sequence,
+    )
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+        )
+    except Exception as e:
+        print(f"[PlanEval] Failed to call evaluation model: {e}")
+        return None
+
+    result_text = response.choices[0].message.content.strip()
+    match = re.search(r"\d+(?:\.\d+)?", result_text)
+    if not match:
+        print(f"[PlanEval] Unexpected response: {result_text}")
+        return None
+
+    try:
+        value = float(match.group(0))
+    except ValueError:
+        print(f"[PlanEval] Unable to parse probability from response: {result_text}")
+        return None
+
+    return max(0.0, min(100.0, value))
 
 
 def _save_to_firestore(entry, collection_override=None):
@@ -198,6 +264,13 @@ def save_pre_experiment_result(human_score: int):
         "mode": st.session_state.get("mode", "")
     }
 
+    success_probability = evaluate_plan_success_probability(
+        instruction,
+        function_sequence,
+    )
+    if success_probability is not None:
+        entry["plan_success_probability"] = success_probability
+
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
@@ -237,6 +310,14 @@ def save_experiment_1_result(
 
     function_count, variable_lengths = _analyze_function_sequence(function_sequence)
 
+    human_scores = dict(human_scores)
+    success_probability = evaluate_plan_success_probability(
+        instruction,
+        function_sequence,
+    )
+    if success_probability is not None:
+        human_scores["plan_success_probability"] = success_probability
+
     clarifications = []
     user_answers = []
     for m in st.session_state.context:
@@ -274,6 +355,8 @@ def save_experiment_1_result(
         "function_count": function_count,
         "function_variable_lengths": variable_lengths,
     }
+    if success_probability is not None:
+        entry["plan_success_probability"] = success_probability
     if termination_label:
         entry["termination_label"] = termination_label
     if termination_reason:
@@ -318,6 +401,14 @@ def save_experiment_2_result(
 
     function_count, variable_lengths = _analyze_function_sequence(function_sequence)
 
+    human_scores = dict(human_scores)
+    success_probability = evaluate_plan_success_probability(
+        instruction,
+        function_sequence,
+    )
+    if success_probability is not None:
+        human_scores["plan_success_probability"] = success_probability
+
     clarifications = []
     user_answers = []
     for m in st.session_state.context:
@@ -347,6 +438,8 @@ def save_experiment_2_result(
         "function_count": function_count,
         "function_variable_lengths": variable_lengths,
     }
+    if success_probability is not None:
+        entry["plan_success_probability"] = success_probability
 
     if termination_label:
         entry["termination_label"] = termination_label
