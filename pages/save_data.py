@@ -1,18 +1,19 @@
-import streamlit as st
 import json
 import os
 import re
-from openai import OpenAI
+
+import streamlit as st
 from dotenv import load_dotenv
+
 from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
-from move_functions import move_to, pick_object, place_object_next_to, place_object_on
-from run_and_show import show_function_sequence, show_clarifying_question, show_information, run_plan_and_show
 from jsonl import (
+    remove_last_jsonl_entry,
     save_jsonl_entry,
     show_jsonl_block,
-    save_pre_experiment_result,
-    remove_last_jsonl_entry,
 )
+from move_functions import move_to, pick_object, place_object_next_to, place_object_on
+from run_and_show import run_plan_and_show, show_clarifying_question, show_function_sequence, show_information
+from tasks.ui import render_random_room_task
 
 load_dotenv()
 
@@ -98,6 +99,9 @@ def app():
             image_dir = os.path.join(image_dir, st.session_state["selected_subfolder"])
     else:
         st.session_state["selected_subfolder"] = ""
+
+    selected_room = st.session_state.get("selected_subfolder", "")
+    render_random_room_task(selected_room, state_prefix="save_data")
 
     if os.path.isdir(image_dir):
         image_files = [
