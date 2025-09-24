@@ -3,7 +3,6 @@ import json
 import re
 from pathlib import Path
 import joblib
-import os
 from itertools import zip_longest
 
 from typing import Any, List, Optional, Tuple
@@ -13,7 +12,8 @@ from api import client
 
 load_dotenv()
 
-DATASET_PATH = Path(__file__).parent / "json" / "critic_dataset_train.jsonl"
+DATASET_PATH = Path(__file__).parent / "json" / "critic_dataset_train.json"
+LEGACY_DATASET_PATH = DATASET_PATH.with_suffix(".jsonl")
 MODEL_PATH = Path(__file__).parent / "models" / "critic_model_20250903_053907.joblib"
 PRE_EXPERIMENT_PATH = Path(__file__).parent / "json" / "pre_experiment_results.jsonl"
 EXPERIMENT_1_PATH = Path(__file__).parent / "json" / "experiment_1_results.jsonl"
@@ -148,57 +148,37 @@ def _save_to_firestore(entry, collection_override=None):
         raise
 
 
-def remove_last_jsonl_entry():
-    """Remove the last saved entry from the dataset file and session cache."""
-
-    if "saved_jsonl" in st.session_state and st.session_state.saved_jsonl:
-        st.session_state.saved_jsonl.pop()
-
-    if not DATASET_PATH.exists():
-        return
-
-    with DATASET_PATH.open("rb+") as f:
-        f.seek(0, os.SEEK_END)
-        file_end = f.tell()
-        if file_end == 0:
-            return
-
-        pos = file_end - 1
-
-        # Skip trailing newlines at the end of the file
-        while pos >= 0:
-            f.seek(pos)
-            if f.read(1) != b"\n":
-                break
-            pos -= 1
-
-        if pos < 0:
-            f.truncate(0)
-            return
-
-        # Find the newline that precedes the last line and truncate after it
-        while pos >= 0:
-            f.seek(pos)
-            if f.read(1) == b"\n":
-                f.truncate(pos + 1)
-                return
-            pos -= 1
-
-        # No newline found, meaning there was a single line
-        f.truncate(0)
+def _load_jsonl_entries(path: Path) -> list[dict]:
+    with path.open("r", encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
 
 
-def save_jsonl_entry(label: str):
-    """会話ログをjsonl形式で1行保存"""
-    instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
-    last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
-    fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
-    info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
-    function_sequence = fs_match.group(1).strip() if fs_match else ""
-    information = info_match.group(1).strip() if info_match else ""
+def _load_dataset_entries() -> list[dict]:
+    if DATASET_PATH.exists():
+        try:
+            with DATASET_PATH.open("r", encoding="utf-8") as f:
+                data = json.load(f)
+        except json.JSONDecodeError:
+            data = []
+        if isinstance(data, list):
+            return data
+        return list(data or [])
 
-    clarifying_questions: List[str] = []
-    for message in st.session_state.context:
+    if LEGACY_DATASET_PATH.exists():
+        return _load_jsonl_entries(LEGACY_DATASET_PATH)
+
+    return []
+
+
+def _save_dataset_entries(entries: list[dict]) -> None:
+    DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with DATASET_PATH.open("w", encoding="utf-8") as f:
+        json.dump(entries, f, ensure_ascii=False, indent=2)
+
+
+def _collect_clarifying_history() -> list[dict[str, str]]:
+    clarifying_questions: list[str] = []
+    for message in st.session_state.get("context", []):
         if message.get("role") != "assistant":
             continue
         q_match = re.search(
@@ -215,10 +195,12 @@ def save_jsonl_entry(label: str):
         if ans and ans.strip()
     ]
 
-    clarifying_history = []
+    clarifying_history: list[dict[str, str]] = []
     for question, user_input in zip_longest(
         clarifying_questions, chat_inputs, fillvalue=""
     ):
+        question = question.strip() if isinstance(question, str) else ""
+        user_input = user_input.strip() if isinstance(user_input, str) else ""
         if not question and not user_input:
             continue
         clarifying_history.append(
@@ -227,6 +209,91 @@ def save_jsonl_entry(label: str):
                 "chat_input": user_input,
             }
         )
+
+    return clarifying_history
+
+
+def _format_clarifying_history_for_model(
+    clarifying_history: list[dict[str, str]] | list
+) -> str:
+    segments: list[str] = []
+    for step in clarifying_history:
+        if isinstance(step, dict):
+            question = (
+                step.get("clarifying_question")
+                or step.get("question")
+                or step.get("llm_question")
+                or ""
+            ).strip()
+            answer = (
+                step.get("chat_input")
+                or step.get("user_answer")
+                or step.get("answer")
+                or ""
+            ).strip()
+            pair: list[str] = []
+            if question:
+                pair.append(f"Q: {question}")
+            if answer:
+                pair.append(f"A: {answer}")
+            if pair:
+                segments.append(" ".join(pair))
+        elif step:
+            segments.append(str(step))
+    return " || ".join(segments)
+
+
+def build_critic_model_input(
+    instruction: str,
+    function_sequence: str,
+    clarifying_history: list[dict[str, str]] | list,
+    information: str,
+) -> str:
+    parts: list[str] = []
+
+    instruction = (instruction or "").strip()
+    if instruction:
+        parts.append(f"Instruction: {instruction}")
+
+    function_sequence = (function_sequence or "").strip()
+    if function_sequence:
+        parts.append(f"FunctionSequence: {function_sequence}")
+
+    history_text = _format_clarifying_history_for_model(clarifying_history or [])
+    if history_text:
+        parts.append(f"ClarifyingHistory: {history_text}")
+
+    information = (information or "").strip()
+    if information:
+        parts.append(f"Information: {information}")
+
+    return " | ".join(parts)
+
+
+def remove_last_jsonl_entry():
+    """Remove the last saved entry from the dataset file and session cache."""
+
+    if "saved_jsonl" in st.session_state and st.session_state.saved_jsonl:
+        st.session_state.saved_jsonl.pop()
+
+    entries = _load_dataset_entries()
+    if not entries:
+        return
+
+    entries.pop()
+    _save_dataset_entries(entries)
+
+
+def save_jsonl_entry(label: str):
+    """会話ログをデータセットファイルへ保存"""
+    instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
+    last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
+    fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
+    info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
+    function_sequence = fs_match.group(1).strip() if fs_match else ""
+    information = info_match.group(1).strip() if info_match else ""
+
+    clarifying_history = _collect_clarifying_history()
 
     entry = {
         "instruction": instruction,
@@ -239,16 +306,9 @@ def save_jsonl_entry(label: str):
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
 
-    DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
-    need_newline = False
-    if DATASET_PATH.exists() and DATASET_PATH.stat().st_size > 0:
-        with DATASET_PATH.open("rb") as f:
-            f.seek(-1, 2)
-            need_newline = f.read(1) != b"\n"
-    with DATASET_PATH.open("a", encoding="utf-8") as f:
-        if need_newline:
-            f.write("\n")
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+    entries = _load_dataset_entries()
+    entries.append(entry)
+    _save_dataset_entries(entries)
     _save_to_firestore(entry, collection_override="critic_dataset")
 
 def predict_with_model():
@@ -263,7 +323,13 @@ def predict_with_model():
     function_sequence = fs_match.group(1).strip() if fs_match else ""
     information = info_match.group(1).strip() if info_match else ""
 
-    text = f"instruction: {instruction} \nfs: {function_sequence} \ninfo: {information}"
+    clarifying_history = _collect_clarifying_history()
+    text = build_critic_model_input(
+        instruction,
+        function_sequence,
+        clarifying_history,
+        information,
+    )
     model_path = Path(st.session_state.get("model_path", MODEL_PATH))
     model = joblib.load(model_path)
     pred = model.predict([text])[0]
@@ -272,10 +338,11 @@ def predict_with_model():
     entry = {
         "instruction": instruction,
         "function_sequence": function_sequence,
+        "clarifying_history": clarifying_history,
         "information": information,
-        "label": label,
         "mode": st.session_state.get("mode", "")
     }
+    entry["prediction"] = label
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
