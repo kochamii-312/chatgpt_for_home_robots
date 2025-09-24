@@ -111,7 +111,7 @@ def app():
     指定した物体をターゲットの中に入れます。
 
     - **detect_object(object:str)**  
-    YOLOで指定した物体を検出します。
+    指定した物体を検出します。
 
     - **search_about(object:str)**  
     指定した物体に関する情報を検索します。
