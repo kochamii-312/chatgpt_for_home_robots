@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import random
 
 import joblib
 import streamlit as st
@@ -127,7 +128,18 @@ def app():
         "2": SYSTEM_PROMPT_FRIENDLY,
         "3": SYSTEM_PROMPT_PRATFALL,
     }
-    prompt_label = st.selectbox("プロンプト（自動）", list(prompt_options.keys()))
+    prompt_keys = list(prompt_options.keys())
+    if "prompt_label" not in st.session_state:
+        st.session_state["prompt_label"] = random.choice(prompt_keys)
+
+    default_prompt_label = st.session_state["prompt_label"]
+    prompt_label = st.selectbox(
+        "プロンプト（自動）",
+        prompt_keys,
+        index=prompt_keys.index(default_prompt_label)
+        if default_prompt_label in prompt_keys
+        else 0,
+    )
     system_prompt = prompt_options[prompt_label]
     st.session_state["prompt_label"] = prompt_label
 

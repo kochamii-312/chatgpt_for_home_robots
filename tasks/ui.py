@@ -9,8 +9,8 @@ def render_random_room_task(
     room_name: str,
     state_prefix: str,
     *,
-    title: str = "本日のタスク例",
-    reroll_label: str = "🔀 他のタスクを表示",
+    title: str = "タスク",
+    reroll_label: str = "🔀 他のタスクにする",
 ) -> str | None:
     """Display a random task for the specified room at the top of the page.
 
