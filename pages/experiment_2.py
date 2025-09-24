@@ -85,7 +85,7 @@ def get_critic_label(context):
     return "sufficient" if pred[0] == 1 else "insufficient"
 
 def app():
-    st.title("LLMATCHデモアプリ")
+    st.title("Criticモデルデモアプリ")
     st.subheader("ChatGPT with 'Critic'")
     
     st.sidebar.subheader("行動計画で使用される関数")

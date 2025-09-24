@@ -30,7 +30,7 @@ def accumulate_information(reply: str) -> str:
 
 
 def app():
-    st.title("LLMATCHデモアプリ")
+    st.title("Criticモデルデモアプリ")
     
     st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
