@@ -120,6 +120,10 @@ def app():
         st.session_state["context"] = [
             {"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT},
         ]
+        st.session_state["chat_input_history"] = []
+
+    if "chat_input_history" not in st.session_state:
+        st.session_state["chat_input_history"] = []
 
     if "active" not in st.session_state:
         st.session_state.active = True
@@ -170,6 +174,8 @@ def app():
 
     # 3) 追加の自由入力（会話継続用）
     user_input = st.chat_input("入力してください")
+    if user_input:
+        st.session_state["chat_input_history"].append(user_input)
     if user_input:
         context.append({"role": "user", "content": user_input})
         selected_paths = st.session_state.get("selected_image_paths", [])
@@ -242,6 +248,7 @@ def app():
                     }
                     st.session_state.saved_jsonl = []
                     st.session_state.information_items = []
+                    st.session_state["chat_input_history"] = []
                     st.rerun()
                 st.stop()
 

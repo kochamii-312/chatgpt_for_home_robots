@@ -147,6 +147,9 @@ def app():
             "clarifying_steps": []
         }
         st.session_state.turn_count = 0
+        st.session_state["chat_input_history"] = []
+    if "chat_input_history" not in st.session_state:
+        st.session_state["chat_input_history"] = []
     if "active" not in st.session_state:
         st.session_state.active = True
     if "turn_count" not in st.session_state:
@@ -164,6 +167,8 @@ def app():
         user_input = None
     else:
         input_box = st.chat_input("ロボットへの回答を入力してください")
+        if input_box:
+            st.session_state["chat_input_history"].append(input_box)
         user_input = st.session_state.pop("pending_user_input", None) or input_box
     
     if user_input:
@@ -299,6 +304,7 @@ def app():
                     st.session_state.turn_count = 0
                     st.session_state.force_end = False
                     st.session_state.end_reason = ""
+                    st.session_state["chat_input_history"] = []
                     st.rerun()
             with cols_end[1]:
                 st.button("🚨会話を強制的に終了", key="force_end_disabled", disabled=True)
@@ -319,6 +325,7 @@ def app():
             st.session_state.turn_count = 0
             st.session_state.force_end = False
             st.session_state.end_reason = ""
+            st.session_state["chat_input_history"] = []
             st.rerun()
     with cols[1]:
         if st.button("🚨会話を強制的に終了", key="force_end_button"):

@@ -210,12 +210,15 @@ def app():
             "label": "",
             "clarifying_steps": []
         }
+        st.session_state["chat_input_history"] = []
     if "active" not in st.session_state:
         st.session_state.active = True
     if "force_end" not in st.session_state:
         st.session_state.force_end = False
     if "end_reason" not in st.session_state:
         st.session_state.end_reason = ""
+    if "chat_input_history" not in st.session_state:
+        st.session_state["chat_input_history"] = []
 
     context = st.session_state["context"]
 
@@ -225,6 +228,8 @@ def app():
         user_input = None
     else:
         user_input = st.chat_input("ロボットへの指示や回答を入力してください")
+        if user_input:
+            st.session_state["chat_input_history"].append(user_input)
     if user_input:
         context.append({"role": "user", "content": user_input})
         selected_paths = st.session_state.get("selected_image_paths", [])
@@ -347,6 +352,7 @@ def app():
             st.session_state.saved_jsonl = []
             st.session_state.force_end = False
             st.session_state.end_reason = ""
+            st.session_state["chat_input_history"] = []
             st.rerun()
     with cols[1]:
         if st.button("🚨会話を強制的に終了", key="force_end_button"):
