@@ -84,7 +84,7 @@ def finalize_and_render_plan(label: str):
         st.write(f"{sim:.2f}")
 
 def app():
-    st.title("Criticモデルデモアプリ")
+    st.title("LLMATCH Criticデモアプリ")
     st.subheader("プレ実験")
     st.write("目的：GPT with Criticの学習の効果を図る。")
     st.write("定量的評価：人間が作った行動計画の正解と、対話によって最終的に生成されたロボットの行動計画を比較し、どれくらい一致するかを検証する。")

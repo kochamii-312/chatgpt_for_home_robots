@@ -1,36 +1,76 @@
 import streamlit as st
-import json
-import os
-import re
-from openai import OpenAI
-from dotenv import load_dotenv
-from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
-from move_functions import move_to, pick_object, place_object_next_to, place_object_on
-from run_and_show import show_function_sequence, show_clarifying_question, show_information, run_plan_and_show
-from jsonl import (
-    save_jsonl_entry,
-    show_jsonl_block,
-    save_pre_experiment_result,
-    remove_last_jsonl_entry,
-)
-
-load_dotenv()
-
-
-def accumulate_information(reply: str) -> str:
-    info_match = re.search(r"<Information>([\s\S]*?)</Information>", reply, re.IGNORECASE)
-    if not info_match:
-        return reply
-    if "information_items" not in st.session_state:
-        st.session_state.information_items = []
-    items = re.findall(r"<li>(.*?)</li>", info_match.group(1))
-    st.session_state.information_items.extend(items)
-    aggregated = "<Information>\n" + "\n".join(f"  <li>{item}</li>" for item in st.session_state.information_items) + "\n</Information>"
-    return re.sub(r"<Information>[\s\S]*?</Information>", aggregated, reply)
-
 
 def app():
-    st.title("Criticモデルデモアプリ")
+    st.title("LLMATCH Criticデモアプリ")
+    st.subheader("実験方法と利用案内")
+    st.warning("このページの内容は、以下のGoogleドキュメントと同じ内容です。")
+    st.write("👉 [Googleドキュメントを見る](https://docs.google.com/document/d/10ZAhJMUuT9SC0maI0S5eWDMCf_pBUn6xWQvqqD6-7Mc/edit?usp=sharing)")
+
+    st.markdown("""
+    ### 研究概要
+    LLMATCH研究員の **吉田馨** です。私は「人間とAIの関係性がロボットの最終的なタスク達成率に影響を与える」という仮説を検証するために、このデモアプリを用いた実験を行います。  
+    この研究には実際に利用した方々のデータが数多く必要です。ご協力をお願いいたします。
+
+    本デモアプリは「家庭用ロボットにタスクを指示し、対話を通じて行動計画を生成する」仮想システムを模したものです。
+    ユーザーがLLMに指示を入力すると、LLMが指示を実行するために不足している情報について質問し、家庭用ロボットの行動計画を更新していきます。
+    """)
+
+    st.markdown("""
+    ### 実験の構成
+    **Experiment 1**  
+    - RAGにおける「知らない状態の認識」を重視した *SIM-RAG* フレームワークを参考に、情報が十分かどうかを二値分類問題として判断するCriticモデルを採用。  
+    - 「規定回数だけ質問を繰り返す GPT」 vs 「情報が十分になるまで質問を続ける GPT with Critic」を比較。  
+    - タスクの具体性・成功率とユーザーとの関係性を分析。  
+
+    **Experiment 2**  
+    - GPT with Critic を用い、3つの異なるコミュニケーションタイプを比較。  
+        1. Standard（グライスの格率に従う）  
+        2. Friendly（フレンドリーに振る舞う）  
+        3. Pratfall（プラットフォール効果を狙う）  
+    - タスクの具体性・成功率とユーザーとの関係性を分析。
+    """)
+    st.error("⚠️ 実験の途中でサイドバーから他のページに移動しないでください。進行中の会話や評価が正しく保存されなくなる可能性があります。")
+    
+    st.markdown("""
+    ### Experiment 1 の利用方法
+    1. サイドバーから **Experiment 1** を開く  
+    2. 「モード選択」から **GPT / GPT with Critic** を選ぶ  
+    3. 「評価モデル」は選択不要  
+    4. 家の画像をもとに「想定する家 → 部屋 → 表示する画像」を選ぶ（複数選択可）  
+    5. 「タスク」が表示されるので、テキストボックスに入力して会話を開始  
+    6. 約30秒後に「ロボットの行動計画」と「質問」が出力される  
+    7. 質問に回答しながら会話を進める  
+    8. Critic により会話は自動終了  
+
+    ⚠️ 会話が終わらない場合は：  
+    「会話を終了したい理由」を記入 → **🚨 会話を強制的に終了** ボタンを押す  
+
+    最後に評価フォームを記入 → **評価を保存** をクリック
+    """)
+
+    st.markdown("""
+    ### Experiment 2 の利用方法
+    1. サイドバーから **Experiment 2** を開く  
+    2. 「プロンプト」は自動で選択済み  
+    3. 「評価モデル」は選択不要  
+    4. 家の画像をもとに「想定する家 → 部屋 → 表示する画像」を選ぶ（複数選択可）  
+    5. 「タスク」が表示されるので、テキストボックスに入力して会話を開始  
+    6. 約30秒後に「ロボットの行動計画」と「質問」が出力される  
+    7. 質問に回答しながら会話を進める  
+    8. Critic により会話は自動終了  
+
+    ⚠️ 会話が終わらない場合は：  
+    「会話を終了したい理由」を記入 → **🚨 会話を強制的に終了** ボタンを押す  
+
+    最後に評価フォームを記入 → **評価を保存** をクリック
+    """)
+    st.info(
+        """
+         **質問やお問い合わせはこちら**  
+        Slack の [@Kaoru Yoshida](https://matsuokenllmcommunity.slack.com/team/U071ML4LY5C) までお願いします。
+        """,
+        icon="📩"
+    )
     
     st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
@@ -63,186 +103,5 @@ def app():
     指定したテキストを発話します。
     """
     )
-
-
-    image_root = "images"
-    house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
-    default_label = "(default)"
-    options = [default_label] + house_dirs
-    current_house = st.session_state.get("selected_house", "")
-    current_label = current_house if current_house else default_label
-    selected_label = st.selectbox(
-        "想定する家",
-        options,
-        index=options.index(current_label) if current_label in options else 0,
-    )
-    st.session_state["selected_house"] = "" if selected_label == default_label else selected_label
-
-    image_dir = image_root
-    subdirs = []
-    if st.session_state["selected_house"]:
-        image_dir = os.path.join(image_dir, st.session_state["selected_house"])
-        subdirs = [d for d in os.listdir(image_dir) if os.path.isdir(os.path.join(image_dir, d))]
-    sub_default = "(default)"
-    if subdirs:
-        current_sub = st.session_state.get("selected_subfolder", "")
-        current_sub_label = current_sub if current_sub else sub_default
-        sub_options = [sub_default] + subdirs
-        sub_label = st.selectbox(
-            "部屋",
-            sub_options,
-            index=sub_options.index(current_sub_label) if current_sub_label in sub_options else 0,
-        )
-        st.session_state["selected_subfolder"] = "" if sub_label == sub_default else sub_label
-        if st.session_state["selected_subfolder"]:
-            image_dir = os.path.join(image_dir, st.session_state["selected_subfolder"])
-    else:
-        st.session_state["selected_subfolder"] = ""
-
-    if os.path.isdir(image_dir):
-        image_files = [
-            f
-            for f in os.listdir(image_dir)
-            if os.path.isfile(os.path.join(image_dir, f))
-            and f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp"))
-        ]
-        if image_files:
-            selected_imgs = st.multiselect("表示する画像", image_files)
-            selected_paths = [os.path.join(image_dir, img) for img in selected_imgs]
-            st.session_state["selected_image_paths"] = selected_paths
-            for path, img in zip(selected_paths, selected_imgs):
-                st.image(path, caption=img)
-        else:
-            st.session_state["selected_image_paths"] = []
-
-    # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
-    if "context" not in st.session_state:
-        st.session_state["context"] = [
-            {"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT},
-        ]
-
-    if "active" not in st.session_state:
-        st.session_state.active = True
-    if "conv_log" not in st.session_state:
-        st.session_state.conv_log = {
-            "label": "",
-            "clarifying_steps": []
-        }
-
-    if "information_items" not in st.session_state:
-        st.session_state.information_items = []
-
-    context = st.session_state["context"]
-
-    # 2) フォーム：ここで送信したら即時に最初の応答まで取得して表示
-    with st.form(key="instruction_form"):
-        st.subheader("ロボットへの指示")
-        instruction = st.text_input("ロボットへの指示")
-        submit_btn = st.form_submit_button("実行")
-
-    if submit_btn:
-        if not instruction.strip():
-            st.warning("指示が空です。内容を入力してください。")
-        else:
-            # フォーム送信のタイミングでユーザー指示を表示
-            st.success(f"ロボットへの指示がセットされました：**{instruction}**")
-            context.append({"role": "user", "content": instruction})
-
-            selected_paths = st.session_state.get("selected_image_paths", [])
-            if selected_paths:
-                context.append(
-                    build_bootstrap_user_message(
-                        text="Here are the selected images. Use them for scene understanding and disambiguation.",
-                        local_image_paths=selected_paths,
-                    )
-                )
-
-            # 2) 最初のアシスタント応答を取得（画像を添えた状態で）
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=st.session_state["context"]
-            )
-            reply = (response.choices[0].message.content).strip()
-            reply = accumulate_information(reply)
-            st.session_state["context"].append({"role": "assistant", "content": reply})
-            save_jsonl_entry("insufficient")
-
-
-    # 3) 追加の自由入力（会話継続用）
-    user_input = st.chat_input("入力してください")
-    if user_input:
-        context.append({"role": "user", "content": user_input})
-        selected_paths = st.session_state.get("selected_image_paths", [])
-        if selected_paths:
-            context.append(
-                build_bootstrap_user_message(
-                    text="Here are the selected images. Use them for scene understanding and disambiguation.",
-                    local_image_paths=selected_paths,
-                )
-            )
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=context
-        )
-        reply = response.choices[0].message.content.strip()
-        reply = accumulate_information(reply)
-        print("Assistant:", reply)
-        context.append({"role": "assistant", "content": reply})
-        print("context: ", context)
-        save_jsonl_entry("insufficient")  # ←この行を追加
-
-    # 4) 画面下部に履歴を全表示（systemは省く）
-    last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
-
-    for i, msg in enumerate(context):
-        if msg["role"] == "system":
-            continue
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-            if msg["role"] == "assistant":
-                if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
-                    run_plan_and_show(msg["content"])
-                show_function_sequence(msg["content"])
-                show_clarifying_question(msg["content"])
-                show_information(msg["content"])
-        # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
-        if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
-            st.write("この計画はロボットが実行するのに十分ですか？")
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("十分", key=f"enough_{i}"):
-                    remove_last_jsonl_entry()
-                    save_jsonl_entry("sufficient")
-                    st.session_state.active = False
-                    st.rerun()
-            with col2:
-                if st.button("不十分", key=f"not_enough_{i}"):
-                    clarify_prompt = {
-                        "role": "system",
-                        "content": "The previous plan was insufficient. Ask a clarifying question to the user to improve it."
-                    }
-                    response = client.chat.completions.create(
-                        model="gpt-4o-mini",
-                        messages=context + [clarify_prompt]
-                    )
-                    question = response.choices[0].message.content.strip()
-                    context.append({"role": "assistant", "content": question})
-                    save_jsonl_entry("insufficient")
-                    st.rerun()
-            if st.session_state.active == False:
-                show_jsonl_block()
-                st.warning("会話を終了しました。ありがとうございました！")
-                if st.button("⚠️会話をリセット", key="reset_conv"):
-                    st.session_state.context = [{"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT}]
-                    st.session_state.active = True
-                    st.session_state.conv_log = {
-                        "label": "",
-                        "clarifying_steps": []
-                    }
-                    st.session_state.saved_jsonl = []
-                    st.session_state.information_items = []
-                    st.rerun()
-                st.stop()
 
 app()

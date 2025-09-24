@@ -85,8 +85,8 @@ def get_critic_label(context):
     return "sufficient" if pred[0] == 1 else "insufficient"
 
 def app():
-    st.title("Criticモデルデモアプリ")
-    st.subheader("ChatGPT with 'Critic'")
+    st.title("LLMATCH Criticデモアプリ")
+    st.subheader("実験② 異なるコミュニケーションタイプの比較")
     
     st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
@@ -121,11 +121,11 @@ def app():
     )
 
     prompt_options = {
-        "Standard": SYSTEM_PROMPT_STANDARD,
-        "Friendly": SYSTEM_PROMPT_FRIENDLY,
-        "Pratfall": SYSTEM_PROMPT_PRATFALL,
+        "1": SYSTEM_PROMPT_STANDARD,
+        "2": SYSTEM_PROMPT_FRIENDLY,
+        "3": SYSTEM_PROMPT_PRATFALL,
     }
-    prompt_label = st.selectbox("プロンプト", list(prompt_options.keys()))
+    prompt_label = st.selectbox("プロンプト（自動）", list(prompt_options.keys()))
     system_prompt = prompt_options[prompt_label]
     st.session_state["prompt_label"] = prompt_label
 
@@ -142,7 +142,7 @@ def app():
         if current_model not in model_files:
             current_model = latest_model
         selected_model = st.selectbox(
-            "評価モデル",
+            "評価モデル（自動）",
             model_files,
             index=model_files.index(current_model),
         )

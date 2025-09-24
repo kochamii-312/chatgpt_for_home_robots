@@ -23,7 +23,7 @@ from pathlib import Path
 load_dotenv()
 
 def app():
-    st.title("Criticモデルデモアプリ")
+    st.title("LLMATCH Criticデモアプリ")
     st.subheader("実験① GPTとGPT with Criticの比較")
     
     st.sidebar.subheader("行動計画で使用される関数")

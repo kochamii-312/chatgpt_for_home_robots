@@ -9,7 +9,7 @@ def show_function_sequence(reply: str):
     func_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", reply, re.IGNORECASE)
     if not func_match:
         return
-    st.subheader("現時点でのロボット行動計画")
+    st.subheader("ロボット行動計画")
     st.code(func_match.group(0), language="xml")
 
 
