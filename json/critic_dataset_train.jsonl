@@ -113,3 +113,10 @@
 {"instruction": "BEDROOMのベッドわきの電気を消して", "function_sequence": "<move_to room_name=\"BEDROOM\" />\n  <detect_object object=\"左側のライト\" />\n  <detect_object object=\"右側のライト\" />\n  <push object=\"左側のライト\" />\n  <push object=\"右側のライト\" />", "information": "", "label": "insufficient"}
 {"instruction": "BEDROOMのベッドわきの電気を消して", "function_sequence": "<move_to room_name=\"BEDROOM\" />\n  <detect_object object=\"左側のライト\" />\n  <push object=\"左側のライト\" />\n  <detect_object object=\"右側のライト\" />\n  <push object=\"右側のライト\" />", "information": "", "label": "insufficient"}
 {"instruction": "BEDROOMのベッドわきの電気を消して", "function_sequence": "<move_to room_name=\"BEDROOM\" />\n  <detect_object object=\"左側のライト\" />\n  <push object=\"左側のライト\" />\n  <detect_object object=\"右側のライト\" />\n  <push object=\"右側のライト\" />", "information": "", "label": "sufficient"}
+{"instruction": "なんでもいいからジャケットを探して", "function_sequence": "<move_to room_name=\"closet\"/>\n    <detect_object object=\"jacket\"/>", "information": "", "label": "insufficient"}
+{"instruction": "なんでもいいからジャケットを探して", "function_sequence": "<move_to room_name=\"closet\"/>\n    <detect_object object=\"jacket\"/>", "information": "", "label": "sufficient"}
+{"instruction": "昨日読んだ本を持ってきて", "function_sequence": "<move_to>BOOK SHELF</move_to>\n  <pick_object>The Great Gatsby</pick_object>", "information": "", "label": "insufficient"}
+{"instruction": "昨日読んだ本を持ってきて", "function_sequence": "<move_to>NIGHTSTAND</move_to>\n  <pick_object>Home Decor</pick_object>", "information": "", "label": "insufficient"}
+{"instruction": "昨日読んだ本を持ってきて", "function_sequence": "<move_to>NIGHTSTAND</move_to>\n  <pick_object>Home Decor</pick_object>", "information": "", "label": "sufficient"}
+{"instruction": "寝室の机の上の本を取ってきて", "function_sequence": "<move_to room_name=\"寝室\"/>\n  <pick_object object=\"雑誌\"/>", "information": "<li>寝室に机がある。</li>\n  <li>机の上に雑誌が1冊ある。</li>", "label": "insufficient"}
+{"instruction": "寝室の机の上の本を取ってきて", "function_sequence": "<move_to room_name=\"寝室\"/>\n  <pick_object object=\"雑誌\"/>", "information": "<li>寝室に机がある。</li>\n  <li>机の上に雑誌が1冊ある。</li>\n  <li>寝室に机がある。</li>\n  <li>机の上に雑誌が1冊ある。</li>", "label": "insufficient"}
