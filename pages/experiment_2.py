@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import re
 
 import joblib
@@ -127,7 +128,18 @@ def app():
         "2": SYSTEM_PROMPT_FRIENDLY,
         "3": SYSTEM_PROMPT_PRATFALL,
     }
-    prompt_label = st.selectbox("プロンプト（自動）", list(prompt_options.keys()))
+    prompt_keys = list(prompt_options.keys())
+    if "prompt_label" not in st.session_state:
+        st.session_state["prompt_label"] = random.choice(prompt_keys)
+
+    default_prompt_label = st.session_state["prompt_label"]
+    prompt_label = st.selectbox(
+        "プロンプト（自動）",
+        prompt_keys,
+        index=prompt_keys.index(default_prompt_label)
+        if default_prompt_label in prompt_keys
+        else 0,
+    )
     system_prompt = prompt_options[prompt_label]
     st.session_state["prompt_label"] = prompt_label
 
@@ -184,9 +196,6 @@ def app():
     else:
         st.session_state["selected_subfolder"] = ""
 
-    selected_room = st.session_state.get("selected_subfolder", "")
-    render_random_room_task(selected_room, state_prefix="experiment2")
-
     if os.path.isdir(image_dir):
         image_files = [
             f
@@ -202,6 +211,31 @@ def app():
                 st.image(path, caption=img)
         else:
             st.session_state["selected_image_paths"] = []
+    else:
+        st.session_state["selected_image_paths"] = []
+
+    def _infer_room_from_image_name(image_name: str) -> str | None:
+        base = os.path.splitext(os.path.basename(image_name))[0]
+        cleaned = re.sub(r"[^0-9A-Za-zぁ-んァ-ン一-龠ー]+", " ", base).strip()
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        if not cleaned:
+            return None
+        if all(ord(ch) < 128 for ch in cleaned):
+            return cleaned.upper()
+        return cleaned
+
+    inferred_room = ""
+    if st.session_state.get("selected_subfolder"):
+        inferred_room = st.session_state["selected_subfolder"]
+    elif st.session_state.get("selected_image_paths"):
+        for img_path in st.session_state["selected_image_paths"]:
+            candidate = _infer_room_from_image_name(os.path.basename(img_path))
+            if candidate:
+                inferred_room = candidate
+                break
+
+    st.session_state["experiment2_inferred_room"] = inferred_room
+    render_random_room_task(inferred_room, state_prefix="experiment2")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if (
