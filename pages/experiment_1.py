@@ -1,24 +1,25 @@
 import streamlit as st
 import json
 import os
-from difflib import SequenceMatcher
+
+from dotenv import load_dotenv
+
+from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
+from jsonl import predict_with_model, save_experiment_1_result
 from move_functions import (
     move_to,
     pick_object,
     place_object_next_to,
     place_object_on,
 )
-from dotenv import load_dotenv
-from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
-from strips import strip_tags, extract_between
 from run_and_show import (
-    show_function_sequence,
-    show_clarifying_question,
     run_plan_and_show,
+    show_clarifying_question,
+    show_function_sequence,
 )
-from jsonl import predict_with_model, save_experiment_1_result
 from run_and_show import show_provisional_output
-from pathlib import Path
+from strips import extract_between, strip_tags
+from tasks.ui import render_random_room_task
 
 load_dotenv()
 
@@ -117,6 +118,9 @@ def app():
             image_dir = os.path.join(image_dir, st.session_state["selected_subfolder"])
     else:
         st.session_state["selected_subfolder"] = ""
+
+    selected_room = st.session_state.get("selected_subfolder", "")
+    render_random_room_task(selected_room, state_prefix="experiment1")
 
     if os.path.isdir(image_dir):
         image_files = [
