@@ -13,8 +13,8 @@ from sklearn.pipeline import Pipeline
 
 
 DATA_DIR = Path(__file__).parent / "json"
-DEFAULT_TRAIN_PATH = DATA_DIR / "critic_dataset_train.jsonl"
-DEFAULT_VALID_PATH = DATA_DIR / "critic_dataset_valid.jsonl"
+DEFAULT_TRAIN_PATH = DATA_DIR / "critic_dataset_train.json"
+DEFAULT_VALID_PATH = DATA_DIR / "critic_dataset_valid.json"
 
 
 def load_jsonl(path: str | Path) -> list[dict]:
@@ -24,17 +24,80 @@ def load_jsonl(path: str | Path) -> list[dict]:
         return [json.loads(line) for line in f if line.strip()]
 
 
+def load_dataset(path: str | Path) -> list[dict]:
+    """訓練・検証用データセットを読み込む。
+
+    デフォルトではjson形式のファイルを想定するが、後方互換のために
+    jsonl形式のファイルが存在する場合はそちらも利用できるようにする。
+    """
+
+    path = Path(path)
+
+    if path.exists():
+        if path.suffix == ".jsonl":
+            return load_jsonl(path)
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            if isinstance(data, list):
+                return data
+            # list以外の形式で保存されていた場合でも安全に扱う
+            return list(data or [])
+
+    legacy_path = path.with_suffix(".jsonl")
+    if legacy_path.exists():
+        return load_jsonl(legacy_path)
+
+    return []
+
+
 def prepare_data(data: Iterable[dict]) -> tuple[list[str], list[int]]:
     """学習・推論で利用するテキストとラベルを作成する。"""
 
     texts: list[str] = []
     labels: list[int] = []
     for ex in data:
-        parts = [
-            ex.get("instruction", ""),
-            ex.get("function_sequence", ""),
-            ex.get("information", ""),
-        ]
+        parts: list[str] = []
+
+        instruction = (ex.get("instruction") or "").strip()
+        if instruction:
+            parts.append(f"Instruction: {instruction}")
+
+        function_sequence = (ex.get("function_sequence") or "").strip()
+        if function_sequence:
+            parts.append(f"FunctionSequence: {function_sequence}")
+
+        clarifying_history = ex.get("clarifying_history") or []
+        history_segments: list[str] = []
+        for step in clarifying_history:
+            if isinstance(step, dict):
+                question = (
+                    step.get("clarifying_question")
+                    or step.get("question")
+                    or step.get("llm_question")
+                    or ""
+                ).strip()
+                answer = (
+                    step.get("chat_input")
+                    or step.get("user_answer")
+                    or step.get("answer")
+                    or ""
+                ).strip()
+                pair_parts = []
+                if question:
+                    pair_parts.append(f"Q: {question}")
+                if answer:
+                    pair_parts.append(f"A: {answer}")
+                if pair_parts:
+                    history_segments.append(" ".join(pair_parts))
+            elif step:
+                history_segments.append(str(step))
+        if history_segments:
+            parts.append("ClarifyingHistory: " + " || ".join(history_segments))
+
+        information = (ex.get("information") or "").strip()
+        if information:
+            parts.append(f"Information: {information}")
+
         text = " | ".join(parts)
         texts.append(text)
         labels.append(1 if ex.get("label") == "sufficient" else 0)
@@ -61,8 +124,8 @@ def train_and_save_model(
 ) -> Path:
     """データセットを読み込みモデルを学習し、joblib形式で保存する。"""
 
-    train_data = load_jsonl(train_path)
-    valid_data = load_jsonl(valid_path)
+    train_data = load_dataset(train_path)
+    valid_data = load_dataset(valid_path)
 
     all_data: list[dict] = list(train_data) + list(valid_data)
     X_all, y_all = prepare_data(all_data)
