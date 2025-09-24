@@ -273,18 +273,16 @@ def save_pre_experiment_result(human_score: int):
     information = info_match.group(1).strip() if info_match else ""
 
     clarifications = []
-    user_answers = []
     for m in st.session_state.context:
         if m["role"] == "assistant":
             q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", m["content"], re.IGNORECASE)
             if q_match:
                 clarifications.append(q_match.group(1).strip())
-        if m["role"] == "user":
-            content = m["content"]
-            if isinstance(content, list):
-                # Join list items into a single string
-                content = " ".join(map(str, content))
-            user_answers.append(content.strip())
+    user_answers = [
+        ans.strip()
+        for ans in st.session_state.get("chat_input_history", [])
+        if ans and ans.strip()
+    ]
     text = f"instruction: {instruction} \nfs: {function_sequence}"
     similarity = None
     model_path = Path(st.session_state.get("model_path", MODEL_PATH))
@@ -361,18 +359,16 @@ def save_experiment_1_result(
         human_scores["plan_success_probability"] = success_probability
 
     clarifications = []
-    user_answers = []
     for m in st.session_state.context:
         if m["role"] == "assistant":
             q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", m["content"], re.IGNORECASE)
             if q_match:
                 clarifications.append(q_match.group(1).strip())
-        if m["role"] == "user":
-            content = m["content"]
-            if isinstance(content, list):
-                # Join list items into a single string
-                content = " ".join(map(str, content))
-            user_answers.append(content.strip())
+    user_answers = [
+        ans.strip()
+        for ans in st.session_state.get("chat_input_history", [])
+        if ans and ans.strip()
+    ]
     text = f"instruction: {instruction} \nfs: {function_sequence}"
     # TODO: 類似度どうするか考える。プレ実験にしか含めないか、experiment_1にも含めるか
     similarity = None
@@ -389,8 +385,7 @@ def save_experiment_1_result(
         "function_sequence": function_sequence,
         "information": information,
         "clarification_question": clarifications,
-        # TODO: user_answersは保存しないか、image_urlを除いて保存するか考える
-        # "user_answers": user_answers,
+        "user_answers": user_answers,
         "similarity": similarity,
         "human_scores": human_scores,
         "mode": st.session_state.get("mode", ""),
@@ -452,18 +447,16 @@ def save_experiment_2_result(
         human_scores["plan_success_probability"] = success_probability
 
     clarifications = []
-    user_answers = []
     for m in st.session_state.context:
         if m["role"] == "assistant":
             q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", m["content"], re.IGNORECASE)
             if q_match:
                 clarifications.append(q_match.group(1).strip())
-        if m["role"] == "user":
-            content = m["content"]
-            if isinstance(content, list):
-                # Join list items into a single string
-                content = " ".join(map(str, content))
-            user_answers.append(content.strip())
+    user_answers = [
+        ans.strip()
+        for ans in st.session_state.get("chat_input_history", [])
+        if ans and ans.strip()
+    ]
     text = f"instruction: {instruction} \nfs: {function_sequence}"
 
     entry = {
@@ -471,8 +464,7 @@ def save_experiment_2_result(
         "function_sequence": function_sequence,
         "information": information,
         "clarification_question": clarifications,
-        # TODO: user_answersは保存しないか、image_urlを除いて保存するか考える
-        # "user_answers": user_answers,
+        "user_answers": user_answers,
         "human_scores": human_scores,
         "prompt_label": st.session_state.get("prompt_label", ""),
         "termination_label": termination_label,

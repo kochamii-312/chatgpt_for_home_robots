@@ -205,8 +205,11 @@ def app():
             "label": "",
             "clarifying_steps": []
         }
+        st.session_state["chat_input_history"] = []
     if "active" not in st.session_state:
         st.session_state.active = True
+    if "chat_input_history" not in st.session_state:
+        st.session_state["chat_input_history"] = []
 
     gt_map = load_ground_truth_map()
     inst_options = ["(未選択)"] + list(gt_map.keys())
@@ -228,6 +231,8 @@ def app():
     message = st.chat_message("assistant")
     message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
     input_box = st.chat_input("ロボットへの回答を入力してください")
+    if input_box:
+        st.session_state["chat_input_history"].append(input_box)
     user_input = st.session_state.pop("pending_user_input", None) or input_box
     
     if user_input:
@@ -289,6 +294,7 @@ def app():
             "clarifying_steps": []
         }
         st.session_state.saved_jsonl = []
+        st.session_state["chat_input_history"] = []
         st.rerun()
 
 app()
