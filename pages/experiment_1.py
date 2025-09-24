@@ -79,7 +79,7 @@ def app():
         if current_model not in model_files:
             current_model = latest_model
         selected_model = st.selectbox(
-            "評価モデル",
+            "評価モデル（自動）",
             model_files,
             index=model_files.index(current_model),
         )
