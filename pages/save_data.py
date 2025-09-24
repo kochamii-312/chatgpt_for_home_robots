@@ -133,6 +133,9 @@ def app():
             "clarifying_steps": []
         }
 
+    if "chat_input_history" not in st.session_state:
+        st.session_state["chat_input_history"] = []
+
     if "information_items" not in st.session_state:
         st.session_state.information_items = []
 
@@ -150,6 +153,7 @@ def app():
         else:
             # フォーム送信のタイミングでユーザー指示を表示
             st.success(f"ロボットへの指示がセットされました：**{instruction}**")
+            st.session_state["chat_input_history"] = []
             context.append({"role": "user", "content": instruction})
 
             selected_paths = st.session_state.get("selected_image_paths", [])
@@ -176,6 +180,7 @@ def app():
     user_input = st.chat_input("入力してください")
     if user_input:
         context.append({"role": "user", "content": user_input})
+        st.session_state["chat_input_history"].append(user_input)
         selected_paths = st.session_state.get("selected_image_paths", [])
         if selected_paths:
             context.append(
@@ -246,6 +251,7 @@ def app():
                     }
                     st.session_state.saved_jsonl = []
                     st.session_state.information_items = []
+                    st.session_state["chat_input_history"] = []
                     st.rerun()
                 st.stop()
 

@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 import joblib
 import os
+from itertools import zip_longest
 
 from typing import Any, List, Optional, Tuple
 from dotenv import load_dotenv
@@ -196,9 +197,41 @@ def save_jsonl_entry(label: str):
     function_sequence = fs_match.group(1).strip() if fs_match else ""
     information = info_match.group(1).strip() if info_match else ""
 
+    clarifying_questions: List[str] = []
+    for message in st.session_state.context:
+        if message.get("role") != "assistant":
+            continue
+        q_match = re.search(
+            r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>",
+            message.get("content", ""),
+            re.IGNORECASE,
+        )
+        if q_match:
+            clarifying_questions.append(q_match.group(1).strip())
+
+    chat_inputs = [
+        ans.strip()
+        for ans in st.session_state.get("chat_input_history", [])
+        if ans and ans.strip()
+    ]
+
+    clarifying_history = []
+    for question, user_input in zip_longest(
+        clarifying_questions, chat_inputs, fillvalue=""
+    ):
+        if not question and not user_input:
+            continue
+        clarifying_history.append(
+            {
+                "clarifying_question": question,
+                "chat_input": user_input,
+            }
+        )
+
     entry = {
         "instruction": instruction,
         "function_sequence": function_sequence,
+        "clarifying_history": clarifying_history,
         "information": information,
         "label": label,
     }
