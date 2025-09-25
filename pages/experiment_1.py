@@ -109,9 +109,15 @@ def app():
                 st.session_state["experiment1_selected_task_set"] = None
                 payload = {}
             else:
-                # ランダム選択
-                selected_label = random.choice(labels)
-                st.selectbox("タスク", labels, index=labels.index(selected_label))
+                stored_label = st.session_state.get("experiment1_selected_task_label")
+                if stored_label not in labels:
+                    stored_label = random.choice(labels)
+                selected_label = st.selectbox(
+                    "タスク",
+                    labels,
+                    index=labels.index(stored_label),
+                )
+                st.session_state["experiment1_selected_task_label"] = selected_label
                 selected_task_name = label_to_key.get(selected_label)
                 st.session_state["experiment1_selected_task_set"] = selected_task_name
                 payload = task_sets.get(selected_task_name, {}) if selected_task_name else {}
