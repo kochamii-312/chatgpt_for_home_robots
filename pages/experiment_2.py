@@ -89,7 +89,8 @@ def get_critic_label(context):
     ex = {"instruction": instruction, "clarifying_steps": clarifying_steps, "label": "unknown"}
     texts, _ = prepare_data([ex])
     model_path = st.session_state.get("model_path", "models/critic_model_20250903_053907.joblib")
-    model = joblib.load(model_path)
+    loaded = joblib.load(model_path)
+    model = loaded["model"]
     pred = model.predict(texts)
     return "sufficient" if pred[0] == 1 else "insufficient"
 

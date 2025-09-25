@@ -333,7 +333,8 @@ def predict_with_model():
         information,
     )
     model_path = Path(st.session_state.get("model_path", MODEL_PATH))
-    model = joblib.load(model_path)
+    loaded = joblib.load(model_path)
+    model = loaded["model"]
     pred = model.predict([text])[0]
     label = "sufficient" if pred == 1 else "insufficient"
 
