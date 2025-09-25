@@ -30,6 +30,23 @@ from image_task_sets import (
 
 load_dotenv()
 
+
+def _update_random_task_selection(label_key: str, labels_key: str, mapping_key: str, set_key: str) -> None:
+    """Select a new task label at random and update related session state."""
+
+    labels = st.session_state.get(labels_key) or []
+    if not labels:
+        return
+
+    current_label = st.session_state.get(label_key)
+    candidates = [label for label in labels if label != current_label] or labels
+    new_label = random.choice(candidates)
+
+    st.session_state[label_key] = new_label
+    label_to_key = st.session_state.get(mapping_key) or {}
+    st.session_state[set_key] = label_to_key.get(new_label)
+
+
 def app():
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("実験1 GPTとGPT with Criticの比較")
@@ -98,15 +115,22 @@ def app():
             st.warning("写真とタスクのセットが保存されていません。まず『写真とタスクの選定・保存』ページで作成してください。")
             st.session_state["selected_image_paths"] = []
             st.session_state["experiment1_selected_task_set"] = None
+            st.session_state["experiment1_task_labels"] = []
+            st.session_state["experiment1_label_to_key"] = {}
         else:
             choice_pairs = build_task_set_choices(task_sets)
             labels = [label for label, _ in choice_pairs]
             label_to_key = {label: key for label, key in choice_pairs}
 
+            st.session_state["experiment1_task_labels"] = labels
+            st.session_state["experiment1_label_to_key"] = label_to_key
+
             if not labels:
                 st.warning("保存済みのタスクが読み込めませんでした。")
                 st.session_state["selected_image_paths"] = []
                 st.session_state["experiment1_selected_task_set"] = None
+                st.session_state["experiment1_task_labels"] = []
+                st.session_state["experiment1_label_to_key"] = {}
                 payload = {}
             else:
                 stored_label = st.session_state.get("experiment1_selected_task_label")
@@ -345,6 +369,12 @@ def app():
                     st.session_state.force_end = False
                     st.session_state.end_reason = ""
                     st.session_state["chat_input_history"] = []
+                    _update_random_task_selection(
+                        "experiment1_selected_task_label",
+                        "experiment1_task_labels",
+                        "experiment1_label_to_key",
+                        "experiment1_selected_task_set",
+                    )
                     st.rerun()
             with cols_end[1]:
                 st.button("🚨会話を強制的に終了", key="force_end_disabled", disabled=True)
@@ -366,6 +396,12 @@ def app():
             st.session_state.force_end = False
             st.session_state.end_reason = ""
             st.session_state["chat_input_history"] = []
+            _update_random_task_selection(
+                "experiment1_selected_task_label",
+                "experiment1_task_labels",
+                "experiment1_label_to_key",
+                "experiment1_selected_task_set",
+            )
             st.rerun()
     with cols[1]:
         if st.button("🚨会話を強制的に終了", key="force_end_button"):
