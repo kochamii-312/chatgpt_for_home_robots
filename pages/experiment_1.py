@@ -233,10 +233,17 @@ def app():
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
-    label, p, th = predict_with_model()
-    st.caption(f"評価モデルの予測: {label} (p={p:.3f}, th={th:.3f})")
-    has_plan = ("<FunctionSequence>" in (context[-1]["content"] if context else ""))
-    high_conf = (p >= th + 0.15)
+    assistant_messages = [m for m in context if m["role"] == "assistant"]
+    if assistant_messages:
+        label, p, th = predict_with_model()
+        st.caption(f"評価モデルの予測: {label} (p={p:.3f}, th={th:.3f})")
+    else:
+        label, p, th = None, None, None
+        st.caption("評価モデルの予測: ---")
+
+    last_assistant_content = assistant_messages[-1]["content"] if assistant_messages else ""
+    has_plan = "<FunctionSequence>" in last_assistant_content
+    high_conf = (p is not None and th is not None and p >= th + 0.15)
 
     should_stop = False
     end_message = ""
