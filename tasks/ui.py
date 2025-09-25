@@ -51,3 +51,16 @@ def render_random_room_task(
     if task:
         st.success(f"部屋「{room_name}」のタスク例：{task}")
     return task
+
+
+def reset_random_room_task(state_prefix: str) -> None:
+    """Re-roll the random task associated with ``state_prefix`` if possible."""
+
+    task_state_key = f"{state_prefix}_random_task"
+    room_state_key = f"{state_prefix}_task_room"
+    room_name = st.session_state.get(room_state_key, "")
+
+    if room_name:
+        st.session_state[task_state_key] = choose_random_task(room_name)
+    else:
+        st.session_state[task_state_key] = None
