@@ -127,21 +127,16 @@ def app():
         house = payload.get("house") if isinstance(payload, dict) else ""
         room = payload.get("room") if isinstance(payload, dict) else ""
         meta_lines = []
-        if house:
-            meta_lines.append(f"想定する家: {house}")
-        if room:
-            meta_lines.append(f"部屋: {room}")
-        if meta_lines:
-            st.info(" / ".join(meta_lines))
 
         task_lines = extract_task_lines(payload)
 
-        st.markdown("### タスク")
+        st.markdown("### 指定されたタスク")
         if task_lines:
             for line in task_lines:
-                st.write(f"- {line}")
+                st.info(f"{line}")
         else:
             st.info("タスクが登録されていません。")
+        st.write("→ここで指定されたタスクをそのままテキストフィールドに入力してください！")
 
         image_candidates = []
         if isinstance(payload, dict):
@@ -156,7 +151,13 @@ def app():
                 "以下の画像ファイルが見つかりません: " + ", ".join(missing_images)
             )
 
-        st.markdown("### 選択された画像")
+        st.markdown("### 指定されたタスクが行われる場所")
+        if house:
+            meta_lines.append(f"家: {house}")
+        if room:
+            meta_lines.append(f"部屋: {room}")
+        if meta_lines:
+            st.write(" / ".join(meta_lines))
         if existing_images:
             for path in existing_images:
                 st.image(path, caption=os.path.basename(path))

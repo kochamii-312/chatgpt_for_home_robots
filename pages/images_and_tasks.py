@@ -166,7 +166,7 @@ def app():
     current_house = st.session_state.get("selected_house", "")
     current_house_label = current_house if current_house else DEFAULT_LABEL
     house_label = st.selectbox(
-        "想定する家",
+        "家",
         house_options,
         index=house_options.index(current_house_label)
         if current_house_label in house_options

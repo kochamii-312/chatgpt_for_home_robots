@@ -27,7 +27,7 @@ def load_jsonl(path: str | Path) -> list[dict]:
 def load_dataset(path: str | Path) -> list[dict]:
     """訓練・検証用データセットを読み込む。
 
-    デフォルトではjson形式のファイルを想定するが、後方互換のために
+    デフォルトではjson形式のファイルをが、後方互換のために
     jsonl形式のファイルが存在する場合はそちらも利用できるようにする。
     """
 
