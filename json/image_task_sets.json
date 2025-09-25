@@ -1,0 +1,156 @@
+{
+  "エアコンをつけて": {
+    "house": "house2",
+    "room": "LIVING",
+    "images": [
+      "images\\house2\\LIVING\\00096-rgb.png"
+    ],
+    "tasks": [
+      "エアコンをつけて"
+    ],
+    "task_text": "エアコンをつけて"
+  },
+  "テレビを消して": {
+    "house": "house2",
+    "room": "LIVING",
+    "images": [
+      "images\\house2\\LIVING\\00096-rgb.png"
+    ],
+    "tasks": [
+      "テレビを消して"
+    ],
+    "task_text": "テレビを消して"
+  },
+  "テレビの横の花瓶の水を替えて": {
+    "house": "house2",
+    "room": "LIVING",
+    "images": [
+      "images\\house2\\LIVING\\00096-rgb.png"
+    ],
+    "tasks": [
+      "テレビの横の花瓶の水を替えて"
+    ],
+    "task_text": "テレビの横の花瓶の水を替えて"
+  },
+  "窓際の植物に水をあげて": {
+    "house": "house2",
+    "room": "LIVING",
+    "images": [
+      "images\\house2\\LIVING\\00051-rgb.png"
+    ],
+    "tasks": [
+      "窓際の植物に水をあげて"
+    ],
+    "task_text": "窓際の植物に水をあげて"
+  },
+  "窓のカーテンを開けて": {
+    "house": "house2",
+    "room": "LIVING",
+    "images": [
+      "images\\house2\\LIVING\\00051-rgb.png"
+    ],
+    "tasks": [
+      "窓のカーテンを開けて"
+    ],
+    "task_text": "窓のカーテンを開けて"
+  },
+  "パンをトースターに入れて": {
+    "house": "house2",
+    "room": "DINING",
+    "images": [
+      "images\\house2\\DINING\\00007-rgb.png"
+    ],
+    "tasks": [
+      "パンをトースターに入れて"
+    ],
+    "task_text": "パンをトースターに入れて"
+  },
+  "ダイニングテーブルのお皿をキッチンに持って行って": {
+    "house": "house2",
+    "room": "DINING",
+    "images": [
+      "images\\house2\\DINING\\00007-rgb.png"
+    ],
+    "tasks": [
+      "ダイニングテーブルのお皿をキッチンに持って行って"
+    ],
+    "task_text": "ダイニングテーブルのお皿をキッチンに持って行って"
+  },
+  "ベッドメイキングをして": {
+    "house": "house7",
+    "room": "BEDROOM",
+    "images": [
+      "images\\house7\\BEDROOM\\00104-rgb.png"
+    ],
+    "tasks": [
+      "ベッドメイキングをして"
+    ],
+    "task_text": "ベッドメイキングをして"
+  },
+  "引き出しから日記を持って来て": {
+    "house": "house7",
+    "room": "BEDROOM",
+    "images": [
+      "images\\house7\\BEDROOM\\00104-rgb.png"
+    ],
+    "tasks": [
+      "引き出しから日記を持って来て"
+    ],
+    "task_text": "引き出しから日記を持って来て"
+  },
+  "鏡を拭いて": {
+    "house": "house7",
+    "room": "BEDROOM",
+    "images": [
+      "images\\house7\\BEDROOM\\00104-rgb.png"
+    ],
+    "tasks": [
+      "鏡を拭いて"
+    ],
+    "task_text": "鏡を拭いて"
+  },
+  "暖炉に納屋から持ってきた木材を入れて": {
+    "house": "house7",
+    "room": "LIVING",
+    "images": [
+      "images\\house7\\LIVING\\00014-rgb.png"
+    ],
+    "tasks": [
+      "暖炉に納屋から持ってきた木材を入れて"
+    ],
+    "task_text": "暖炉に納屋から持ってきた木材を入れて"
+  },
+  "ソファをきれいにして掃除機をかけて": {
+    "house": "house7",
+    "room": "LIVING",
+    "images": [
+      "images\\house7\\LIVING\\00027-rgb.png"
+    ],
+    "tasks": [
+      "ソファをきれいにして掃除機をかけて"
+    ],
+    "task_text": "ソファをきれいにして掃除機をかけて"
+  },
+  "ベッドわきのライトを消して": {
+    "house": "house11",
+    "room": "BEDROOM",
+    "images": [
+      "images\\house11\\BEDROOM\\00051-rgb.png"
+    ],
+    "tasks": [
+      "ベッドわきのライトを消して"
+    ],
+    "task_text": "ベッドわきのライトを消して"
+  },
+  "枕元の白い本を持って来て": {
+    "house": "house11",
+    "room": "BEDROOM",
+    "images": [
+      "images\\house11\\BEDROOM\\00086-rgb.png"
+    ],
+    "tasks": [
+      "枕元の白い本を持って来て"
+    ],
+    "task_text": "枕元の白い本を持って来て"
+  }
+}
