@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Iterable, List, Tuple
 
 _DATA_PATH = Path("json/image_task_sets.json")
+_PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 def load_image_task_sets() -> Dict[str, Dict[str, Any]]:
@@ -113,4 +114,52 @@ def build_task_set_choices(
 
     choices.sort(key=lambda item: item[0])
     return choices
+
+
+def resolve_image_path(path_str: str) -> Path:
+    """Return a Path object that best matches the stored path string.
+
+    The saved image paths are typically relative to the project root.  However,
+    depending on how Streamlit is executed (e.g. from a different working
+    directory on Google Cloud), simple string checks with ``os.path.exists`` can
+    fail.  This helper attempts a handful of sensible fallbacks so callers can
+    reliably locate the image files regardless of the current working
+    directory.
+    """
+
+    original = Path(str(path_str))
+    candidates = [original]
+
+    if not original.is_absolute():
+        candidates.append((_PROJECT_ROOT / original).resolve())
+
+    for candidate in candidates:
+        try:
+            if candidate.exists():
+                return candidate
+        except OSError:
+            continue
+
+    return candidates[-1]
+
+
+def resolve_image_paths(paths: Iterable[str]) -> Tuple[List[str], List[str]]:
+    """Resolve a collection of image paths.
+
+    Returns a tuple of ``(existing, missing)`` where ``existing`` contains
+    strings to the resolved paths that were found on disk and ``missing``
+    contains the original strings that could not be resolved.
+    """
+
+    existing: List[str] = []
+    missing: List[str] = []
+
+    for path_str in paths:
+        resolved = resolve_image_path(path_str)
+        if resolved.exists():
+            existing.append(str(resolved))
+        else:
+            missing.append(str(path_str))
+
+    return existing, missing
 
