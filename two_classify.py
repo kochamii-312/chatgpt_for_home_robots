@@ -143,16 +143,25 @@ def train_and_save_model(
 
     proba = model.predict_proba(X_valid)[:, 1]
     prec, rec, th = precision_recall_curve(y_valid, proba)
-    f1 = (2 * prec * rec) / (prec + rec + 1e-9)
-    best_idx = int(np.argmax(f1))
-    best_th = th[best_idx] if best_idx < len(th) else 0.5
-    y_pred_opt = (proba >= best_th).astype(int)
+    TARGET_PRECISION = 0.90  # ← 誤検知を避けたいなら 0.90〜0.95 を起点に
+    th = np.append(th, 1.0)  # 長さ合わせ（sklearnの仕様で threshold 配列は1短い）
 
-    print(f"Best threshold ≈ {best_th:.3f}  (valid F1={f1[best_idx]:.3f})")
+    ok = np.where(prec >= TARGET_PRECISION)[0]
+    if len(ok) > 0:
+        best_idx = ok[np.argmax(rec[ok])]   # 目標precisionを満たす中で recall 最大
+    else:
+        best_idx = int(np.argmax(prec))     # 満たせない場合は precision 最大点
+
+    best_th = float(th[best_idx])
+
+    y_pred_opt = (proba >= best_th).astype(int)
+    print(f"[Precision-first] target_precision={TARGET_PRECISION:.2f} -> chosen threshold={best_th:.3f}")
     print(classification_report(y_valid, y_pred_opt, zero_division=0))
 
-    pred = model.predict(X_valid)
-    print(classification_report(y_valid, pred))
+    # 参考出力：従来の0.5判定
+    pred_05 = (proba >= 0.5).astype(int)
+    print("== Report @ 0.5 ==")
+    print(classification_report(y_valid, pred_05, zero_division=0))
 
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = Path("models") / f"critic_model_{timestamp}.joblib"

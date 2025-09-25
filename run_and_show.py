@@ -9,7 +9,7 @@ def show_function_sequence(reply: str):
     func_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", reply, re.IGNORECASE)
     if not func_match:
         return
-    st.subheader("ロボット行動計画")
+    st.markdown("#### ロボットアクションプラン")
     st.code(func_match.group(0), language="xml")
 
 
@@ -18,7 +18,7 @@ def show_clarifying_question(reply: str):
     q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", reply, re.IGNORECASE)
     if not q_match:
         return
-    st.subheader("ロボットからの質問")
+    st.markdown("**ロボットからの質問**")
     st.write(q_match.group(1).strip())
 
 

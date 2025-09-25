@@ -76,23 +76,67 @@ def finalize_and_render_plan(label: str):
         language="json"
     )
 
+def _build_text_for_model(instruction: str, function_sequence: str, information: str) -> str:
+    # 学習時(two_classify.py)の prepare_data と同じ接頭辞・結合順に合わせる
+    parts = []
+    if instruction.strip():
+        parts.append(f"Instruction: {instruction.strip()}")
+    if function_sequence.strip():
+        parts.append(f"FunctionSequence: {function_sequence.strip()}")
+    if information.strip():
+        parts.append(f"Information: {information.strip()}")
+    return " | ".join(parts)
+
+def _extract_between(tag: str, text: str) -> str | None:
+    m = re.search(fr"<{tag}>([\s\S]*?)</{tag}>", text or "", re.IGNORECASE)
+    return m.group(1).strip() if m else ""
+
 def get_critic_label(context):
-    # contextから判定用テキストを生成
-    instruction = next((m["content"] for m in context if m["role"] == "user"), "")
-    clarifying_steps = []
-    for m in context:
-        if m["role"] == "assistant":
-            q = extract_between("llm_question", m["content"]) or ""
-            a = extract_between("user_answer", m["content"]) or ""
-            if q and a:
-                clarifying_steps.append({"llm_question": q, "user_answer": a})
-    ex = {"instruction": instruction, "clarifying_steps": clarifying_steps, "label": "unknown"}
-    texts, _ = prepare_data([ex])
-    model_path = st.session_state.get("model_path", "models/critic_model_20250903_053907.joblib")
-    loaded = joblib.load(model_path)
-    model = loaded["model"]
-    pred = model.predict(texts)
-    return "sufficient" if pred[0] == 1 else "insufficient"
+    # 1) 入力抽出（最新ユーザー発話と直近アシスタント出力から FS/Information）
+    instruction = next((m.get("content","") for m in context if m.get("role")=="user"), "")
+    last_assistant = next((m.get("content","") for m in reversed(context) if m.get("role")=="assistant"), "")
+    function_sequence = _extract_between("FunctionSequence", last_assistant) or ""
+    information      = _extract_between("Information",      last_assistant) or ""
+
+    text = _build_text_for_model(instruction, function_sequence, information)
+
+    # 2) モデル+保存閾値のロード（後方互換：旧モデルは閾値0.5扱い）
+    model_path = st.session_state.get("model_path", "models/critic_model_latest.joblib")
+    obj = joblib.load(model_path)
+    if isinstance(obj, dict):
+        model = obj.get("model", obj)
+        saved_th = float(obj.get("threshold", 0.5))
+    else:
+        model = obj
+        saved_th = 0.5
+
+    # 3) 確率計算
+    if hasattr(model, "predict_proba"):
+        p = float(model.predict_proba([text])[0, 1])
+    elif hasattr(model, "decision_function"):
+        import numpy as np
+        z = model.decision_function([text])[0]
+        p = float(1 / (1 + np.exp(-z)))
+    else:
+        p = float(model.predict([text])[0])
+
+    # 4) 誤検知対策：最低閾値＋高信頼マージン＋ガード
+    th_min  = float(st.session_state.get("critic_min_threshold", 0.60))  # ←必要に応じて0.65〜0.70も可
+    margin  = float(st.session_state.get("critic_margin", 0.15))
+    th_eff  = max(saved_th, th_min)
+
+    has_plan = bool(function_sequence.strip())
+    turns    = int(st.session_state.get("turn_count", 0))
+    high_conf = (p >= th_eff + margin)
+
+    label = "sufficient" if (p >= th_eff and (high_conf or has_plan or turns >= 2)) else "insufficient"
+
+    # デバッグ用に保持
+    st.session_state["critic_debug"] = {
+        "p": p, "saved_th": saved_th, "th_eff": th_eff, "margin": margin,
+        "has_plan": has_plan, "turns": turns, "label": label
+    }
+    return label
 
 def app():
     st.title("LLMATCH Criticデモアプリ")
@@ -141,7 +185,7 @@ def app():
 
     default_prompt_label = st.session_state["prompt_label"]
     prompt_label = st.selectbox(
-        "プロンプト（自動）",
+        "①プロンプト（自動）",
         prompt_keys,
         index=prompt_keys.index(default_prompt_label)
         if default_prompt_label in prompt_keys
@@ -170,6 +214,9 @@ def app():
                 index=model_files.index(current_model),
             )
             st.session_state["model_path"] = os.path.join("models", selected_model)
+
+        st.session_state["critic_min_threshold"] = st.slider("critic_min_threshold", 0.5, 0.9, 0.60, 0.01)
+        st.session_state["critic_margin"]       = st.slider("critic_margin", 0.0, 0.3, 0.15, 0.01)
 
         # タスク selectbox
         task_sets = load_image_task_sets()
@@ -206,7 +253,7 @@ def app():
 
         task_lines = extract_task_lines(payload)
 
-    st.markdown("### 指定されたタスク")
+    st.markdown("### ②指定されたタスク")
     if task_lines:
         for line in task_lines:
             st.info(f"{line}")
@@ -227,7 +274,7 @@ def app():
             "以下の画像ファイルが見つかりません: " + ", ".join(missing_images)
         )
 
-    st.markdown("### 指定されたタスクが行われる場所")
+    st.markdown("### ③指定されたタスクが行われる場所")
     if house:
         meta_lines.append(f"家: {house}")
     if room:
@@ -255,6 +302,8 @@ def app():
         st.session_state["chat_input_history"] = []
     if "active" not in st.session_state:
         st.session_state.active = True
+    if "turn_count" not in st.session_state:
+        st.session_state.turn_count = 0
     if "force_end" not in st.session_state:
         st.session_state.force_end = False
     if "end_reason" not in st.session_state:
@@ -262,7 +311,7 @@ def app():
     if "chat_input_history" not in st.session_state:
         st.session_state["chat_input_history"] = []
 
-    st.markdown("### ロボットとの会話")
+    st.markdown("### ④ロボットとの会話")
     st.write("最初にタスクを入力し、上の写真を見ながらロボットの質問に対して答えてください。")
     context = st.session_state["context"]
 
@@ -292,16 +341,8 @@ def app():
         print("Assistant:", reply)
         context.append({"role": "assistant", "content": reply})
         print("context: ", context)
-
-        run_plan_and_show(reply)
-
-    # sufficient判定なら終了
-    label = get_critic_label(context)
-    if label == "sufficient":
-        st.success("クリティックモデルが「十分」と判定したため会話を終了します。")
-        finalize_and_render_plan(label="sufficient")
-        st.stop()
-
+        st.session_state.turn_count += 1
+        
     # 画面下部に履歴を全表示（systemは省く）
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
     
@@ -315,21 +356,33 @@ def app():
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
-    label = predict_with_model()
+    assistant_messages = [m for m in context if m["role"] == "assistant"]
+    if assistant_messages:
+        label, p, th = predict_with_model()
+        st.caption(f"評価モデルの予測: {label} (p={p:.3f}, th={th:.3f})")
+    else:
+        label, p, th = None, None, None
+        st.caption("評価モデルの予測: ---")
+
+    last_assistant_content = assistant_messages[-1]["content"] if assistant_messages else ""
+    has_plan = "<FunctionSequence>" in last_assistant_content
+    high_conf = (p is not None and th is not None and p >= th + 0.15)
+
     should_stop = False
     end_message = ""
-
     if st.session_state.get("force_end"):
         should_stop = True
         end_message = "ユーザーが会話を強制的に終了しました。"
-    elif label == "sufficient":
-        should_stop = True
-        end_message = "モデルがsufficientを出力したため終了します。"
+    else:
+        if label == "sufficient" and (has_plan or high_conf or st.session_state.turn_count >= 2):
+            should_stop = True
+            end_message = "モデルがsufficientを出力したため終了します。"
 
     if should_stop:
         st.success(end_message)
         if st.session_state.active:
             with st.form("evaluation_form"):
+                st.subheader("⑤評価フォーム")
                 name = st.text_input(
                     "あなたの名前やユーザーネーム等（被験者区別用）"
                 )
@@ -395,6 +448,29 @@ def app():
                     termination_label,
                 )
                 st.session_state.active = False
+        
+        if st.session_state.active == False:
+            st.warning("会話を終了しました。ありがとうございました！")
+            cols_end = st.columns([1, 1, 2])
+            with cols_end[0]:
+                if st.button("⚠️会話をリセット", key="reset_conv_end"):
+                    st.session_state.context = [{"role": "system", "content": system_prompt}]
+                    st.session_state.active = True
+                    st.session_state.conv_log = {
+                        "label": "",
+                        "clarifying_steps": []
+                    }
+                    st.session_state.saved_jsonl = []
+                    st.session_state.turn_count = 0
+                    st.session_state.force_end = False
+                    st.session_state.end_reason = ""
+                    st.session_state["chat_input_history"] = []
+                    st.rerun()
+            with cols_end[1]:
+                st.button("🚨会話を強制的に終了", key="force_end_disabled", disabled=True)
+            with cols_end[2]:
+                st.text_input("会話を終了したい理由", key="end_reason", disabled=True)
+            st.stop()
 
     cols = st.columns([1, 1, 2])
     with cols[0]:
@@ -407,6 +483,7 @@ def app():
                 "clarifying_steps": []
             }
             st.session_state.saved_jsonl = []
+            st.session_state.turn_count = 0
             st.session_state.force_end = False
             st.session_state.end_reason = ""
             st.session_state["chat_input_history"] = []

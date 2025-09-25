@@ -68,7 +68,7 @@ def app():
 
     mode_options = ["GPT", "GPT with critic"]
     default_mode = st.session_state.get("mode", "GPT with critic")
-    mode = st.radio("モード選択", mode_options, index=mode_options.index(default_mode), horizontal=True)
+    mode = st.radio("①モード選択", mode_options, index=mode_options.index(default_mode), horizontal=True)
     st.session_state["mode"] = mode
 
     system_prompt = SYSTEM_PROMPT
@@ -92,7 +92,9 @@ def app():
                 index=model_files.index(current_model),
             )
             st.session_state["model_path"] = os.path.join("models", selected_model)
-
+        st.session_state["critic_min_threshold"] = st.slider("critic_min_threshold", 0.5, 0.9, 0.60, 0.01)
+        st.session_state["critic_margin"]       = st.slider("critic_margin", 0.0, 0.3, 0.15, 0.01)
+        
         task_sets = load_image_task_sets()
         if not task_sets:
             st.warning("写真とタスクのセットが保存されていません。まず『写真とタスクの選定・保存』ページで作成してください。")
@@ -128,7 +130,7 @@ def app():
 
         task_lines = extract_task_lines(payload)
 
-    st.markdown("### 指定されたタスク")
+    st.markdown("### ②指定されたタスク")
     if task_lines:
         for line in task_lines:
             st.info(f"{line}")
@@ -149,7 +151,7 @@ def app():
             "以下の画像ファイルが見つかりません: " + ", ".join(missing_images)
         )
 
-    st.markdown("### 指定されたタスクが行われる場所")
+    st.markdown("### ③指定されたタスクが行われる場所")
     if house:
         meta_lines.append(f"家: {house}")
     if room:
@@ -187,7 +189,8 @@ def app():
     if "end_reason" not in st.session_state:
         st.session_state.end_reason = ""
 
-    st.markdown("### ロボットとの会話")
+    st.markdown("### ④ロボットとの会話")
+    st.write("最初にタスクを入力し、上の写真を見ながらロボットの質問に対して答えてください。")
     context = st.session_state["context"]
 
     message = st.chat_message("assistant")
@@ -263,6 +266,7 @@ def app():
         st.success(end_message)
         if st.session_state.active:
             with st.form("evaluation_form"):
+                st.subheader("⑤評価フォーム")
                 name = st.text_input(
                     "あなたの名前やユーザーネーム等（被験者区別用）"
                 )
