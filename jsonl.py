@@ -314,11 +314,11 @@ def save_jsonl_entry(label: str):
     _save_to_firestore(entry, collection_override="critic_dataset")
 
 def predict_with_model():
-    """学習済みモデルでラベルを推論"""
+    """学習済みモデルでラベルを推論（有効しきい値を使用）"""
     # instruction
     instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
 
-    # 最新のassistantメッセージから FunctionSequence と Information を抽出
+    # 最新assistantから FS / Information
     last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
     fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
     info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
@@ -332,41 +332,52 @@ def predict_with_model():
         clarifying_history,
         information,
     )
+
+    # モデル+しきい値を一度だけロード
     model_path = Path(st.session_state.get("model_path", MODEL_PATH))
-    loaded = joblib.load(model_path)
-    model = loaded["model"]
     obj = joblib.load(model_path)
     if isinstance(obj, dict):
-        model = obj["model"]
-        th = float(obj.get("threshold", 0.5))
+        model = obj.get("model", obj)
+        saved_th = float(obj.get("threshold", 0.5))
     else:
         model = obj
-        th = 0.5  # 後方互換
+        saved_th = 0.5  # 後方互換
 
-    pred = model.predict([text])[0]
-    prediction_label = "sufficient" if pred == 1 else "insufficient"
-    p = float(model.predict_proba([text])[0, 1])
-    label = "sufficient" if p >= th else "insufficient"
+    # 確率
+    if hasattr(model, "predict_proba"):
+        p = float(model.predict_proba([text])[0, 1])
+    elif hasattr(model, "decision_function"):
+        import numpy as np
+        z = model.decision_function([text])[0]
+        p = float(1 / (1 + np.exp(-z)))
+    else:
+        p = float(model.predict([text])[0])  # 最低限のフォールバック
 
+    # 有効しきい値（UIで設定した最低値を適用）
+    th_min = float(st.session_state.get("critic_min_threshold", 0.60))
+    th_eff = max(saved_th, th_min)
+
+    label = "sufficient" if p >= th_eff else "insufficient"
+
+    # 保存・ログ（saved_th も入れておく）
     entry = {
         "instruction": instruction,
         "function_sequence": function_sequence,
         "clarifying_history": clarifying_history,
         "information": information,
-        "mode": st.session_state.get("mode", "")
+        "mode": st.session_state.get("mode", ""),
+        "prediction": label,
+        "probability": p,
+        "threshold_eff": th_eff,
+        "threshold_saved": saved_th,
     }
-    entry["prediction"] = label
-    entry["probability"] = p
-    entry["threshold"] = th
-    entry["model_prediction"] = prediction_label
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
-
     _save_to_firestore(entry, collection_override="predict_with_model")
 
-    return label, p, th
-
+    # UI/呼び出し側がそのまま使えるよう、有効しきい値を返す
+    return label, p, th_eff
 
 def save_pre_experiment_result(human_score: int):
     """保存済みコンテキストから実験結果をjsonl形式で保存"""

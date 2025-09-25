@@ -68,8 +68,10 @@ def app():
 
     mode_options = ["GPT", "GPT with critic"]
     default_mode = st.session_state.get("mode", "GPT with critic")
-    mode = st.radio("①モード選択", mode_options, index=mode_options.index(default_mode), horizontal=True)
+    mode = st.radio("### ①モード選択", mode_options, index=mode_options.index(default_mode), horizontal=True)
     st.session_state["mode"] = mode
+
+    st.session_state.setdefault("critic_min_threshold", 0.60)
 
     system_prompt = SYSTEM_PROMPT
     
@@ -190,7 +192,7 @@ def app():
         st.session_state.end_reason = ""
 
     st.markdown("### ④ロボットとの会話")
-    st.write("最初にタスクを入力し、上の写真を見ながらロボットの質問に対して答えてください。")
+    st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。")
     context = st.session_state["context"]
 
     message = st.chat_message("assistant")

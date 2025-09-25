@@ -185,7 +185,7 @@ def app():
 
     default_prompt_label = st.session_state["prompt_label"]
     prompt_label = st.selectbox(
-        "①プロンプト（自動）",
+        "### ①プロンプト（自動）",
         prompt_keys,
         index=prompt_keys.index(default_prompt_label)
         if default_prompt_label in prompt_keys
@@ -193,6 +193,8 @@ def app():
     )
     system_prompt = prompt_options[prompt_label]
     st.session_state["prompt_label"] = prompt_label
+
+    st.session_state.setdefault("critic_min_threshold", 0.60)
 
     with st.expander("評価モデル・タスク調整（任意）", expanded=False):
         # 評価モデル selectbox
@@ -312,7 +314,7 @@ def app():
         st.session_state["chat_input_history"] = []
 
     st.markdown("### ④ロボットとの会話")
-    st.write("最初にタスクを入力し、上の写真を見ながらロボットの質問に対して答えてください。")
+    st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。")
     context = st.session_state["context"]
 
     message = st.chat_message("assistant")

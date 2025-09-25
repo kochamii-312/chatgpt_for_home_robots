@@ -167,8 +167,12 @@ def train_and_save_model(
     filename = Path("models") / f"critic_model_{timestamp}.joblib"
     filename.parent.mkdir(parents=True, exist_ok=True)
 
-    payload = {"model": model, "threshold": float(best_th)}
-    joblib.dump(payload, filename)
+    BEST_TH_FLOOR = 0.60           # 最低閾値
+    best_th = max(float(best_th), BEST_TH_FLOOR)
+
+    # 保存ペイロード（dict形式）
+    payload = {"model": model, "threshold": best_th}
+    joblib.dump(payload, f"models/critic_model_{timestamp}.joblib")
     print(f"モデルを保存しました: {filename}")
 
     return filename
