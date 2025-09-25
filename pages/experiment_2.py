@@ -22,6 +22,7 @@ from image_task_sets import (
     build_task_set_choices,
     extract_task_lines,
     load_image_task_sets,
+    resolve_image_paths,
 )
 
 from two_classify import prepare_data  # 既存関数を利用
@@ -224,13 +225,14 @@ def app():
         if isinstance(payload, dict):
             image_candidates = [str(p) for p in payload.get("images", []) if isinstance(p, str)]
 
-        existing_images = [p for p in image_candidates if os.path.exists(p)]
-        missing_images = [p for p in image_candidates if p not in existing_images]
+        existing_images, missing_images = resolve_image_paths(image_candidates)
 
         st.session_state["selected_image_paths"] = existing_images
 
         if missing_images:
-            st.warning("以下の画像ファイルが見つかりません: " + ", ".join(missing_images))
+            st.warning(
+                "以下の画像ファイルが見つかりません: " + ", ".join(missing_images)
+            )
 
         st.markdown("### 選択された画像")
         if existing_images:
