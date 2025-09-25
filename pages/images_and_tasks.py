@@ -1,115 +1,261 @@
-import streamlit as st
-import json
 import os
+from pathlib import Path
+from typing import Dict, List
 
+import streamlit as st
 from dotenv import load_dotenv
 
-from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
-from jsonl import predict_with_model, save_experiment_1_result
-from move_functions import (
-    move_to,
-    pick_object,
-    place_object_next_to,
-    place_object_on,
+from image_task_sets import (
+    delete_image_task_set,
+    load_image_task_sets,
+    upsert_image_task_set,
 )
-from run_and_show import (
-    run_plan_and_show,
-    show_clarifying_question,
-    show_function_sequence,
-)
-from run_and_show import show_provisional_output
-from strips import extract_between, strip_tags
-from tasks.ui import render_random_room_task
 
 load_dotenv()
 
+IMAGE_ROOT = Path("images")
+NEW_SET_LABEL = "(新規作成)"
+DEFAULT_LABEL = "(default)"
+
+
+def _ensure_form_state() -> None:
+    defaults: Dict[str, str | List[str]] = {
+        "task_set_name": "",
+        "task_description": "",
+        "selected_house": "",
+        "selected_subfolder": "",
+    }
+    for key, value in defaults.items():
+        st.session_state.setdefault(key, value)
+    st.session_state.setdefault("selected_image_paths", [])
+    st.session_state.setdefault("current_task_set_choice", NEW_SET_LABEL)
+
+
+def _reset_form_state() -> None:
+    st.session_state.update(
+        {
+            "task_set_name": "",
+            "task_description": "",
+            "selected_house": "",
+            "selected_subfolder": "",
+            "selected_image_paths": [],
+            "current_task_set_choice": NEW_SET_LABEL,
+        }
+    )
+
+
+def _populate_form_from_set(name: str, payload: Dict[str, object]) -> None:
+    tasks = payload.get("tasks") if isinstance(payload, dict) else []
+    task_lines: List[str] = []
+    if isinstance(tasks, list):
+        task_lines = [str(t) for t in tasks if str(t).strip()]
+    elif isinstance(tasks, str):
+        task_lines = [line.strip() for line in tasks.splitlines() if line.strip()]
+    elif isinstance(payload, dict):
+        raw_text = payload.get("task_text")
+        if isinstance(raw_text, str):
+            task_lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+
+    st.session_state.update(
+        {
+            "task_set_name": name,
+            "task_description": "\n".join(task_lines),
+            "selected_house": str(payload.get("house", "")) if isinstance(payload, dict) else "",
+            "selected_subfolder": str(payload.get("room", "")) if isinstance(payload, dict) else "",
+            "selected_image_paths": [
+                str(path) for path in payload.get("images", [])
+            ]
+            if isinstance(payload, dict)
+            else [],
+            "current_task_set_choice": name,
+        }
+    )
+
+
+
 def app():
     st.title("LLMATCH Criticデモアプリ")
-    st.subheader("写真とタスクの選定")
-    
+    st.subheader("写真とタスクの選定・保存")
+
     st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
-    """
-    - **move_to(room_name:str)**  
-    指定した部屋へロボットを移動します。
+        """
+        - **move_to(room_name:str)**
+        指定した部屋へロボットを移動します。
 
-    - **pick_object(object:str)**  
-    指定した物体をつかみます。
+        - **pick_object(object:str)**
+        指定した物体をつかみます。
 
-    - **place_object_next_to(object:str, target:str)**  
-    指定した物体をターゲットの横に置きます。
+        - **place_object_next_to(object:str, target:str)**
+        指定した物体をターゲットの横に置きます。
 
-    - **place_object_on(object:str, target:str)**  
-    指定した物体をターゲットの上に置きます。
+        - **place_object_on(object:str, target:str)**
+        指定した物体をターゲットの上に置きます。
 
-    - **place_object_in(object:str, target:str)**  
-    指定した物体をターゲットの中に入れます。
+        - **place_object_in(object:str, target:str)**
+        指定した物体をターゲットの中に入れます。
 
-    - **detect_object(object:str)**  
-    指定した物体を検出します。
+        - **detect_object(object:str)**
+        指定した物体を検出します。
 
-    - **search_about(object:str)**  
-    指定した物体に関する情報を検索します。
+        - **search_about(object:str)**
+        指定した物体に関する情報を検索します。
 
-    - **push(object:str)**  
-    指定した物体を押します。
+        - **push(object:str)**
+        指定した物体を押します。
 
-    - **say(text:str)**  
-    指定したテキストを発話します。
-    """
+        - **say(text:str)**
+        指定したテキストを発話します。
+        """
     )
 
-    image_root = "images"
-    house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
-    default_label = "(default)"
-    options = [default_label] + house_dirs
-    current_house = st.session_state.get("selected_house", "")
-    current_label = current_house if current_house else default_label
+    _ensure_form_state()
+
+    task_sets = load_image_task_sets()
+    sorted_names = sorted(task_sets.keys())
+    selection_options = [NEW_SET_LABEL] + sorted_names
+
+    default_choice = st.session_state.get("current_task_set_choice", NEW_SET_LABEL)
+    if default_choice not in selection_options:
+        default_choice = NEW_SET_LABEL
+
     selected_label = st.selectbox(
-        "想定する家",
-        options,
-        index=options.index(current_label) if current_label in options else 0,
+        "保存済みのタスクセット",
+        selection_options,
+        index=selection_options.index(default_choice),
     )
-    st.session_state["selected_house"] = "" if selected_label == default_label else selected_label
 
-    image_dir = image_root
-    subdirs = []
+    if selected_label != st.session_state.get("current_task_set_choice"):
+        if selected_label == NEW_SET_LABEL:
+            _reset_form_state()
+        else:
+            payload = task_sets.get(selected_label, {})
+            _populate_form_from_set(selected_label, payload)
+
+    # --- タスクセット名とタスク内容 ---
+    st.text_input("タスクセット名", key="task_set_name")
+    st.text_area("タスク（1行につき1つの指示を入力してください）", height=120, key="task_description")
+
+    # --- 画像の選択 ---
+    house_dirs = sorted([d for d in os.listdir(IMAGE_ROOT) if (IMAGE_ROOT / d).is_dir()])
+    house_options = [DEFAULT_LABEL] + house_dirs
+    current_house = st.session_state.get("selected_house", "")
+    current_house_label = current_house if current_house else DEFAULT_LABEL
+    house_label = st.selectbox(
+        "想定する家",
+        house_options,
+        index=house_options.index(current_house_label)
+        if current_house_label in house_options
+        else 0,
+    )
+    st.session_state["selected_house"] = "" if house_label == DEFAULT_LABEL else house_label
+
+    image_dir = IMAGE_ROOT
+    subdirs: List[str] = []
     if st.session_state["selected_house"]:
-        image_dir = os.path.join(image_dir, st.session_state["selected_house"])
-        subdirs = [d for d in os.listdir(image_dir) if os.path.isdir(os.path.join(image_dir, d))]
-    sub_default = "(default)"
+        image_dir = image_dir / st.session_state["selected_house"]
+        subdirs = sorted([d for d in os.listdir(image_dir) if (image_dir / d).is_dir()])
+
     if subdirs:
         current_sub = st.session_state.get("selected_subfolder", "")
-        current_sub_label = current_sub if current_sub else sub_default
-        sub_options = [sub_default] + subdirs
+        current_sub_label = current_sub if current_sub else DEFAULT_LABEL
+        sub_options = [DEFAULT_LABEL] + subdirs
         sub_label = st.selectbox(
             "部屋",
             sub_options,
-            index=sub_options.index(current_sub_label) if current_sub_label in sub_options else 0,
+            index=sub_options.index(current_sub_label)
+            if current_sub_label in sub_options
+            else 0,
         )
-        st.session_state["selected_subfolder"] = "" if sub_label == sub_default else sub_label
+        st.session_state["selected_subfolder"] = "" if sub_label == DEFAULT_LABEL else sub_label
         if st.session_state["selected_subfolder"]:
-            image_dir = os.path.join(image_dir, st.session_state["selected_subfolder"])
+            image_dir = image_dir / st.session_state["selected_subfolder"]
     else:
         st.session_state["selected_subfolder"] = ""
 
-    selected_room = st.session_state.get("selected_subfolder", "")
-    render_random_room_task(selected_room, state_prefix="experiment1")
+    selected_paths: List[str] = st.session_state.get("selected_image_paths", [])
+    image_files: List[str] = []
+    if image_dir.is_dir():
+        image_files = sorted(
+            [
+                f
+                for f in os.listdir(image_dir)
+                if (image_dir / f).is_file()
+                and f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp"))
+            ]
+        )
 
-    if os.path.isdir(image_dir):
-        image_files = [
-            f
-            for f in os.listdir(image_dir)
-            if os.path.isfile(os.path.join(image_dir, f))
-            and f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp"))
-        ]
-        if image_files:
-            selected_imgs = st.multiselect("表示する画像", image_files)
-            selected_paths = [os.path.join(image_dir, img) for img in selected_imgs]
-            st.session_state["selected_image_paths"] = selected_paths
-            for path, img in zip(selected_paths, selected_imgs):
-                st.image(path, caption=img)
+    image_dir_str = str(image_dir)
+    default_images = [
+        os.path.basename(path)
+        for path in selected_paths
+        if os.path.dirname(path) == image_dir_str
+    ]
+
+    selected_imgs = st.multiselect(
+        "表示する画像",
+        image_files,
+        default=default_images,
+    )
+    st.session_state["selected_image_paths"] = [
+        str(image_dir / img) for img in selected_imgs
+    ]
+
+    st.markdown("### 選択中の画像")
+    if st.session_state["selected_image_paths"]:
+        for path in st.session_state["selected_image_paths"]:
+            if os.path.exists(path):
+                st.image(path, caption=os.path.basename(path))
+            else:
+                st.warning(f"画像ファイルが見つかりません: {path}")
+    else:
+        st.info("画像を1枚以上選択してください。")
+
+    # --- 保存処理 ---
+    if st.button("タスクセットを保存", type="primary"):
+        name = st.session_state.get("task_set_name", "").strip()
+        tasks_text = st.session_state.get("task_description", "")
+        image_paths = st.session_state.get("selected_image_paths", [])
+
+        errors = []
+        if not name:
+            errors.append("タスクセット名を入力してください。")
+        if not image_paths:
+            errors.append("画像を1枚以上選択してください。")
+        task_lines = [line.strip() for line in tasks_text.splitlines() if line.strip()]
+        if not task_lines:
+            errors.append("タスクを1行以上入力してください。")
+
+        if errors:
+            for err in errors:
+                st.error(err)
         else:
-            st.session_state["selected_image_paths"] = []
+            payload = {
+                "house": st.session_state.get("selected_house", ""),
+                "room": st.session_state.get("selected_subfolder", ""),
+                "images": image_paths,
+                "tasks": task_lines,
+                "task_text": "\n".join(task_lines),
+            }
+            upsert_image_task_set(name, payload)
+            st.session_state["current_task_set_choice"] = name
+            st.success(f"タスクセット『{name}』を保存しました。")
+
+    if selected_label != NEW_SET_LABEL and st.button("選択中のタスクセットを削除", type="secondary"):
+        delete_image_task_set(selected_label)
+        st.success(f"タスクセット『{selected_label}』を削除しました。")
+        _reset_form_state()
+        st.rerun()
+
+    st.markdown("### 保存済みタスクセット一覧")
+    refreshed_sets = load_image_task_sets()
+    if not refreshed_sets:
+        st.info("保存済みのタスクセットはまだありません。")
+    else:
+        for name in sorted(refreshed_sets.keys()):
+            data = refreshed_sets[name]
+            tasks = data.get("tasks", []) if isinstance(data, dict) else []
+            st.markdown(f"- **{name}**: {', '.join(tasks) if tasks else 'タスク未登録'}")
+
 
 app()
