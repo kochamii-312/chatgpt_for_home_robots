@@ -1,6 +1,8 @@
 import streamlit as st
 import json
 import os
+import random
+import joblib
 
 from dotenv import load_dotenv
 
@@ -30,7 +32,7 @@ load_dotenv()
 
 def app():
     st.title("LLMATCH Criticデモアプリ")
-    st.subheader("実験① GPTとGPT with Criticの比較")
+    st.subheader("実験1 GPTとGPT with Criticの比較")
     
     st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(
@@ -70,59 +72,49 @@ def app():
     st.session_state["mode"] = mode
 
     system_prompt = SYSTEM_PROMPT
-
-    model_files = sorted(
-        f for f in os.listdir("models") if f.endswith(".joblib")
-    )
-    if model_files:
-        latest_model = max(
-            model_files,
-            key=lambda f: os.path.getmtime(os.path.join("models", f)),
+    
+    with st.expander("評価モデル・タスク調整（任意）", expanded=False):
+        model_files = sorted(
+            f for f in os.listdir("models") if f.endswith(".joblib")
         )
-        stored_model = st.session_state.get("model_path")
-        current_model = os.path.basename(stored_model) if stored_model else None
-        if current_model not in model_files:
-            current_model = latest_model
-        selected_model = st.selectbox(
-            "評価モデル（自動）",
-            model_files,
-            index=model_files.index(current_model),
-        )
-        st.session_state["model_path"] = os.path.join("models", selected_model)
+        if model_files:
+            latest_model = max(
+                model_files,
+                key=lambda f: os.path.getmtime(os.path.join("models", f)),
+            )
+            stored_model = st.session_state.get("model_path")
+            current_model = os.path.basename(stored_model) if stored_model else None
+            if current_model not in model_files:
+                current_model = latest_model
+            selected_model = st.selectbox(
+                "評価モデル（自動）",
+                model_files,
+                index=model_files.index(current_model),
+            )
+            st.session_state["model_path"] = os.path.join("models", selected_model)
 
-    task_sets = load_image_task_sets()
-    if not task_sets:
-        st.warning("写真とタスクのセットが保存されていません。まず『写真とタスクの選定・保存』ページで作成してください。")
-        st.session_state["selected_image_paths"] = []
-        st.session_state["experiment1_selected_task_set"] = None
-    else:
-        choice_pairs = build_task_set_choices(task_sets)
-        labels = [label for label, _ in choice_pairs]
-        label_to_key = {label: key for label, key in choice_pairs}
-
-        if not labels:
-            st.warning("保存済みのタスクが読み込めませんでした。")
+        task_sets = load_image_task_sets()
+        if not task_sets:
+            st.warning("写真とタスクのセットが保存されていません。まず『写真とタスクの選定・保存』ページで作成してください。")
             st.session_state["selected_image_paths"] = []
             st.session_state["experiment1_selected_task_set"] = None
-            payload = {}
         else:
-            default_key = st.session_state.get("experiment1_selected_task_set")
-            if default_key not in label_to_key.values():
-                default_key = choice_pairs[0][1]
+            choice_pairs = build_task_set_choices(task_sets)
+            labels = [label for label, _ in choice_pairs]
+            label_to_key = {label: key for label, key in choice_pairs}
 
-            default_label = next(
-                (label for label, key in choice_pairs if key == default_key),
-                labels[0],
-            )
-
-            selected_label = st.selectbox(
-                "タスク",
-                labels,
-                index=labels.index(default_label) if default_label in labels else 0,
-            )
-            selected_task_name = label_to_key.get(selected_label)
-            st.session_state["experiment1_selected_task_set"] = selected_task_name
-            payload = task_sets.get(selected_task_name, {}) if selected_task_name else {}
+            if not labels:
+                st.warning("保存済みのタスクが読み込めませんでした。")
+                st.session_state["selected_image_paths"] = []
+                st.session_state["experiment1_selected_task_set"] = None
+                payload = {}
+            else:
+                # ランダム選択
+                selected_label = random.choice(labels)
+                st.selectbox("タスク", labels, index=labels.index(selected_label))
+                selected_task_name = label_to_key.get(selected_label)
+                st.session_state["experiment1_selected_task_set"] = selected_task_name
+                payload = task_sets.get(selected_task_name, {}) if selected_task_name else {}
 
         house = payload.get("house") if isinstance(payload, dict) else ""
         room = payload.get("room") if isinstance(payload, dict) else ""
@@ -130,39 +122,39 @@ def app():
 
         task_lines = extract_task_lines(payload)
 
-        st.markdown("### 指定されたタスク")
-        if task_lines:
-            for line in task_lines:
-                st.info(f"{line}")
-        else:
-            st.info("タスクが登録されていません。")
-        st.write("→ここで指定されたタスクをそのままテキストフィールドに入力してください！")
+    st.markdown("### 指定されたタスク")
+    if task_lines:
+        for line in task_lines:
+            st.info(f"{line}")
+    else:
+        st.info("タスクが登録されていません。")
+    st.write("→指定されたタスクをそのままテキストフィールドに入力してください！")
 
-        image_candidates = []
-        if isinstance(payload, dict):
-            image_candidates = [str(p) for p in payload.get("images", []) if isinstance(p, str)]
+    image_candidates = []
+    if isinstance(payload, dict):
+        image_candidates = [str(p) for p in payload.get("images", []) if isinstance(p, str)]
 
-        existing_images, missing_images = resolve_image_paths(image_candidates)
+    existing_images, missing_images = resolve_image_paths(image_candidates)
 
-        st.session_state["selected_image_paths"] = existing_images
+    st.session_state["selected_image_paths"] = existing_images
 
-        if missing_images:
-            st.warning(
-                "以下の画像ファイルが見つかりません: " + ", ".join(missing_images)
-            )
+    if missing_images:
+        st.warning(
+            "以下の画像ファイルが見つかりません: " + ", ".join(missing_images)
+        )
 
-        st.markdown("### 指定されたタスクが行われる場所")
-        if house:
-            meta_lines.append(f"家: {house}")
-        if room:
-            meta_lines.append(f"部屋: {room}")
-        if meta_lines:
-            st.write(" / ".join(meta_lines))
-        if existing_images:
-            for path in existing_images:
-                st.image(path, caption=os.path.basename(path))
-        else:
-            st.info("画像が設定されていません。")
+    st.markdown("### 指定されたタスクが行われる場所")
+    if house:
+        meta_lines.append(f"家: {house}")
+    if room:
+        meta_lines.append(f"部屋: {room}")
+    if meta_lines:
+        st.write(" / ".join(meta_lines))
+    if existing_images:
+        for path in existing_images:
+            st.image(path, caption=os.path.basename(path))
+    else:
+        st.info("画像が設定されていません。")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if (
@@ -189,6 +181,7 @@ def app():
     if "end_reason" not in st.session_state:
         st.session_state.end_reason = ""
 
+    st.markdown("### ロボットとの会話")
     context = st.session_state["context"]
 
     message = st.chat_message("assistant")
@@ -234,14 +227,18 @@ def app():
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
-    label = predict_with_model()
+    label, p, th = predict_with_model()
+    st.caption(f"評価モデルの予測: {label} (p={p:.3f}, th={th:.3f})")
+    has_plan = ("<FunctionSequence>" in (context[-1]["content"] if context else ""))
+    high_conf = (p >= th + 0.15)
+
     should_stop = False
     end_message = ""
     if st.session_state.get("force_end"):
         should_stop = True
         end_message = "ユーザーが会話を強制的に終了しました。"
     elif st.session_state.get("mode") == "GPT with critic":
-        if label == "sufficient":
+        if label == "sufficient" and (has_plan or high_conf or st.session_state.turn_count >= 2):
             should_stop = True
             end_message = "モデルがsufficientを出力したため終了します。"
     else:

@@ -349,19 +349,20 @@ def predict_with_model():
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
 
-    # DATASET_PATH.parent.mkdir(parents=True, exist_ok=True)
-    # need_newline = False
-    # if DATASET_PATH.exists() and DATASET_PATH.stat().st_size > 0:
-    #     with DATASET_PATH.open("rb") as f:
-    #         f.seek(-1, 2)
-    #         need_newline = f.read(1) != b"\n"
-    # with DATASET_PATH.open("a", encoding="utf-8") as f:
-    #     if need_newline:
-    #         f.write("\n")
-    #     f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-
     _save_to_firestore(entry, collection_override="predict_with_model")
-    return label
+    
+    obj = joblib.load(model_path)
+    if isinstance(obj, dict):
+        model = obj["model"]
+        th = float(obj.get("threshold", 0.5))
+    else:
+        model = obj
+        th = 0.5  # 後方互換
+
+    p = float(model.predict_proba([text])[0, 1])
+    label = "sufficient" if p >= th else "insufficient"
+    return label, p, th
+
 
 def save_pre_experiment_result(human_score: int):
     """保存済みコンテキストから実験結果をjsonl形式で保存"""

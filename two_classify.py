@@ -157,7 +157,9 @@ def train_and_save_model(
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = Path("models") / f"critic_model_{timestamp}.joblib"
     filename.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump(model, filename)
+
+    payload = {"model": model, "threshold": float(best_th)}
+    joblib.dump(payload, filename)
     print(f"モデルを保存しました: {filename}")
 
     return filename
