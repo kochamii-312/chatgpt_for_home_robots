@@ -19,7 +19,11 @@ from run_and_show import (
 )
 from run_and_show import show_provisional_output
 from strips import extract_between, strip_tags
-from image_task_sets import load_image_task_sets
+from image_task_sets import (
+    build_task_set_choices,
+    extract_task_lines,
+    load_image_task_sets,
+)
 
 load_dotenv()
 
@@ -91,17 +95,34 @@ def app():
         st.session_state["selected_image_paths"] = []
         st.session_state["experiment1_selected_task_set"] = None
     else:
-        task_names = sorted(task_sets.keys())
-        default_task = st.session_state.get("experiment1_selected_task_set")
-        if default_task not in task_names:
-            default_task = task_names[0]
-        selected_task_name = st.selectbox(
-            "タスクセット",
-            task_names,
-            index=task_names.index(default_task) if default_task in task_names else 0,
-        )
-        st.session_state["experiment1_selected_task_set"] = selected_task_name
-        payload = task_sets.get(selected_task_name, {})
+        choice_pairs = build_task_set_choices(task_sets)
+        labels = [label for label, _ in choice_pairs]
+        label_to_key = {label: key for label, key in choice_pairs}
+
+        if not labels:
+            st.warning("保存済みのタスクが読み込めませんでした。")
+            st.session_state["selected_image_paths"] = []
+            st.session_state["experiment1_selected_task_set"] = None
+            payload = {}
+        else:
+            default_key = st.session_state.get("experiment1_selected_task_set")
+            if default_key not in label_to_key.values():
+                default_key = choice_pairs[0][1]
+
+            default_label = next(
+                (label for label, key in choice_pairs if key == default_key),
+                labels[0],
+            )
+
+            selected_label = st.selectbox(
+                "タスク",
+                labels,
+                index=labels.index(default_label) if default_label in labels else 0,
+            )
+            selected_task_name = label_to_key.get(selected_label)
+            st.session_state["experiment1_selected_task_set"] = selected_task_name
+            payload = task_sets.get(selected_task_name, {}) if selected_task_name else {}
+
         house = payload.get("house") if isinstance(payload, dict) else ""
         room = payload.get("room") if isinstance(payload, dict) else ""
         meta_lines = []
@@ -112,17 +133,7 @@ def app():
         if meta_lines:
             st.info(" / ".join(meta_lines))
 
-        task_lines = []
-        if isinstance(payload, dict):
-            tasks_value = payload.get("tasks")
-            if isinstance(tasks_value, list):
-                task_lines = [str(t) for t in tasks_value if str(t).strip()]
-            elif isinstance(tasks_value, str):
-                task_lines = [line.strip() for line in tasks_value.splitlines() if line.strip()]
-            else:
-                raw_text = payload.get("task_text")
-                if isinstance(raw_text, str):
-                    task_lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
+        task_lines = extract_task_lines(payload)
 
         st.markdown("### タスク")
         if task_lines:

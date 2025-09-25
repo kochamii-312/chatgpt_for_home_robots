@@ -6,6 +6,8 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from image_task_sets import (
+    build_task_set_choices,
+
     delete_image_task_set,
     load_image_task_sets,
     upsert_image_task_set,
@@ -20,7 +22,6 @@ DEFAULT_LABEL = "(default)"
 
 def _ensure_form_state() -> None:
     defaults: Dict[str, str | List[str]] = {
-        "task_set_name": "",
         "task_description": "",
         "selected_house": "",
         "selected_subfolder": "",
@@ -34,7 +35,6 @@ def _ensure_form_state() -> None:
 def _reset_form_state() -> None:
     st.session_state.update(
         {
-            "task_set_name": "",
             "task_description": "",
             "selected_house": "",
             "selected_subfolder": "",
@@ -58,7 +58,6 @@ def _populate_form_from_set(name: str, payload: Dict[str, object]) -> None:
 
     st.session_state.update(
         {
-            "task_set_name": name,
             "task_description": "\n".join(task_lines),
             "selected_house": str(payload.get("house", "")) if isinstance(payload, dict) else "",
             "selected_subfolder": str(payload.get("room", "")) if isinstance(payload, dict) else "",
@@ -112,28 +111,46 @@ def app():
     _ensure_form_state()
 
     task_sets = load_image_task_sets()
-    sorted_names = sorted(task_sets.keys())
-    selection_options = [NEW_SET_LABEL] + sorted_names
+    choice_pairs = build_task_set_choices(task_sets)
+    labels = [label for label, _ in choice_pairs]
+    label_to_key = {label: key for label, key in choice_pairs}
 
-    default_choice = st.session_state.get("current_task_set_choice", NEW_SET_LABEL)
-    if default_choice not in selection_options:
-        default_choice = NEW_SET_LABEL
+    selection_options = [NEW_SET_LABEL] + labels
+
+    current_key = st.session_state.get("current_task_set_choice", NEW_SET_LABEL)
+    valid_keys = {key for _, key in choice_pairs}
+    if current_key not in valid_keys and current_key != NEW_SET_LABEL:
+        if current_key in label_to_key:
+            current_key = label_to_key[current_key]
+        else:
+            current_key = NEW_SET_LABEL
+        st.session_state["current_task_set_choice"] = current_key
+    if not labels:
+        default_label = NEW_SET_LABEL
+    elif current_key != NEW_SET_LABEL:
+        default_label = next(
+            (label for label, key in choice_pairs if key == current_key),
+            NEW_SET_LABEL,
+        )
+    else:
+        default_label = NEW_SET_LABEL
 
     selected_label = st.selectbox(
-        "保存済みのタスクセット",
+        "保存済みのタスク",
         selection_options,
-        index=selection_options.index(default_choice),
+        index=selection_options.index(default_label) if default_label in selection_options else 0,
     )
 
-    if selected_label != st.session_state.get("current_task_set_choice"):
-        if selected_label == NEW_SET_LABEL:
+    selected_key = label_to_key.get(selected_label, NEW_SET_LABEL)
+
+    if selected_key != current_key:
+        if selected_key == NEW_SET_LABEL:
             _reset_form_state()
         else:
-            payload = task_sets.get(selected_label, {})
-            _populate_form_from_set(selected_label, payload)
+            payload = task_sets.get(selected_key, {})
+            _populate_form_from_set(selected_key, payload)
 
     # --- タスクセット名とタスク内容 ---
-    st.text_input("タスクセット名", key="task_set_name")
     st.text_area("タスク（1行につき1つの指示を入力してください）", height=120, key="task_description")
 
     # --- 画像の選択 ---
@@ -212,14 +229,11 @@ def app():
         st.info("画像を1枚以上選択してください。")
 
     # --- 保存処理 ---
-    if st.button("タスクセットを保存", type="primary"):
-        name = st.session_state.get("task_set_name", "").strip()
+    if st.button("タスクを保存", type="primary"):
         tasks_text = st.session_state.get("task_description", "")
         image_paths = st.session_state.get("selected_image_paths", [])
 
         errors = []
-        if not name:
-            errors.append("タスクセット名を入力してください。")
         if not image_paths:
             errors.append("画像を1枚以上選択してください。")
         task_lines = [line.strip() for line in tasks_text.splitlines() if line.strip()]
@@ -230,6 +244,7 @@ def app():
             for err in errors:
                 st.error(err)
         else:
+            name = "\n".join(task_lines)
             payload = {
                 "house": st.session_state.get("selected_house", ""),
                 "room": st.session_state.get("selected_subfolder", ""),
@@ -239,23 +254,28 @@ def app():
             }
             upsert_image_task_set(name, payload)
             st.session_state["current_task_set_choice"] = name
-            st.success(f"タスクセット『{name}』を保存しました。")
+            st.success("タスクを保存しました。")
 
-    if selected_label != NEW_SET_LABEL and st.button("選択中のタスクセットを削除", type="secondary"):
-        delete_image_task_set(selected_label)
-        st.success(f"タスクセット『{selected_label}』を削除しました。")
+    if selected_key != NEW_SET_LABEL and st.button("選択中のタスクを削除", type="secondary"):
+        if selected_key in task_sets:
+            delete_image_task_set(selected_key)
+            st.success("選択中のタスクを削除しました。")
+        else:
+            st.warning("削除対象のタスクが見つかりませんでした。")
         _reset_form_state()
         st.rerun()
 
-    st.markdown("### 保存済みタスクセット一覧")
+    st.markdown("### 保存済みタスク一覧")
     refreshed_sets = load_image_task_sets()
     if not refreshed_sets:
-        st.info("保存済みのタスクセットはまだありません。")
+        st.info("保存済みのタスクはまだありません。")
     else:
-        for name in sorted(refreshed_sets.keys()):
-            data = refreshed_sets[name]
+        refreshed_choices = build_task_set_choices(refreshed_sets)
+        for label, key in refreshed_choices:
+            data = refreshed_sets.get(key, {})
             tasks = data.get("tasks", []) if isinstance(data, dict) else []
-            st.markdown(f"- **{name}**: {', '.join(tasks) if tasks else 'タスク未登録'}")
-
+            st.markdown(
+                f"- **{label}**: {', '.join(tasks) if tasks else 'タスク未登録'}"
+            )
 
 app()
