@@ -353,9 +353,12 @@ def predict_with_model():
     else:
         p = float(model.predict([text])[0])  # 最低限のフォールバック
 
-    # 有効しきい値（UIで設定した最低値を適用）
-    th_min = float(st.session_state.get("critic_min_threshold", 0.60))
-    th_eff = max(saved_th, th_min)
+    th_min  = float(st.session_state.get("critic_min_threshold", 0.60))
+    force   = st.session_state.get("critic_force_threshold", None)
+    if force is not None:
+        th_eff = float(force)                 # ← 強制上書き
+    else:
+        th_eff = max(saved_th, th_min)        # ← 従来の下限フロア
 
     label = "sufficient" if p >= th_eff else "insufficient"
 

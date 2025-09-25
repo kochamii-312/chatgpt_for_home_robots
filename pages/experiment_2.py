@@ -220,7 +220,12 @@ def app():
         st.session_state["critic_min_threshold"] = st.slider("critic_min_threshold", 0.5, 0.9, 0.60, 0.01)
         st.session_state["critic_margin"]       = st.slider("critic_margin", 0.0, 0.3, 0.15, 0.01)
 
-        # タスク selectbox
+        use_force = st.checkbox("しきい値を上書きする（force）", value=True)
+        if use_force:
+            st.session_state["critic_force_threshold"] = st.slider("force_threshold", 0.50, 0.90, 0.60, 0.01)
+        else:
+            st.session_state.pop("critic_force_threshold", None)
+
         task_sets = load_image_task_sets()
         if not task_sets:
             st.warning("写真とタスクのセットが保存されていません。まず『写真とタスクの選定・保存』ページで作成してください。")
@@ -314,7 +319,9 @@ def app():
         st.session_state["chat_input_history"] = []
 
     st.markdown("### ④ロボットとの会話")
-    st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。")
+    st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。" \
+    "質問された情報が写真にない場合は仮想の情報を答えて構いません。" \
+    "自動で評価フォームが表示されるまで会話を続けてください。")
     context = st.session_state["context"]
 
     message = st.chat_message("assistant")
