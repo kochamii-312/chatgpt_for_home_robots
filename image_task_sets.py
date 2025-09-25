@@ -127,7 +127,14 @@ def resolve_image_path(path_str: str) -> Path:
     directory.
     """
 
-    original = Path(str(path_str))
+    # ``path_str`` may come from Windows environments where the path was saved
+    # with backslashes (e.g. ``images\house2\LIVING\00051-rgb.png``).  On
+    # Linux these backslashes are treated as literal characters which prevents
+    # ``Path`` from resolving the file correctly.  Normalise the separators
+    # before constructing the ``Path`` object so the resolution logic works
+    # irrespective of the originating platform.
+    normalised = str(path_str).replace("\\", "/")
+    original = Path(normalised)
     candidates = [original]
 
     if not original.is_absolute():
