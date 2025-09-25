@@ -7,10 +7,57 @@ can share the same storage format.
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Dict, List, Tuple
 
 _DATA_PATH = Path("json/image_task_sets.json")
+
+
+def _normalise_path_string(path_str: object) -> str:
+    """Return a filesystem-friendly representation of *path_str*.
+
+    The stored JSON may contain Windows style paths (e.g. "images\\house1\\room").
+    These strings do not map to actual files when running on POSIX systems.  This
+    helper converts such strings into POSIX-like paths so that ``os.path`` calls and
+    Streamlit's ``st.image`` can successfully locate the files regardless of the
+    operating system used when the data was recorded.
+    """
+
+    if isinstance(path_str, str):
+        candidate = path_str.strip()
+    else:
+        candidate = str(path_str).strip()
+
+    if not candidate:
+        return ""
+
+    if "\\" in candidate:
+        try:
+            windows_path = PureWindowsPath(candidate)
+            posix_candidate = Path(*windows_path.parts).as_posix()
+            if posix_candidate:
+                return posix_candidate
+        except Exception:
+            # If the string cannot be parsed as a Windows path we simply fall back to
+            # the generic handling below.
+            pass
+
+    try:
+        return Path(candidate).as_posix()
+    except Exception:
+        return candidate
+
+
+def _normalise_payload(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a shallow copy of *payload* with normalised image paths."""
+
+    normalised = dict(payload)
+    images = normalised.get("images")
+    if isinstance(images, list):
+        normalised["images"] = [
+            _normalise_path_string(item) for item in images if str(item).strip()
+        ]
+    return normalised
 
 
 def load_image_task_sets() -> Dict[str, Dict[str, Any]]:
@@ -35,7 +82,7 @@ def load_image_task_sets() -> Dict[str, Dict[str, Any]]:
     cleaned: Dict[str, Dict[str, Any]] = {}
     for key, value in raw.items():
         if isinstance(value, dict):
-            cleaned[str(key)] = value
+            cleaned[str(key)] = _normalise_payload(value)
     return cleaned
 
 
@@ -43,8 +90,14 @@ def save_image_task_sets(task_sets: Dict[str, Dict[str, Any]]) -> None:
     """Persist the provided task sets to disk."""
 
     _DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
+    normalised = {
+        str(key): _normalise_payload(value)
+        for key, value in task_sets.items()
+        if isinstance(value, dict)
+    }
+
     _DATA_PATH.write_text(
-        json.dumps(task_sets, ensure_ascii=False, indent=2),
+        json.dumps(normalised, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
@@ -53,7 +106,7 @@ def upsert_image_task_set(name: str, payload: Dict[str, Any]) -> None:
     """Create or update a single task set entry."""
 
     task_sets = load_image_task_sets()
-    task_sets[name] = payload
+    task_sets[name] = _normalise_payload(payload)
     save_image_task_sets(task_sets)
 
 
