@@ -18,7 +18,11 @@ from api import (
 from jsonl import predict_with_model, save_experiment_2_result
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import run_plan_and_show, show_clarifying_question, show_function_sequence
-from tasks.ui import render_random_room_task
+from image_task_sets import (
+    build_task_set_choices,
+    extract_task_lines,
+    load_image_task_sets,
+)
 from two_classify import prepare_data  # 既存関数を利用
 
 load_dotenv()
@@ -163,80 +167,76 @@ def app():
         )
         st.session_state["model_path"] = os.path.join("models", selected_model)
 
-    image_root = "images"
-    house_dirs = [d for d in os.listdir(image_root) if os.path.isdir(os.path.join(image_root, d))]
-    default_label = "(default)"
-    options = [default_label] + house_dirs
-    current_house = st.session_state.get("selected_house", "")
-    current_label = current_house if current_house else default_label
-    selected_label = st.selectbox(
-        "想定する家",
-        options,
-        index=options.index(current_label) if current_label in options else 0,
-    )
-    st.session_state["selected_house"] = "" if selected_label == default_label else selected_label
-
-    image_dir = image_root
-    subdirs = []
-    if st.session_state["selected_house"]:
-        image_dir = os.path.join(image_dir, st.session_state["selected_house"])
-        subdirs = [d for d in os.listdir(image_dir) if os.path.isdir(os.path.join(image_dir, d))]
-    sub_default = "(default)"
-    if subdirs:
-        current_sub = st.session_state.get("selected_subfolder", "")
-        current_sub_label = current_sub if current_sub else sub_default
-        sub_options = [sub_default] + subdirs
-        sub_label = st.selectbox(
-            "部屋",
-            sub_options,
-            index=sub_options.index(current_sub_label) if current_sub_label in sub_options else 0,
-        )
-        st.session_state["selected_subfolder"] = "" if sub_label == sub_default else sub_label
-        if st.session_state["selected_subfolder"]:
-            image_dir = os.path.join(image_dir, st.session_state["selected_subfolder"])
-    else:
-        st.session_state["selected_subfolder"] = ""
-
-    if os.path.isdir(image_dir):
-        image_files = [
-            f
-            for f in os.listdir(image_dir)
-            if os.path.isfile(os.path.join(image_dir, f))
-            and f.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".bmp"))
-        ]
-        if image_files:
-            selected_imgs = st.multiselect("表示する画像", image_files)
-            selected_paths = [os.path.join(image_dir, img) for img in selected_imgs]
-            st.session_state["selected_image_paths"] = selected_paths
-            for path, img in zip(selected_paths, selected_imgs):
-                st.image(path, caption=img)
-        else:
-            st.session_state["selected_image_paths"] = []
-    else:
+    task_sets = load_image_task_sets()
+    if not task_sets:
+        st.warning("写真とタスクのセットが保存されていません。まず『写真とタスクの選定・保存』ページで作成してください。")
         st.session_state["selected_image_paths"] = []
+        st.session_state["experiment2_selected_task_set"] = None
+    else:
+        choice_pairs = build_task_set_choices(task_sets)
+        labels = [label for label, _ in choice_pairs]
+        label_to_key = {label: key for label, key in choice_pairs}
 
-    def _infer_room_from_image_name(image_name: str) -> str | None:
-        base = os.path.splitext(os.path.basename(image_name))[0]
-        cleaned = re.sub(r"[^0-9A-Za-zぁ-んァ-ン一-龠ー]+", " ", base).strip()
-        cleaned = re.sub(r"\s+", " ", cleaned)
-        if not cleaned:
-            return None
-        if all(ord(ch) < 128 for ch in cleaned):
-            return cleaned.upper()
-        return cleaned
+        if not labels:
+            st.warning("保存済みのタスクが読み込めませんでした。")
+            st.session_state["selected_image_paths"] = []
+            st.session_state["experiment2_selected_task_set"] = None
+            payload = {}
+        else:
+            default_key = st.session_state.get("experiment2_selected_task_set")
+            if default_key not in label_to_key.values():
+                default_key = choice_pairs[0][1]
 
-    inferred_room = ""
-    if st.session_state.get("selected_subfolder"):
-        inferred_room = st.session_state["selected_subfolder"]
-    elif st.session_state.get("selected_image_paths"):
-        for img_path in st.session_state["selected_image_paths"]:
-            candidate = _infer_room_from_image_name(os.path.basename(img_path))
-            if candidate:
-                inferred_room = candidate
-                break
+            default_label = next(
+                (label for label, key in choice_pairs if key == default_key),
+                labels[0],
+            )
 
-    st.session_state["experiment2_inferred_room"] = inferred_room
-    render_random_room_task(inferred_room, state_prefix="experiment2")
+            selected_label = st.selectbox(
+                "タスク",
+                labels,
+                index=labels.index(default_label) if default_label in labels else 0,
+            )
+            selected_task_name = label_to_key.get(selected_label)
+            st.session_state["experiment2_selected_task_set"] = selected_task_name
+            payload = task_sets.get(selected_task_name, {}) if selected_task_name else {}
+        house = payload.get("house") if isinstance(payload, dict) else ""
+        room = payload.get("room") if isinstance(payload, dict) else ""
+        meta_lines = []
+        if house:
+            meta_lines.append(f"想定する家: {house}")
+        if room:
+            meta_lines.append(f"部屋: {room}")
+        if meta_lines:
+            st.info(" / ".join(meta_lines))
+
+        task_lines = extract_task_lines(payload)
+
+        st.markdown("### タスク")
+        if task_lines:
+            for line in task_lines:
+                st.write(f"- {line}")
+        else:
+            st.info("タスクが登録されていません。")
+
+        image_candidates = []
+        if isinstance(payload, dict):
+            image_candidates = [str(p) for p in payload.get("images", []) if isinstance(p, str)]
+
+        existing_images = [p for p in image_candidates if os.path.exists(p)]
+        missing_images = [p for p in image_candidates if p not in existing_images]
+
+        st.session_state["selected_image_paths"] = existing_images
+
+        if missing_images:
+            st.warning("以下の画像ファイルが見つかりません: " + ", ".join(missing_images))
+
+        st.markdown("### 選択された画像")
+        if existing_images:
+            for path in existing_images:
+                st.image(path, caption=os.path.basename(path))
+        else:
+            st.info("画像が設定されていません。")
 
     # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
     if (
