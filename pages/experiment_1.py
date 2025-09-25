@@ -219,7 +219,7 @@ def app():
     if "force_end" not in st.session_state:
         st.session_state.force_end = False
     if "end_reason" not in st.session_state:
-        st.session_state.end_reason = ""
+        st.session_state.end_reason = []
 
     st.markdown("### ④ロボットとの会話")
     st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。" \
@@ -360,9 +360,14 @@ def app():
                     "free": free,
                 }
                 termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
+                selected_reasons = st.session_state.get("end_reason", [])
+                if isinstance(selected_reasons, str):
+                    termination_reason = selected_reasons
+                else:
+                    termination_reason = "、".join(selected_reasons)
                 save_experiment_1_result(
                     scores,
-                    st.session_state.get("end_reason", ""),
+                    termination_reason,
                     termination_label,
                 )
                 st.session_state.active = False
@@ -381,7 +386,7 @@ def app():
                     st.session_state.saved_jsonl = []
                     st.session_state.turn_count = 0
                     st.session_state.force_end = False
-                    st.session_state.end_reason = ""
+                    st.session_state.end_reason = []
                     st.session_state["chat_input_history"] = []
                     _update_random_task_selection(
                         "experiment1_selected_task_label",
@@ -393,7 +398,16 @@ def app():
             with cols_end[1]:
                 st.button("🚨会話を強制的に終了", key="force_end_disabled", disabled=True)
             with cols_end[2]:
-                st.text_input("会話を終了したい理由", key="end_reason", disabled=True)
+                st.multiselect(
+                    "会話を終了したい理由",
+                    [
+                        "行動計画は十分実行可能でさらなる質問は不要",
+                        "同じ質問が繰り返されて会話が終わらない",
+                        "「計画を実行します」で会話が終わっているが自動で終了しない",
+                    ],
+                    key="end_reason",
+                    disabled=True,
+                )
             st.stop()
 
     cols = st.columns([1, 1, 2])
@@ -408,7 +422,7 @@ def app():
             st.session_state.saved_jsonl = []
             st.session_state.turn_count = 0
             st.session_state.force_end = False
-            st.session_state.end_reason = ""
+            st.session_state.end_reason = []
             st.session_state["chat_input_history"] = []
             _update_random_task_selection(
                 "experiment1_selected_task_label",
@@ -420,9 +434,17 @@ def app():
     with cols[1]:
         if st.button("🚨会話を強制的に終了", key="force_end_button"):
             st.session_state.force_end = True
-            st.session_state.end_reason = st.session_state.get("end_reason", "")
+            st.session_state.end_reason = st.session_state.get("end_reason", [])
             st.rerun()
     with cols[2]:
-        st.text_input("会話を終了したい理由", key="end_reason")
+        st.multiselect(
+            "会話を終了したい理由",
+            [
+                "行動計画は十分実行可能でさらなる質問は不要",
+                "同じ質問が繰り返されて会話が終わらない",
+                "「計画を実行します」で会話が終わっているが自動で終了しない",
+            ],
+            key="end_reason",
+        )
 
 app()
