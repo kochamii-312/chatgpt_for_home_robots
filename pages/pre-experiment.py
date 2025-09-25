@@ -19,7 +19,7 @@ from run_and_show import (
 )
 from run_and_show import show_provisional_output
 from strips import extract_between, strip_tags
-from tasks.ui import render_random_room_task
+from tasks.ui import render_random_room_task, reset_random_room_task
 
 load_dotenv()
 
@@ -271,6 +271,7 @@ def app():
                         "clarifying_steps": []
                     }
                     st.session_state.saved_jsonl = []
+                    reset_random_room_task("pre_experiment")
                     st.rerun()
                 st.stop()
 
@@ -299,6 +300,7 @@ def app():
         }
         st.session_state.saved_jsonl = []
         st.session_state["chat_input_history"] = []
+        reset_random_room_task("pre_experiment")
         st.rerun()
 
 app()

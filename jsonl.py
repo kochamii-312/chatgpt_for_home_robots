@@ -344,7 +344,9 @@ def predict_with_model():
         th = 0.5  # 後方互換
 
     pred = model.predict([text])[0]
-    label = "sufficient" if pred == 1 else "insufficient"
+    prediction_label = "sufficient" if pred == 1 else "insufficient"
+    p = float(model.predict_proba([text])[0, 1])
+    label = "sufficient" if p >= th else "insufficient"
 
     entry = {
         "instruction": instruction,
@@ -354,14 +356,15 @@ def predict_with_model():
         "mode": st.session_state.get("mode", "")
     }
     entry["prediction"] = label
+    entry["probability"] = p
+    entry["threshold"] = th
+    entry["model_prediction"] = prediction_label
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
 
     _save_to_firestore(entry, collection_override="predict_with_model")
 
-    p = float(model.predict_proba([text])[0, 1])
-    label = "sufficient" if p >= th else "insufficient"
     return label, p, th
 
 
@@ -519,6 +522,19 @@ def save_experiment_1_result(
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     _save_to_firestore(entry, collection_override="experiment_1_results")
 
+
+def _strip_visible_text(text: Optional[str]) -> str:
+    """Convert assistant output into the plain text shown to users."""
+
+    if not text:
+        return ""
+
+    cleaned = re.sub(r"</li>\s*", "\n", text)
+    cleaned = re.sub(r"<li>\s*", "- ", cleaned)
+    cleaned = re.sub(r"</?([A-Za-z0-9_]+)(\s[^>]*)?>", "", cleaned)
+    return cleaned.strip()
+
+
 def save_experiment_2_result(
     human_scores: dict,
     termination_reason: str = "",
@@ -563,6 +579,16 @@ def save_experiment_2_result(
     ]
     text = f"instruction: {instruction} \nfs: {function_sequence}"
 
+    assistant_visible_messages = [
+        visible
+        for visible in (
+            _strip_visible_text(m.get("content", ""))
+            for m in st.session_state.context
+            if m.get("role") == "assistant"
+        )
+        if visible
+    ]
+
     entry = {
         "instruction": instruction,
         "function_sequence": function_sequence,
@@ -583,6 +609,9 @@ def save_experiment_2_result(
         entry["termination_label"] = termination_label
     if termination_reason:
         entry["termination_reason"] = termination_reason
+
+    if assistant_visible_messages:
+        entry["assistant_visible_messages"] = assistant_visible_messages
 
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
