@@ -18,6 +18,7 @@ load_dotenv()
 IMAGE_ROOT = Path("images")
 NEW_SET_LABEL = "(新規作成)"
 DEFAULT_LABEL = "(default)"
+RESET_TRIGGER_KEY = "reset_task_form_trigger"
 
 
 def _ensure_form_state() -> None:
@@ -30,6 +31,7 @@ def _ensure_form_state() -> None:
         st.session_state.setdefault(key, value)
     st.session_state.setdefault("selected_image_paths", [])
     st.session_state.setdefault("current_task_set_choice", NEW_SET_LABEL)
+    st.session_state.setdefault(RESET_TRIGGER_KEY, False)
 
 
 def _reset_form_state() -> None:
@@ -40,6 +42,7 @@ def _reset_form_state() -> None:
             "selected_subfolder": "",
             "selected_image_paths": [],
             "current_task_set_choice": NEW_SET_LABEL,
+            RESET_TRIGGER_KEY: False,
         }
     )
 
@@ -67,6 +70,7 @@ def _populate_form_from_set(name: str, payload: Dict[str, object]) -> None:
             if isinstance(payload, dict)
             else [],
             "current_task_set_choice": name,
+            RESET_TRIGGER_KEY: False,
         }
     )
 
@@ -109,6 +113,9 @@ def app():
     )
 
     _ensure_form_state()
+
+    if st.session_state.pop(RESET_TRIGGER_KEY, False):
+        _reset_form_state()
 
     task_sets = load_image_task_sets()
     choice_pairs = build_task_set_choices(task_sets)
@@ -262,7 +269,7 @@ def app():
             st.success("選択中のタスクを削除しました。")
         else:
             st.warning("削除対象のタスクが見つかりませんでした。")
-        _reset_form_state()
+        st.session_state[RESET_TRIGGER_KEY] = True
         st.rerun()
 
     st.markdown("### 保存済みタスク一覧")
