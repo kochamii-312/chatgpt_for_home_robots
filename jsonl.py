@@ -342,7 +342,9 @@ def predict_with_model():
         th = 0.5  # 後方互換
 
     pred = model.predict([text])[0]
-    label = "sufficient" if pred == 1 else "insufficient"
+    prediction_label = "sufficient" if pred == 1 else "insufficient"
+    p = float(model.predict_proba([text])[0, 1])
+    label = "sufficient" if p >= th else "insufficient"
 
     entry = {
         "instruction": instruction,
@@ -352,14 +354,15 @@ def predict_with_model():
         "mode": st.session_state.get("mode", "")
     }
     entry["prediction"] = label
+    entry["probability"] = p
+    entry["threshold"] = th
+    entry["model_prediction"] = prediction_label
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
     st.session_state.saved_jsonl.append(entry)
 
     _save_to_firestore(entry, collection_override="predict_with_model")
 
-    p = float(model.predict_proba([text])[0, 1])
-    label = "sufficient" if p >= th else "insufficient"
     return label, p, th
 
 
