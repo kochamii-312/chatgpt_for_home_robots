@@ -122,6 +122,7 @@ def app():
             selected_task_name = label_to_key.get(selected_label)
             st.session_state["experiment1_selected_task_set"] = selected_task_name
             payload = task_sets.get(selected_task_name, {}) if selected_task_name else {}
+
         house = payload.get("house") if isinstance(payload, dict) else ""
         room = payload.get("room") if isinstance(payload, dict) else ""
         meta_lines = []

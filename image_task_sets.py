@@ -65,7 +65,6 @@ def delete_image_task_set(name: str) -> None:
         task_sets.pop(name)
         save_image_task_sets(task_sets)
 
-
 def extract_task_lines(payload: Dict[str, Any]) -> List[str]:
     """Return a list of task strings from a payload."""
 
@@ -114,3 +113,4 @@ def build_task_set_choices(
 
     choices.sort(key=lambda item: item[0])
     return choices
+

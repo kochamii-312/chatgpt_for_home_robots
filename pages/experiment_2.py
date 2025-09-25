@@ -23,6 +23,7 @@ from image_task_sets import (
     extract_task_lines,
     load_image_task_sets,
 )
+
 from two_classify import prepare_data  # 既存関数を利用
 
 load_dotenv()

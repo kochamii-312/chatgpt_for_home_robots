@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 
 from image_task_sets import (
     build_task_set_choices,
+
     delete_image_task_set,
     load_image_task_sets,
     upsert_image_task_set,
@@ -276,6 +277,5 @@ def app():
             st.markdown(
                 f"- **{label}**: {', '.join(tasks) if tasks else 'タスク未登録'}"
             )
-
 
 app()
