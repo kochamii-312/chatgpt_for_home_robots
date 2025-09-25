@@ -393,17 +393,7 @@ def save_pre_experiment_result(human_score: int):
     function_sequence = fs_match.group(1).strip() if fs_match else ""
     information = info_match.group(1).strip() if info_match else ""
 
-    clarifications = []
-    for m in st.session_state.context:
-        if m["role"] == "assistant":
-            q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", m["content"], re.IGNORECASE)
-            if q_match:
-                clarifications.append(q_match.group(1).strip())
-    user_answers = [
-        ans.strip()
-        for ans in st.session_state.get("chat_input_history", [])
-        if ans and ans.strip()
-    ]
+    clarifying_history = _collect_clarifying_history()
     text = f"instruction: {instruction} \nfs: {function_sequence}"
     similarity = None
     model_path = Path(st.session_state.get("model_path", MODEL_PATH))
@@ -479,17 +469,7 @@ def save_experiment_1_result(
     if success_probability is not None:
         human_scores["plan_success_probability"] = success_probability
 
-    clarifications = []
-    for m in st.session_state.context:
-        if m["role"] == "assistant":
-            q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", m["content"], re.IGNORECASE)
-            if q_match:
-                clarifications.append(q_match.group(1).strip())
-    user_answers = [
-        ans.strip()
-        for ans in st.session_state.get("chat_input_history", [])
-        if ans and ans.strip()
-    ]
+    clarifying_history = _collect_clarifying_history()
     text = f"instruction: {instruction} \nfs: {function_sequence}"
     # TODO: 類似度どうするか考える。プレ実験にしか含めないか、experiment_1にも含めるか
     similarity = None
@@ -503,15 +483,16 @@ def save_experiment_1_result(
 
     entry = {
         "instruction": instruction,
-        "function_sequence": function_sequence,
         "information": information,
-        "clarification_question": clarifications,
-        "user_answers": user_answers,
+        "clarifying_history": clarifying_history,
         "similarity": similarity,
         "human_scores": human_scores,
         "mode": st.session_state.get("mode", ""),
-        "function_count": function_count,
-        "function_variable_lengths": variable_lengths,
+        "function": {
+            "sequence": function_sequence,
+            "count": function_count,
+            "variable_lengths": variable_lengths,
+        },
     }
     if success_probability is not None:
         entry["plan_success_probability"] = success_probability
@@ -580,17 +561,7 @@ def save_experiment_2_result(
     if success_probability is not None:
         human_scores["plan_success_probability"] = success_probability
 
-    clarifications = []
-    for m in st.session_state.context:
-        if m["role"] == "assistant":
-            q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", m["content"], re.IGNORECASE)
-            if q_match:
-                clarifications.append(q_match.group(1).strip())
-    user_answers = [
-        ans.strip()
-        for ans in st.session_state.get("chat_input_history", [])
-        if ans and ans.strip()
-    ]
+    clarifying_history = _collect_clarifying_history()
     text = f"instruction: {instruction} \nfs: {function_sequence}"
 
     assistant_visible_messages = [
@@ -605,16 +576,17 @@ def save_experiment_2_result(
 
     entry = {
         "instruction": instruction,
-        "function_sequence": function_sequence,
         "information": information,
-        "clarification_question": clarifications,
-        "user_answers": user_answers,
+        "clarifying_history": clarifying_history,
         "human_scores": human_scores,
         "prompt_label": st.session_state.get("prompt_label", ""),
         "termination_label": termination_label,
         "termination_reason": termination_reason,
-        "function_count": function_count,
-        "function_variable_lengths": variable_lengths,
+        "function": {
+            "sequence": function_sequence,
+            "count": function_count,
+            "variable_lengths": variable_lengths,
+        },
     }
     if success_probability is not None:
         entry["plan_success_probability"] = success_probability
