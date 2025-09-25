@@ -335,6 +335,14 @@ def predict_with_model():
     model_path = Path(st.session_state.get("model_path", MODEL_PATH))
     loaded = joblib.load(model_path)
     model = loaded["model"]
+    obj = joblib.load(model_path)
+    if isinstance(obj, dict):
+        model = obj["model"]
+        th = float(obj.get("threshold", 0.5))
+    else:
+        model = obj
+        th = 0.5  # 後方互換
+
     pred = model.predict([text])[0]
     label = "sufficient" if pred == 1 else "insufficient"
 
@@ -351,14 +359,6 @@ def predict_with_model():
     st.session_state.saved_jsonl.append(entry)
 
     _save_to_firestore(entry, collection_override="predict_with_model")
-    
-    obj = joblib.load(model_path)
-    if isinstance(obj, dict):
-        model = obj["model"]
-        th = float(obj.get("threshold", 0.5))
-    else:
-        model = obj
-        th = 0.5  # 後方互換
 
     p = float(model.predict_proba([text])[0, 1])
     label = "sufficient" if p >= th else "insufficient"
