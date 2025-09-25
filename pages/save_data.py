@@ -13,7 +13,7 @@ from jsonl import (
 )
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import run_plan_and_show, show_clarifying_question, show_function_sequence, show_information
-from tasks.ui import render_random_room_task
+from tasks.ui import render_random_room_task, reset_random_room_task
 
 load_dotenv()
 
@@ -252,6 +252,7 @@ def app():
                     st.session_state.saved_jsonl = []
                     st.session_state.information_items = []
                     st.session_state["chat_input_history"] = []
+                    reset_random_room_task("save_data")
                     st.rerun()
                 st.stop()
 
