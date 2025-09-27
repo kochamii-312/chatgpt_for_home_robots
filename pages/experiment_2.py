@@ -283,12 +283,12 @@ def app():
         task_lines = extract_task_lines(payload)
 
     st.markdown("### ②指定されたタスク")
+    st.write("下のタスクをそのまま画面下部のチャットに入力してください！")
     if task_lines:
         for line in task_lines:
             st.info(f"{line}")
     else:
         st.info("タスクが登録されていません。")
-    st.write("→指定されたタスクをそのままテキストフィールドに入力してください！")
 
     image_candidates = []
     if isinstance(payload, dict):
@@ -399,15 +399,26 @@ def app():
     has_plan = "<FunctionSequence>" in last_assistant_content
     high_conf = (p is not None and th is not None and p >= th + 0.15)
 
+    # should_stop 判定（既存のまま）
     should_stop = False
     end_message = ""
     if st.session_state.get("force_end"):
         should_stop = True
-        end_message = "ユーザーが会話を強制的に終了しました。"
+        end_message = "ユーザーが会話を終了しました。"
     else:
         if label == "sufficient" and (has_plan or high_conf or st.session_state.turn_count >= 2):
             should_stop = True
             end_message = "モデルがsufficientを出力したため終了します。"
+
+    # 入力欄の表示制御
+    if should_stop:
+        user_input = None
+    elif st.session_state.get("force_end"):
+        user_input = None
+    else:
+        user_input = st.chat_input("ロボットへの指示や回答を入力してください")
+        if user_input:
+            st.session_state["chat_input_history"].append(user_input)
 
     if should_stop:
         st.success(end_message)
@@ -443,17 +454,18 @@ def app():
                         "嘘や虚偽の情報を述べた",
                         "質問・情報提供が多すぎるまたは少なすぎる",
                         "タスクを実行するのに関係のない発言があった",
-                        "コミュニケーションが明確でなかった（何と答えればいいかわからない質問があった等）"
+                        "コミュニケーションが明確でなかった（何と答えればいいかわからない質問があった等）",
+                        "特になし",
                     ]
                 )
                 familiarity = st.radio(
-                    "ロボットにどれくらい親近感を持ちましたか？（1-4）",
-                    [1, 2, 3, 4],
+                    "ロボットにどれくらい親近感を持ちましたか？",
+                    ["強く持った", "まあまあ持った", "あまり持ってない", "全く持っていない"],
                     horizontal=True
                 )
                 social_presence = st.radio(
-                    "対話の相手がそこに存在し、自分と同じ空間を共有している、あるいは自分と関わっている感覚（ソーシャルプレゼンス）をどれくらい持ちましたか？（1-4）",
-                    [1, 2, 3, 4],
+                    "対話の相手がそこに存在し、自分と同じ空間を共有している、あるいは自分と関わっている感覚（ソーシャルプレゼンス）をどれくらい持ちましたか？",
+                    ["強く持った", "まあまあ持った", "あまり持ってない", "全く持っていない"],
                     horizontal=True
                 )
                 free = st.text_input(
@@ -483,10 +495,28 @@ def app():
                     termination_reason,
                     termination_label,
                 )
-                st.session_state.active = False
+                # ここから会話リセットとタスク再選択
+                st.session_state.context = [{"role": "system", "content": system_prompt}]
+                st.session_state.active = True
+                st.session_state.conv_log = {
+                    "label": "",
+                    "clarifying_steps": []
+                }
+                st.session_state.saved_jsonl = []
+                st.session_state.turn_count = 0
+                st.session_state.force_end = False
+                st.session_state.end_reason = []
+                st.session_state["chat_input_history"] = []
+                _update_random_task_selection(
+                    "experiment2_selected_task_label",
+                    "experiment2_task_labels",
+                    "experiment2_label_to_key",
+                    "experiment2_selected_task_set",
+                )
+                st.rerun()
         
         if st.session_state.active == False:
-            st.warning("会話を終了しました。ありがとうございました！")
+            st.warning("会話を終了しました。ありがとうございました！①のモードを変えて「会話をリセット」ボタンを押し、再度実験をお願いします。")
             cols_end = st.columns([1, 1, 2])
             with cols_end[0]:
                 if st.button("⚠️会話をリセット", key="reset_conv_end"):
@@ -503,9 +533,19 @@ def app():
                     st.session_state["chat_input_history"] = []
                     st.rerun()
             with cols_end[1]:
-                st.button("🚨会話を強制的に終了", key="force_end_disabled", disabled=True)
+                st.button("🚨会話を終了", key="force_end_disabled", disabled=True)
             with cols_end[2]:
-                st.text_input("会話を終了したい理由", key="end_reason", disabled=True)
+                st.multiselect(
+                    "会話を終了したい理由",
+                    [
+                        "行動計画は実行可能でさらなる質問は不要",
+                        "同じ質問が繰り返される",
+                        "計画は確定しているの",
+                        "LLMから質問されない",
+                        "その他",
+                    ],
+                    key="end_reason",
+                )
             st.stop()
 
     cols = st.columns([1, 1, 2])
@@ -531,7 +571,7 @@ def app():
             )
             st.rerun()
     with cols[1]:
-        if st.button("🚨会話を強制的に終了", key="force_end_button"):
+        if st.button("🚨会話を終了", key="force_end_button"):
             st.session_state.force_end = True
             st.session_state.end_reason = st.session_state.get("end_reason", [])
             st.rerun()
@@ -539,9 +579,11 @@ def app():
         st.multiselect(
             "会話を終了したい理由",
             [
-                "行動計画は十分実行可能でさらなる質問は不要",
-                "同じ質問が繰り返されて会話が終わらない",
-                "「計画を実行します」で会話が終わっているが自動で終了しない",
+                "行動計画は実行可能でさらなる質問は不要",
+                "同じ質問が繰り返される",
+                "計画は確定している",
+                "LLMから質問されない",
+                "その他",
             ],
             key="end_reason",
         )

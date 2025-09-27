@@ -131,25 +131,21 @@ def evaluate_plan_success_probability(
 
 def _save_to_firestore(entry, collection_override=None):
     collection = collection_override or os.getenv("FIREBASE_COLLECTION")
-    credentials = os.getenv("FIREBASE_CREDENTIALS")
+    creds = (
+        os.getenv("FIREBASE_CREDENTIALS")
+        or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")  # ← 追加: ADC/パス
+        or None
+    )
     if not collection:
         print("[Firestore] skipped: no collection name")
         return
-    if not credentials:
-        print("[Firestore] skipped: no FIREBASE_CREDENTIALS")
-        return
     try:
-        save_document(collection, entry, credentials)
+        # creds が None でも、save_document 側で ADC を使える実装なら通る
+        save_document(collection, entry, creds)
         print(f"[Firestore] saved to {collection}")
-    except FileNotFoundError:
-        print(f"[Firestore] skipped: credentials file not found or inaccessible: {credentials}")
-    except ValueError as e:
-        print(f"[Firestore] skipped: invalid credential JSON provided: {e}")
     except Exception as e:
-        # Streamlit なら st.error でも良い
         print(f"[Firestore] ERROR saving to {collection}: {e}")
         raise
-
 
 def _load_jsonl_entries(path: Path) -> list[dict]:
     with path.open("r", encoding="utf-8") as f:

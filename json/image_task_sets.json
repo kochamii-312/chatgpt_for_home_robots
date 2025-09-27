@@ -153,17 +153,6 @@
     ],
     "task_text": "木材を暖炉まで持って行って"
   },
-  "エアコンの風、直接当てないで": {
-    "house": "house2",
-    "room": "LIVING",
-    "images": [
-      "images\\house2\\LIVING\\00096-rgb.png"
-    ],
-    "tasks": [
-      "エアコンの風、直接当てないで"
-    ],
-    "task_text": "エアコンの風、直接当てないで"
-  },
   "炊飯器のスイッチ入れてきて": {
     "house": "house2",
     "room": "DINING",
