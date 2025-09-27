@@ -408,24 +408,8 @@ def app():
                     termination_reason,
                     termination_label,
                 )
-                st.session_state.context = [{"role": "system", "content": system_prompt}]
-                st.session_state.active = True
-                st.session_state.conv_log = {
-                    "label": "",
-                    "clarifying_steps": []
-                }
-                st.session_state.saved_jsonl = []
-                st.session_state.turn_count = 0
-                st.session_state.force_end = False
-                st.session_state.end_reason = []
-                st.session_state["chat_input_history"] = []
-                _update_random_task_selection(
-                    "experiment1_selected_task_label",
-                    "experiment1_task_labels",
-                    "experiment1_label_to_key",
-                    "experiment1_selected_task_set",
-                )
-                st.rerun()
+                st.session_state.active = False
+
         if st.session_state.active == False:
             st.warning("会話を終了しました。ありがとうございました！①のモードを変えて「会話をリセット」ボタンを押し、再度実験をお願いします。")
             cols_end = st.columns([1, 1, 2])

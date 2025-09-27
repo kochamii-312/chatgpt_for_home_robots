@@ -10,17 +10,6 @@
     ],
     "task_text": "テレビを消して"
   },
-  "テレビの横の花瓶の水を替えて": {
-    "house": "house2",
-    "room": "LIVING",
-    "images": [
-      "images\\house2\\LIVING\\00096-rgb.png"
-    ],
-    "tasks": [
-      "テレビの横の花瓶の水を替えて"
-    ],
-    "task_text": "テレビの横の花瓶の水を替えて"
-  },
   "窓際の植物に水をあげて": {
     "house": "house2",
     "room": "LIVING",
@@ -64,17 +53,6 @@
       "ダイニングテーブルのお皿をキッチンに持って行って"
     ],
     "task_text": "ダイニングテーブルのお皿をキッチンに持って行って"
-  },
-  "ベッドメイキングをして": {
-    "house": "house7",
-    "room": "BEDROOM",
-    "images": [
-      "images\\house7\\BEDROOM\\00104-rgb.png"
-    ],
-    "tasks": [
-      "ベッドメイキングをして"
-    ],
-    "task_text": "ベッドメイキングをして"
   },
   "引き出しから日記を持って来て": {
     "house": "house7",
@@ -131,16 +109,16 @@
     ],
     "task_text": "ベッドわきのライトを消して"
   },
-  "枕元の白い本を持って来て": {
+  "ベッドの近くの白い本を持って来て": {
     "house": "house11",
     "room": "BEDROOM",
     "images": [
       "images\\house11\\BEDROOM\\00086-rgb.png"
     ],
     "tasks": [
-      "枕元の白い本を持って来て"
+      "ベッドの近くの白い本を持って来て"
     ],
-    "task_text": "枕元の白い本を持って来て"
+    "task_text": "ベッドの近くの白い本を持って来て"
   },
   "木材を暖炉まで持って行って": {
     "house": "house12",
