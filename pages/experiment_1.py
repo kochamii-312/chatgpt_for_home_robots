@@ -32,6 +32,46 @@ from image_task_sets import (
 load_dotenv()
 
 
+st.set_page_config(initial_sidebar_state="collapsed")
+
+SIDEBAR_HIDE_STYLE = """
+    <style>
+        [data-testid="stSidebar"] {display: none !important;}
+        [data-testid="stSidebarNav"] {display: none !important;}
+        [data-testid="collapsedControl"] {display: none !important;}
+    </style>
+"""
+
+FUNCTION_DOCS = """
+- **move_to(room_name:str)**
+  指定した部屋へロボットを移動します。
+
+- **pick_object(object:str)**
+  指定した物体をつかみます。
+
+- **place_object_next_to(object:str, target:str)**
+  指定した物体をターゲットの横に置きます。
+
+- **place_object_on(object:str, target:str)**
+  指定した物体をターゲットの上に置きます。
+
+- **place_object_in(object:str, target:str)**
+  指定した物体をターゲットの中に入れます。
+
+- **detect_object(object:str)**
+  指定した物体を検出します。
+
+- **search_about(object:str)**
+  指定した物体に関する情報を検索します。
+
+- **push(object:str)**
+  指定した物体を押します。
+
+- **say(text:str)**
+  指定したテキストを発話します。
+"""
+
+
 def _update_random_task_selection(label_key: str, labels_key: str, mapping_key: str, set_key: str) -> None:
     """Select a new task label at random and update related session state."""
 
@@ -52,38 +92,11 @@ def app():
     require_consent()
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("実験1 GPTとGPT with Criticの比較")
-    
-    st.sidebar.subheader("行動計画で使用される関数")
-    st.sidebar.markdown(
-    """
-    - **move_to(room_name:str)**  
-    指定した部屋へロボットを移動します。
 
-    - **pick_object(object:str)**  
-    指定した物体をつかみます。
+    st.markdown(SIDEBAR_HIDE_STYLE, unsafe_allow_html=True)
 
-    - **place_object_next_to(object:str, target:str)**  
-    指定した物体をターゲットの横に置きます。
-
-    - **place_object_on(object:str, target:str)**  
-    指定した物体をターゲットの上に置きます。
-
-    - **place_object_in(object:str, target:str)**  
-    指定した物体をターゲットの中に入れます。
-
-    - **detect_object(object:str)**  
-    指定した物体を検出します。
-
-    - **search_about(object:str)**  
-    指定した物体に関する情報を検索します。
-
-    - **push(object:str)**  
-    指定した物体を押します。
-
-    - **say(text:str)**  
-    指定したテキストを発話します。
-    """
-    )
+    st.markdown("### 行動計画で使用される関数")
+    st.markdown(FUNCTION_DOCS)
 
     mode_options = ["GPT", "GPT with critic"]
     default_mode = st.session_state.get("mode", "GPT with critic")
