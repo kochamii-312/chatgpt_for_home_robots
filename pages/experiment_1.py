@@ -165,7 +165,7 @@ def app():
         task_lines = extract_task_lines(payload)
 
     st.markdown("### ②指定されたタスク")
-    st.write("下のタスクをそのまま画面下部のチャットに入力してください！")
+    st.write("下のタスクをそのまま画面下部のチャットに入力してください。")
     if task_lines:
         for line in task_lines:
             st.info(f"{line}")
@@ -235,6 +235,7 @@ def app():
     max_turns = 5
     should_stop = False
     end_message = ""
+    label, p, th = None, None, None
     if st.session_state.get("force_end"):
         should_stop = True
         end_message = "ユーザーが会話を終了しました。"
@@ -256,7 +257,7 @@ def app():
         st.info(f"{max_turns}回の操作に達したため、これ以上入力できません。（GPTモードのみ制限）")
         user_input = None
     else:
-        input_box = st.chat_input("ロボットへの回答を入力してください")
+        input_box = st.chat_input("ロボットへの回答を入力してください", key="experiment_1_chat_input")
         if input_box:
             st.session_state["chat_input_history"].append(input_box)
         user_input = st.session_state.pop("pending_user_input", None) or input_box
@@ -299,7 +300,6 @@ def app():
         label, p, th = predict_with_model()
         st.caption(f"評価モデルの予測: {label} (p={p:.3f}, th={th:.3f})")
     else:
-        label, p, th = None, None, None
         st.caption("評価モデルの予測: ---")
 
     last_assistant_content = assistant_messages[-1]["content"] if assistant_messages else ""

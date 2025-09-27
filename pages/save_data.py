@@ -179,7 +179,7 @@ def app():
 
 
     # 3) 追加の自由入力（会話継続用）
-    user_input = st.chat_input("入力してください")
+    user_input = st.chat_input("入力してください", key="save_data_chat_input")
     if user_input:
         context.append({"role": "user", "content": user_input})
         st.session_state["chat_input_history"].append(user_input)

@@ -237,7 +237,7 @@ def app():
 
     message = st.chat_message("assistant")
     message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
-    input_box = st.chat_input("ロボットへの回答を入力してください")
+    input_box = st.chat_input("ロボットへの回答を入力してください", key="pre-experiment_chat_input")
     if input_box:
         st.session_state["chat_input_history"].append(input_box)
     user_input = st.session_state.pop("pending_user_input", None) or input_box

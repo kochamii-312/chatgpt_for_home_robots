@@ -285,7 +285,7 @@ def app():
         task_lines = extract_task_lines(payload)
 
     st.markdown("### ②指定されたタスク")
-    st.write("下のタスクをそのまま画面下部のチャットに入力してください！")
+    st.write("下のタスクをそのまま画面下部のチャットに入力してください。")
     if task_lines:
         for line in task_lines:
             st.info(f"{line}")
@@ -350,10 +350,13 @@ def app():
 
     message = st.chat_message("assistant")
     message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
-    if st.session_state.get("force_end"):
+    should_stop = False
+    if should_stop:
+        user_input = None
+    elif st.session_state.get("force_end"):
         user_input = None
     else:
-        user_input = st.chat_input("ロボットへの指示や回答を入力してください")
+        user_input = st.chat_input("ロボットへの指示や回答を入力してください", key="experiment_2_chat_input")
         if user_input:
             st.session_state["chat_input_history"].append(user_input)
     if user_input:
@@ -402,7 +405,6 @@ def app():
     high_conf = (p is not None and th is not None and p >= th + 0.15)
 
     # should_stop 判定（既存のまま）
-    should_stop = False
     end_message = ""
     if st.session_state.get("force_end"):
         should_stop = True
@@ -411,16 +413,6 @@ def app():
         if label == "sufficient" and (has_plan or high_conf or st.session_state.turn_count >= 2):
             should_stop = True
             end_message = "モデルがsufficientを出力したため終了します。"
-
-    # 入力欄の表示制御
-    if should_stop:
-        user_input = None
-    elif st.session_state.get("force_end"):
-        user_input = None
-    else:
-        user_input = st.chat_input("ロボットへの指示や回答を入力してください")
-        if user_input:
-            st.session_state["chat_input_history"].append(user_input)
 
     if should_stop:
         st.success(end_message)
