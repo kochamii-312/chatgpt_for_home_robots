@@ -1,3 +1,4 @@
+import json
 import os
 from typing import Any, Dict, Optional
 
@@ -31,6 +32,29 @@ def _get_credentials_from_streamlit() -> Optional[credentials.Certificate]:
     return credentials.Certificate(sa_info)
 
 
+def _load_certificate_from_source(source: str) -> credentials.Certificate:
+    """Load Firebase credentials from a file path or JSON string."""
+
+    source = source.strip()
+
+    if source.startswith("{"):
+        try:
+            info = json.loads(source)
+        except json.JSONDecodeError as exc:
+            raise ValueError("Invalid JSON credential string") from exc
+
+        private_key = info.get("private_key")
+        if isinstance(private_key, str):
+            info["private_key"] = private_key.replace("\\n", "\n")
+
+        return credentials.Certificate(info)
+
+    if os.path.exists(source):
+        return credentials.Certificate(source)
+
+    raise FileNotFoundError(f"Credentials file not found: {source}")
+
+
 def _get_default_credentials() -> credentials.Base:
     """利用可能な認証情報から優先順位に沿って資格情報を取得する。"""
 
@@ -38,13 +62,18 @@ def _get_default_credentials() -> credentials.Base:
     if streamlit_credentials is not None:
         return streamlit_credentials
 
-    credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-    if credentials_path:
-        if not os.path.exists(credentials_path):
+    credentials_source = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if credentials_source:
+        try:
+            return _load_certificate_from_source(credentials_source)
+        except FileNotFoundError as exc:
             raise FileNotFoundError(
-                f"Credentials file not found: {credentials_path}"
-            )
-        return credentials.Certificate(credentials_path)
+                f"Credentials file not found: {credentials_source}"
+            ) from exc
+        except ValueError as exc:
+            raise ValueError(
+                "Invalid JSON credential string provided via GOOGLE_APPLICATION_CREDENTIALS"
+            ) from exc
 
     try:
         return credentials.ApplicationDefault()
@@ -64,24 +93,23 @@ def _get_db_from_secrets() -> firestore.Client:
     return firestore.client()
 
 
-def _get_db_from_credentials_file(credentials_path: str) -> firestore.Client:
-    """ファイルパスで指定されたサービスアカウント情報からFirestoreへ接続"""
+def _get_db_from_credentials_source(credentials_source: str) -> firestore.Client:
+    """ファイルパスまたはJSON文字列で指定されたサービスアカウント情報からFirestoreへ接続"""
 
-    if not os.path.exists(credentials_path):
-        raise FileNotFoundError(f"Credentials file not found: {credentials_path}")
-
-    cred = credentials.Certificate(credentials_path)
+    cred = _load_certificate_from_source(credentials_source)
     _initialize_firebase_app(cred)
     return firestore.client()
 
 
 def save_document(
-    collection: str, data: Dict[str, Any], credentials_path: Optional[str] = None
+    collection: str,
+    data: Dict[str, Any],
+    credentials_source: Optional[str] = None,
 ) -> None:
     """Firestoreコレクションにドキュメントを保存"""
 
-    if credentials_path:
-        db = _get_db_from_credentials_file(credentials_path)
+    if credentials_source:
+        db = _get_db_from_credentials_source(credentials_source)
     else:
         db = _get_db_from_secrets()
     db.collection(collection).add(data)
