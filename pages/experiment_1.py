@@ -1,4 +1,5 @@
 import streamlit as st
+from consent import require_consent
 import json
 import os
 import random
@@ -48,6 +49,7 @@ def _update_random_task_selection(label_key: str, labels_key: str, mapping_key: 
 
 
 def app():
+    require_consent()
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("実験1 GPTとGPT with Criticの比較")
     

@@ -3,6 +3,7 @@ import os
 import re
 
 import streamlit as st
+from consent import require_consent
 from dotenv import load_dotenv
 
 from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
@@ -31,6 +32,7 @@ def accumulate_information(reply: str) -> str:
 
 
 def app():
+    require_consent()
     st.title("LLMATCH Criticデモアプリ")
     
     st.sidebar.subheader("行動計画で使用される関数")

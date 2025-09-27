@@ -5,6 +5,7 @@ import re
 
 import joblib
 import streamlit as st
+from consent import require_consent
 from dotenv import load_dotenv
 
 from api import (
@@ -154,6 +155,7 @@ def get_critic_label(context):
     return label
 
 def app():
+    require_consent()
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("実験2 異なるコミュニケーションタイプの比較")
     

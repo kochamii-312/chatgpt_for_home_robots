@@ -1,6 +1,9 @@
 import streamlit as st
 
+from consent import require_consent
+
 def app():
+    require_consent(allow_withdrawal=True)
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("実験方法と利用案内")
     st.warning("このページの内容は、以下のGoogleドキュメントと同じ内容です。")

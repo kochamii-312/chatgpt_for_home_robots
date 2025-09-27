@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, List
 
 import streamlit as st
+from consent import require_consent
 from dotenv import load_dotenv
 
 from image_task_sets import (
@@ -77,6 +78,7 @@ def _populate_form_from_set(name: str, payload: Dict[str, object]) -> None:
 
 
 def app():
+    require_consent()
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("写真とタスクの選定・保存")
 
