@@ -1,7 +1,9 @@
 import streamlit as st
+from consent import require_consent
 import json
 import os
 from difflib import SequenceMatcher
+from pathlib import Path
 from dotenv import load_dotenv
 
 from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
@@ -85,6 +87,7 @@ def finalize_and_render_plan(label: str):
         st.write(f"{sim:.2f}")
 
 def app():
+    require_consent()
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("プレ実験")
     st.write("目的：GPT with Criticの学習の効果を図る。")
