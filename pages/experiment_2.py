@@ -5,7 +5,12 @@ import re
 
 import joblib
 import streamlit as st
-from consent import require_consent
+from consent import (
+    apply_sidebar_hiding,
+    configure_page,
+    require_consent,
+    should_hide_sidebar,
+)
 from dotenv import load_dotenv
 
 from api import (
@@ -30,15 +35,7 @@ from two_classify import prepare_data  # 既存関数を利用
 load_dotenv()
 
 
-st.set_page_config(initial_sidebar_state="collapsed")
-
-SIDEBAR_HIDE_STYLE = """
-    <style>
-        [data-testid="stSidebar"] {display: none !important;}
-        [data-testid="stSidebarNav"] {display: none !important;}
-        [data-testid="collapsedControl"] {display: none !important;}
-    </style>
-"""
+configure_page(hide_sidebar_for_participant=True)
 
 FUNCTION_DOCS = """
 - **move_to(room_name:str)**
@@ -199,7 +196,8 @@ def app():
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("実験2 異なるコミュニケーションタイプの比較")
 
-    st.markdown(SIDEBAR_HIDE_STYLE, unsafe_allow_html=True)
+    if should_hide_sidebar():
+        apply_sidebar_hiding()
 
     st.markdown("### 行動計画で使用される関数")
     st.markdown(FUNCTION_DOCS)

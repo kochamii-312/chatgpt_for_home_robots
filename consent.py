@@ -5,6 +5,18 @@ from __future__ import annotations
 import streamlit as st
 
 
+ROLE_PARTICIPANT = "被験者"
+ROLE_DEBUG = "デバッグ"
+
+SIDEBAR_HIDE_STYLE = """
+    <style>
+        [data-testid="stSidebar"] {display: none !important;}
+        [data-testid="stSidebarNav"] {display: none !important;}
+        [data-testid="collapsedControl"] {display: none !important;}
+    </style>
+"""
+
+
 CONSENT_TEXT = """
 ### 研究への参加と個人情報の取り扱いについて
 
@@ -41,6 +53,35 @@ CONSENT_TEXT = """
 """
 
 
+def get_participant_role() -> str:
+    """Return the currently selected participant role."""
+
+    role = st.session_state.get("participant_role", ROLE_PARTICIPANT)
+    return role if role in (ROLE_PARTICIPANT, ROLE_DEBUG) else ROLE_PARTICIPANT
+
+
+def should_hide_sidebar() -> bool:
+    """Determine whether the sidebar should be hidden for the current role."""
+
+    return get_participant_role() == ROLE_PARTICIPANT
+
+
+def configure_page(*, hide_sidebar_for_participant: bool = False, **kwargs) -> None:
+    """Configure the page, optionally collapsing the sidebar for participants."""
+
+    if hide_sidebar_for_participant:
+        initial_state = "collapsed" if should_hide_sidebar() else "expanded"
+        st.set_page_config(initial_sidebar_state=initial_state, **kwargs)
+    else:
+        st.set_page_config(**kwargs)
+
+
+def apply_sidebar_hiding() -> None:
+    """Inject CSS that hides the sidebar controls."""
+
+    st.markdown(SIDEBAR_HIDE_STYLE, unsafe_allow_html=True)
+
+
 def _render_consent_form() -> None:
     """Render the consent form and stop execution until the user agrees."""
 
@@ -48,12 +89,23 @@ def _render_consent_form() -> None:
     st.title("研究参加の同意について")
     st.markdown(CONSENT_TEXT)
 
+    role_options = [ROLE_PARTICIPANT, ROLE_DEBUG]
+    current_role = get_participant_role()
+
     with st.form("consent_form", clear_on_submit=False):
+        selected_role = st.radio(
+            "利用モードを選択してください",
+            options=role_options,
+            index=role_options.index(current_role),
+            horizontal=True,
+            help="被験者モードではサイドバーを非表示にします。デバッグモードでは常に表示します。",
+        )
         agree = st.checkbox("上記の説明を読み、研究に参加することに同意します。", value=False)
         submit = st.form_submit_button("同意して実験に進む", use_container_width=True)
 
     if submit:
         if agree:
+            st.session_state["participant_role"] = selected_role
             st.session_state["consent_given"] = True
             st.success("ご同意ありがとうございます。実験画面に進みます。")
             st.rerun()
@@ -73,4 +125,5 @@ def require_consent(*, allow_withdrawal: bool = False) -> None:
         with st.sidebar:
             if st.button("同意を撤回してトップに戻る", type="secondary"):
                 st.session_state["consent_given"] = False
+                st.session_state.pop("participant_role", None)
                 st.rerun()
