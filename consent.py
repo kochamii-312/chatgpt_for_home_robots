@@ -55,6 +55,7 @@ def _render_consent_form() -> None:
     if submit:
         if agree:
             st.session_state["consent_given"] = True
+            st.session_state["redirect_to_instruction_page"] = True
             st.success("ご同意ありがとうございます。実験画面に進みます。")
             st.rerun()
         else:
@@ -63,11 +64,17 @@ def _render_consent_form() -> None:
     st.stop()
 
 
-def require_consent(*, allow_withdrawal: bool = False) -> None:
+def require_consent(
+    *, allow_withdrawal: bool = False, redirect_to_instructions: bool = True
+) -> None:
     """Ensure that the participant has given consent before proceeding."""
 
     if not st.session_state.get("consent_given"):
         _render_consent_form()
+
+    if redirect_to_instructions and st.session_state.get("redirect_to_instruction_page"):
+        st.session_state["redirect_to_instruction_page"] = False
+        st.switch_page("streamlit_app.py")
 
     if allow_withdrawal:
         with st.sidebar:
