@@ -42,36 +42,6 @@ SIDEBAR_HIDE_STYLE = """
     </style>
 """
 
-FUNCTION_DOCS = """
-- **move_to(room_name:str)**
-  指定した部屋へロボットを移動します。
-
-- **pick_object(object:str)**
-  指定した物体をつかみます。
-
-- **place_object_next_to(object:str, target:str)**
-  指定した物体をターゲットの横に置きます。
-
-- **place_object_on(object:str, target:str)**
-  指定した物体をターゲットの上に置きます。
-
-- **place_object_in(object:str, target:str)**
-  指定した物体をターゲットの中に入れます。
-
-- **detect_object(object:str)**
-  指定した物体を検出します。
-
-- **search_about(object:str)**
-  指定した物体に関する情報を検索します。
-
-- **push(object:str)**
-  指定した物体を押します。
-
-- **say(text:str)**
-  指定したテキストを発話します。
-"""
-
-
 def _reset_conversation_state(system_prompt: str) -> None:
     """Reset conversation-related session state for experiment 1."""
 
@@ -84,7 +54,7 @@ def _reset_conversation_state(system_prompt: str) -> None:
     st.session_state.saved_jsonl = []
     st.session_state.turn_count = 0
     st.session_state.force_end = False
-    st.session_state.end_reason = []
+    # st.session_state.end_reason = []
     st.session_state["chat_input_history"] = []
     st.session_state["experiment1_followup_prompt"] = False
     st.session_state.pop("experiment1_followup_choice", None)
@@ -119,16 +89,14 @@ def app():
 
     st.markdown(SIDEBAR_HIDE_STYLE, unsafe_allow_html=True)
 
-    st.markdown("### 行動計画で使用される関数")
-    st.markdown(FUNCTION_DOCS)
-
     mode_options = ["GPT", "GPT with critic"]
     default_mode = st.session_state.get("mode", "GPT with critic")
     mode = st.radio("### ①モード選択", mode_options, index=mode_options.index(default_mode), horizontal=True)
     st.session_state["mode"] = mode
 
+    st.write("※会話をリセットしてもこの選択は変わりません。")
     st.session_state.setdefault("critic_min_threshold", 0.60)
-
+    
     system_prompt = SYSTEM_PROMPT
     
     with st.expander("評価モデル・タスク調整（任意）", expanded=False):
@@ -273,19 +241,7 @@ def app():
 
     max_turns = 5
     should_stop = False
-    end_message = ""
     label, p, th = None, None, None
-    if st.session_state.get("force_end"):
-        should_stop = True
-        end_message = "ユーザーが会話を終了しました。"
-    elif st.session_state.get("mode") == "GPT with critic":
-        if label == "sufficient" and (has_plan or high_conf or st.session_state.turn_count >= 2):
-            should_stop = True
-            end_message = "モデルがsufficientを出力したため終了します。"
-    else:
-        if st.session_state.turn_count >= 4:
-            should_stop = True
-            end_message = "4回の会話に達したため終了します。"
 
     # 入力欄の表示制御
     if should_stop:
@@ -360,8 +316,8 @@ def app():
             end_message = "4回の会話に達したため終了します。"
 
     if should_stop:
-        st.success(end_message)
-        if st.session_state.active:
+        if st.session_state.active == True:
+            st.success(end_message)
             with st.form("evaluation_form"):
                 st.subheader("⑤評価フォーム")
                 name = st.text_input(
@@ -413,6 +369,7 @@ def app():
                 submitted = st.form_submit_button("評価を保存")
 
             if submitted:
+                st.warning("評価を保存しました！")
                 scores = {
                     "name": name,
                     "success": success,
@@ -436,52 +393,7 @@ def app():
                 )
                 st.session_state.active = False
                 st.session_state["experiment1_followup_prompt"] = True
-                st.session_state.pop("experiment1_followup_choice", None)
-
-        if st.session_state.get("experiment1_followup_prompt"):
-            st.info("GPTとGPT with Criticで1回ずつ実験を終えましたか？")
-            followup_choice = st.radio(
-                "実験の実施状況",
-                ["はい", "いいえ"],
-                key="experiment1_followup_choice",
-                index=None,
-                horizontal=True,
-            )
-            if followup_choice == "はい":
-                st.session_state["experiment1_followup_prompt"] = False
-                st.session_state.pop("experiment1_followup_choice", None)
-                st.switch_page("pages/experiment_2.py")
-            elif followup_choice == "いいえ":
-                st.session_state["experiment1_followup_prompt"] = False
-                st.session_state.pop("experiment1_followup_choice", None)
-                _reset_conversation_state(system_prompt)
-                st.rerun()
-            else:
-                st.stop()
-
-        if st.session_state.active == False:
-            st.warning("会話を終了しました。ありがとうございました！①のモードを変えて「会話をリセット」ボタンを押し、再度実験をお願いします。")
-            cols_end = st.columns([1, 1, 2])
-            with cols_end[0]:
-                if st.button("⚠️会話をリセット", key="reset_conv_end"):
-                    _reset_conversation_state(system_prompt)
-                    st.rerun()
-            with cols_end[1]:
-                st.button("🚨会話を終了", key="force_end_disabled", disabled=True)
-            with cols_end[2]:
-                st.multiselect(
-                    "会話を終了したい理由",
-                    [
-                        "行動計画は実行可能でさらなる質問は不要",
-                        "同じ質問が繰り返される",
-                        "計画は確定している",
-                        "LLMから質問されない",
-                        "その他",
-                    ],
-                    key="end_reason",
-                    disabled=True,
-                )
-            st.stop()
+                st.session_state.pop("experiment1_followup_choice", None)   
 
     cols = st.columns([1, 1, 2])
     with cols[0]:
@@ -505,5 +417,16 @@ def app():
             ],
             key="end_reason",
         )
+    if st.session_state.get("experiment1_followup_prompt"):
+        st.markdown("**GPTモード** と **GPT with Criticモード** で1回ずつ実験を終えましたか？")
+        if st.button("🙅‍♂️いいえ → ①のモードを変えて再度実験", key="followup_no", type="primary"):
+            st.session_state["experiment1_followup_prompt"] = False
+            st.session_state.pop("experiment1_followup_choice", None)
+            _reset_conversation_state(system_prompt)
+            st.rerun()
+        if st.button("🙆‍♂️はい → 実験2", key="followup_yes", type="primary"):
+            st.session_state["experiment1_followup_prompt"] = False
+            st.session_state.pop("experiment1_followup_choice", None)
+            st.switch_page("pages/experiment_2.py")
 
 app()

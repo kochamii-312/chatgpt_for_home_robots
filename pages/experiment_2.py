@@ -24,7 +24,6 @@ from image_task_sets import (
     load_image_task_sets,
     resolve_image_paths,
 )
-
 from two_classify import prepare_data  # 既存関数を利用
 
 load_dotenv()
@@ -40,34 +39,28 @@ SIDEBAR_HIDE_STYLE = """
     </style>
 """
 
-FUNCTION_DOCS = """
-- **move_to(room_name:str)**
-  指定した部屋へロボットを移動します。
+def _reset_conversation_state(system_prompt: str) -> None:
+    """Reset conversation-related session state for experiment 1."""
 
-- **pick_object(object:str)**
-  指定した物体をつかみます。
-
-- **place_object_next_to(object:str, target:str)**
-  指定した物体をターゲットの横に置きます。
-
-- **place_object_on(object:str, target:str)**
-  指定した物体をターゲットの上に置きます。
-
-- **place_object_in(object:str, target:str)**
-  指定した物体をターゲットの中に入れます。
-
-- **detect_object(object:str)**
-  指定した物体を検出します。
-
-- **search_about(object:str)**
-  指定した物体に関する情報を検索します。
-
-- **push(object:str)**
-  指定した物体を押します。
-
-- **say(text:str)**
-  指定したテキストを発話します。
-"""
+    st.session_state.context = [{"role": "system", "content": system_prompt}]
+    st.session_state.active = True
+    st.session_state.conv_log = {
+        "label": "",
+        "clarifying_steps": []
+    }
+    st.session_state.saved_jsonl = []
+    st.session_state.turn_count = 0
+    st.session_state.force_end = False
+    # st.session_state.end_reason = []
+    st.session_state["chat_input_history"] = []
+    st.session_state["experiment2_followup_prompt"] = False
+    st.session_state.pop("experiment2_followup_choice", None)
+    _update_random_task_selection(
+        "experiment2_selected_task_label",
+        "experiment2_task_labels",
+        "experiment2_label_to_key",
+        "experiment2_selected_task_set",
+    )
 
 def _update_random_task_selection(label_key: str, labels_key: str, mapping_key: str, set_key: str) -> None:
     """Select a new task label at random and update related session state."""
@@ -201,9 +194,6 @@ def app():
 
     st.markdown(SIDEBAR_HIDE_STYLE, unsafe_allow_html=True)
 
-    st.markdown("### 行動計画で使用される関数")
-    st.markdown(FUNCTION_DOCS)
-
     prompt_options = {
         "1": SYSTEM_PROMPT_STANDARD,
         "2": SYSTEM_PROMPT_FRIENDLY,
@@ -224,6 +214,7 @@ def app():
     system_prompt = prompt_options[prompt_label]
     st.session_state["prompt_label"] = prompt_label
 
+    st.write("※会話をリセットしてもこの選択は変わりません。")
     st.session_state.setdefault("critic_min_threshold", 0.60)
 
     with st.expander("評価モデル・タスク調整（任意）", expanded=False):
@@ -354,6 +345,8 @@ def app():
         st.session_state.end_reason = []
     if "chat_input_history" not in st.session_state:
         st.session_state["chat_input_history"] = []
+    if "experiment2_followup_prompt" not in st.session_state:
+        st.session_state["experiment2_followup_prompt"] = False
 
     st.markdown("### ④ロボットとの会話")
     st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。" \
@@ -428,8 +421,8 @@ def app():
             end_message = "モデルがsufficientを出力したため終了します。"
 
     if should_stop:
-        st.success(end_message)
         if st.session_state.active:
+            st.success(end_message)
             with st.form("evaluation_form"):
                 st.subheader("⑤評価フォーム")
                 name = st.text_input(
@@ -481,6 +474,7 @@ def app():
                 submitted = st.form_submit_button("評価を保存")
 
             if submitted:
+                st.warning("評価を保存しました！")
                 scores = {
                     "name": name,
                     "success": success,
@@ -503,61 +497,13 @@ def app():
                     termination_label,
                 )
                 st.session_state.active = False
-        
-        if st.session_state.active == False:
-            st.warning("会話を終了しました。ありがとうございました！①のモードを変えて「会話をリセット」ボタンを押し、再度実験をお願いします。")
-            cols_end = st.columns([1, 1, 2])
-            with cols_end[0]:
-                if st.button("⚠️会話をリセット", key="reset_conv_end"):
-                    st.session_state.context = [{"role": "system", "content": system_prompt}]
-                    st.session_state.active = True
-                    st.session_state.conv_log = {
-                        "label": "",
-                        "clarifying_steps": []
-                    }
-                    st.session_state.saved_jsonl = []
-                    st.session_state.turn_count = 0
-                    st.session_state.force_end = False
-                    st.session_state.end_reason = ""
-                    st.session_state["chat_input_history"] = []
-                    st.rerun()
-            with cols_end[1]:
-                st.button("🚨会話を終了", key="force_end_disabled", disabled=True)
-            with cols_end[2]:
-                st.multiselect(
-                    "会話を終了したい理由",
-                    [
-                        "行動計画は実行可能でさらなる質問は不要",
-                        "同じ質問が繰り返される",
-                        "計画は確定しているの",
-                        "LLMから質問されない",
-                        "その他",
-                    ],
-                    key="end_reason",
-                )
-            st.stop()
+                st.session_state["experiment2_followup_prompt"] = True
+                st.session_state.pop("experiment2_followup_choice", None)
 
     cols = st.columns([1, 1, 2])
     with cols[0]:
         if st.button("⚠️会話をリセット", key="reset_conv"):
-            # セッション情報を初期化
-            st.session_state.context = [{"role": "system", "content": system_prompt}]
-            st.session_state.active = True
-            st.session_state.conv_log = {
-                "label": "",
-                "clarifying_steps": []
-            }
-            st.session_state.saved_jsonl = []
-            st.session_state.turn_count = 0
-            st.session_state.force_end = False
-            st.session_state.end_reason = []
-            st.session_state["chat_input_history"] = []
-            _update_random_task_selection(
-                "experiment2_selected_task_label",
-                "experiment2_task_labels",
-                "experiment2_label_to_key",
-                "experiment2_selected_task_set",
-            )
+            _reset_conversation_state(system_prompt)
             st.rerun()
     with cols[1]:
         if st.button("🚨会話を終了", key="force_end_button"):
@@ -576,5 +522,16 @@ def app():
             ],
             key="end_reason",
         )
-
+    if st.session_state.get("experiment2_followup_prompt"):
+        st.markdown("**3つのモード** で1回ずつ実験を終えましたか？")
+        if st.button("🙅‍♂️いいえ → ①のモードを変えて再度実験", key="followup_no", type="primary"):
+            st.session_state["experiment2_followup_prompt"] = False
+            st.session_state.pop("experiment2_followup_choice", None)
+            _reset_conversation_state(system_prompt)
+            st.rerun()
+        if st.button("🙆‍♂️はい → 実験終了", key="followup_yes", type="primary"):
+            st.session_state["experiment2_followup_prompt"] = False
+            st.session_state.pop("experiment2_followup_choice", None)
+            st.success("実験お疲れ様でした！ご協力ありがとうございました。")
+            st.balloons()
 app()

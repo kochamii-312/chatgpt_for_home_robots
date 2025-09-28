@@ -3,6 +3,34 @@ import re
 from strips import parse_step
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on, detect_object
 
+FUNCTION_DOCS = """
+- **move_to(room_name:str)**
+  指定した部屋へロボットを移動します。
+
+- **pick_object(object:str)**
+  指定した物体をつかみます。
+
+- **place_object_next_to(object:str, target:str)**
+  指定した物体をターゲットの横に置きます。
+
+- **place_object_on(object:str, target:str)**
+  指定した物体をターゲットの上に置きます。
+
+- **place_object_in(object:str, target:str)**
+  指定した物体をターゲットの中に入れます。
+
+- **detect_object(object:str)**
+  指定した物体を検出します。
+
+- **search_about(object:str)**
+  指定した物体に関する情報を検索します。
+
+- **push(object:str)**
+  指定した物体を押します。
+
+- **say(text:str)**
+  指定したテキストを発話します。
+"""
 
 def show_function_sequence(reply: str):
     """<FunctionSequence> ... </FunctionSequence> をコードブロックで表示"""
@@ -10,9 +38,9 @@ def show_function_sequence(reply: str):
     if not func_match:
         return
     st.markdown("#### ロボット行動計画")
-    st.write("使われている関数は左のサイドバーに説明があります。")
     st.code(func_match.group(0), language="xml")
-
+    with st.expander("行動計画で使用される関数", expanded=False):
+        st.markdown(FUNCTION_DOCS)
 
 def show_clarifying_question(reply: str):
     """<ClarifyingQuestion> ... </ClarifyingQuestion> を通常のテキストで表示"""
