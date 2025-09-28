@@ -44,7 +44,7 @@ def app():
     ⑦ その後、Experiment 2 画面に遷移します。
 
     ⚠️ 会話が終わらない場合は：  
-    「会話を終了したい理由」を記入 → **🚨 会話を終了** ボタンを押す  
+    「会話を終了したい理由」を選択 → **🚨 会話を終了** ボタンを押す  
     """)
 
     st.markdown("""
@@ -57,7 +57,7 @@ def app():
     ⑥ 「会話をリセット」ボタンを押して① のモード選択をほかのものに選びなおし再度実験（3パターン1回ずつ）  
 
     ⚠️ 会話が終わらない場合は：  
-    「会話を終了したい理由」を記入 → **🚨 会話を終了** ボタンを押す  
+    「会話を終了したい理由」を選択 → **🚨 会話を終了** ボタンを押す  
     """)
 
     st.info(
@@ -68,36 +68,8 @@ def app():
         icon="📩"
     )
     
-    st.sidebar.subheader("行動計画で使用される関数")
-    st.sidebar.markdown(
-    """
-    - **move_to(room_name:str)**  
-    指定した部屋へロボットを移動します。
-
-    - **pick_object(object:str)**  
-    指定した物体をつかみます。
-
-    - **place_object_next_to(object:str, target:str)**  
-    指定した物体をターゲットの横に置きます。
-
-    - **place_object_on(object:str, target:str)**  
-    指定した物体をターゲットの上に置きます。
-
-    - **place_object_in(object:str, target:str)**  
-    指定した物体をターゲットの中に入れます。
-
-    - **detect_object(object:str)**  
-    指定した物体を検出します。
-
-    - **search_about(object:str)**  
-    指定した物体に関する情報を検索します。
-
-    - **push(object:str)**  
-    指定した物体を押します。
-
-    - **say(text:str)**  
-    指定したテキストを発話します。
-    """
-    )
+    if st.button("実験を始める", use_container_width=True, type="primary"):
+        st.session_state["redirect_to_instruction_page"] = False
+        st.switch_page("pages/experiment_1.py")
 
 app()

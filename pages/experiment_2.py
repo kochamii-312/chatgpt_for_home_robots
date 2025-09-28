@@ -203,7 +203,7 @@ def app():
 
     default_prompt_label = st.session_state["prompt_label"]
     prompt_label = st.selectbox(
-        "### ①プロンプト（自動）",
+        "### ①プロンプト選択（自動）",
         prompt_keys,
         index=prompt_keys.index(default_prompt_label)
         if default_prompt_label in prompt_keys
