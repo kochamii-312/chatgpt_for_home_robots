@@ -333,6 +333,10 @@ def app():
             "clarifying_steps": []
         }
         st.session_state["chat_input_history"] = []
+        st.session_state.turn_count = 0
+        st.session_state.force_end = False
+        st.session_state.end_reason = []
+        st.session_state.active = True
     if "active" not in st.session_state:
         st.session_state.active = True
     if "turn_count" not in st.session_state:
