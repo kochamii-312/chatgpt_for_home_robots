@@ -5,6 +5,7 @@ import re
 
 import joblib
 import streamlit as st
+import streamlit.components.v1 as components
 from consent import (
     apply_sidebar_hiding,
     configure_page,
@@ -35,6 +36,29 @@ load_dotenv()
 
 
 configure_page(hide_sidebar_for_participant=True)
+
+
+SCROLL_RESET_FLAG_KEY = "experiment2_scroll_reset_done"
+
+
+def _scroll_to_top_on_first_load() -> None:
+    if st.session_state.get(SCROLL_RESET_FLAG_KEY):
+        return
+    components.html(
+        """
+        <script>
+        const doc = window.parent ? window.parent.document : document;
+        const main = doc ? doc.querySelector('section.main') : null;
+        if (main) {
+            main.scrollTo(0, 0);
+        } else {
+            window.scrollTo(0, 0);
+        }
+        </script>
+        """,
+        height=0,
+    )
+    st.session_state[SCROLL_RESET_FLAG_KEY] = True
 
 def _reset_conversation_state(system_prompt: str) -> None:
     """Reset conversation-related session state for experiment 1."""
@@ -186,6 +210,7 @@ def get_critic_label(context):
 
 def app():
     require_consent()
+    _scroll_to_top_on_first_load()
     st.title("LLMATCH Criticデモアプリ")
     st.subheader("実験2 異なるコミュニケーションタイプの比較")
 

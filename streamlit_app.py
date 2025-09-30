@@ -70,6 +70,8 @@ def app():
     
     if st.button("実験を始める", use_container_width=True, type="primary"):
         st.session_state["redirect_to_instruction_page"] = False
+        st.session_state.pop("experiment1_scroll_reset_done", None)
+        st.session_state.pop("experiment2_scroll_reset_done", None)
         st.switch_page("pages/experiment_1.py")
 
 app()
