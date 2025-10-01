@@ -7,7 +7,6 @@ from consent import require_consent
 from dotenv import load_dotenv
 
 from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
-from chat_display import render_chat_history
 from jsonl import (
     remove_last_jsonl_entry,
     save_jsonl_entry,
@@ -206,19 +205,19 @@ def app():
     # 4) 画面下部に履歴を全表示（systemは省く）
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
 
-    render_chat_history(context, height=420)
-
     for i, msg in enumerate(context):
-        if msg["role"] != "assistant":
+        if msg["role"] == "system":
             continue
-        content = msg.get("content")
-        if i == last_assistant_idx and isinstance(content, str) and "<FunctionSequence>" in content:
-            run_plan_and_show(content)
-        show_function_sequence(content)
-        show_clarifying_question(content)
-        show_information(content)
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            if msg["role"] == "assistant":
+                if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
+                    run_plan_and_show(msg["content"])
+                show_function_sequence(msg["content"])
+                show_clarifying_question(msg["content"])
+                show_information(msg["content"])
         # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
-        if i == last_assistant_idx and isinstance(content, str) and "<FunctionSequence>" in content:
+        if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
             st.write("この計画はロボットが実行するのに十分ですか？")
             col1, col2 = st.columns(2)
 

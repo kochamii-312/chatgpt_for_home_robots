@@ -14,7 +14,6 @@ import joblib
 from dotenv import load_dotenv
 
 from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
-from chat_display import render_chat_history
 from jsonl import predict_with_model, save_experiment_1_result
 from move_functions import (
     move_to,
@@ -260,7 +259,8 @@ def app():
              "自動で評価フォームが表示されるまで会話を続けてください。")
     context = st.session_state["context"]
 
-    greeting_text = "こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。"
+    message = st.chat_message("assistant")
+    message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
 
     max_turns = 5
     should_stop = False
@@ -302,16 +302,17 @@ def app():
         
     # 画面下部に履歴を全表示（systemは省く）
     last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
-
-    render_chat_history(context, greeting=greeting_text, height=420)
-
+    
     for i, msg in enumerate(context):
-        if msg["role"] != "assistant":
+        if msg["role"] == "system":
             continue
-        if i == last_assistant_idx and isinstance(msg.get("content"), str) and "<FunctionSequence>" in msg["content"]:
-            run_plan_and_show(msg["content"])
-        show_function_sequence(msg["content"])
-        show_clarifying_question(msg["content"])
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            if msg["role"] == "assistant":
+                if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
+                    run_plan_and_show(msg["content"])
+                show_function_sequence(msg["content"])
+                show_clarifying_question(msg["content"])
     assistant_messages = [m for m in context if m["role"] == "assistant"]
     if assistant_messages:
         label, p, th = predict_with_model()
