@@ -211,8 +211,8 @@ def get_critic_label(context):
 def app():
     require_consent()
     _scroll_to_top_on_first_load()
-    st.title("LLMATCH Criticデモアプリ")
-    st.subheader("実験2 異なるコミュニケーションタイプの比較")
+    # st.title("LLMATCH Criticデモアプリ")
+    st.markdown("### 実験2 異なるコミュニケーションタイプの比較")
 
     if should_hide_sidebar():
         apply_sidebar_hiding()
@@ -311,7 +311,7 @@ def app():
 
         task_lines = extract_task_lines(payload)
 
-    st.markdown("### ②指定されたタスク")
+    st.markdown("#### ②指定されたタスク")
     st.write("下のタスクをそのまま画面下部のチャットに入力してください。")
     if task_lines:
         for line in task_lines:
@@ -332,7 +332,7 @@ def app():
             "以下の画像ファイルが見つかりません: " + ", ".join(missing_images)
         )
 
-    st.markdown("### ③指定されたタスクが行われる場所")
+    st.markdown("#### ③指定されたタスクを行う場所")
     if house:
         meta_lines.append(f"家: {house}")
     if room:
@@ -375,7 +375,7 @@ def app():
     if "experiment2_followup_prompt" not in st.session_state:
         st.session_state["experiment2_followup_prompt"] = False
 
-    st.markdown("### ④ロボットとの会話")
+    st.markdown("#### ④ロボットとの会話")
     st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。" \
     "質問された情報が写真にない場合は、\"仮想の情報\"を答えて構いません。" \
     "自動で評価フォームが表示されるまで会話を続けてください。")
@@ -389,7 +389,7 @@ def app():
     elif st.session_state.get("force_end"):
         user_input = None
     else:
-        user_input = st.chat_input("ロボットへの指示や回答を入力してください", key="experiment_2_chat_input")
+        user_input = st.chat_input("ロボットへの回答を入力してください", key="experiment_2_chat_input")
         if user_input:
             st.session_state["chat_input_history"].append(user_input)
     if user_input:

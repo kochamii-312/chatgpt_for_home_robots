@@ -33,7 +33,7 @@ def accumulate_information(reply: str) -> str:
 
 def app():
     require_consent()
-    st.title("LLMATCH Criticデモアプリ")
+    # st.title("LLMATCH Criticデモアプリ")
     
     st.sidebar.subheader("行動計画で使用される関数")
     st.sidebar.markdown(

@@ -79,7 +79,7 @@ def _populate_form_from_set(name: str, payload: Dict[str, object]) -> None:
 
 def app():
     require_consent()
-    st.title("LLMATCH Criticデモアプリ")
+    # st.title("LLMATCH Criticデモアプリ")
     st.subheader("写真とタスクの選定・保存")
 
     st.sidebar.subheader("行動計画で使用される関数")
