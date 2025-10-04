@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import streamlit as st
+
+from firebase_utils import save_document
 
 
 ROLE_PARTICIPANT = "被験者"
@@ -94,7 +98,14 @@ def _render_consent_form() -> None:
     role_options = [ROLE_PARTICIPANT, ROLE_DEBUG]
     current_role = get_participant_role()
 
+    st.session_state.setdefault("consent_name", "")
+
     with st.form("consent_form", clear_on_submit=False):
+        participant_name = st.text_input(
+            "参加者氏名（必須）",
+            key="consent_name",
+            placeholder="例：山田 太郎",
+        )
         selected_role = st.radio(
             "利用モードを選択してください",
             options=role_options,
@@ -106,14 +117,31 @@ def _render_consent_form() -> None:
         submit = st.form_submit_button("同意して実験に進む", use_container_width=True)
 
     if submit:
-        if agree:
-            st.session_state["participant_role"] = selected_role
-            st.session_state["consent_given"] = True
-            st.session_state["redirect_to_instruction_page"] = True
-            st.success("ご同意ありがとうございます。実験画面に進みます。")
-            st.rerun()
-        else:
+        participant_name = participant_name.strip()
+        if not agree:
             st.error("参加には同意が必要です。チェックボックスにチェックを入れてください。")
+        elif not participant_name:
+            st.error("氏名を入力してください。")
+        else:
+            try:
+                save_document(
+                    collection="consent_entries",
+                    data={
+                        "name": participant_name,
+                        "role": selected_role,
+                        "consented": True,
+                        "timestamp": datetime.now(timezone.utc).isoformat(),
+                    },
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                st.error(f"同意情報の保存に失敗しました。詳細: {exc}")
+            else:
+                st.session_state["participant_role"] = selected_role
+                st.session_state["consent_name"] = participant_name
+                st.session_state["consent_given"] = True
+                st.session_state["redirect_to_instruction_page"] = True
+                st.success("ご同意ありがとうございます。実験画面に進みます。")
+                st.rerun()
 
     st.stop()
 
