@@ -2,8 +2,12 @@ import streamlit as st
 
 from consent import require_consent
 
+ACTIVE_PAGE_STATE_KEY = "current_active_page"
+ACTIVE_PAGE_VALUE = "instructions"
+
 def app():
     require_consent(allow_withdrawal=True, redirect_to_instructions=False)
+    st.session_state[ACTIVE_PAGE_STATE_KEY] = ACTIVE_PAGE_VALUE
     if st.session_state.get("redirect_to_instruction_page"):
         st.session_state["redirect_to_instruction_page"] = False
     st.title("LLMATCH Criticデモアプリ")
