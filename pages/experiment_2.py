@@ -39,26 +39,32 @@ configure_page(hide_sidebar_for_participant=True)
 
 
 SCROLL_RESET_FLAG_KEY = "experiment2_scroll_reset_done"
+ACTIVE_PAGE_STATE_KEY = "current_active_page"
+ACTIVE_PAGE_VALUE = "experiment_2"
 
 
 def _scroll_to_top_on_first_load() -> None:
-    if st.session_state.get(SCROLL_RESET_FLAG_KEY):
-        return
-    components.html(
-        """
-        <script>
-        const doc = window.parent ? window.parent.document : document;
-        const main = doc ? doc.querySelector('section.main') : null;
-        if (main) {
-            main.scrollTo(0, 0);
-        } else {
-            window.scrollTo(0, 0);
-        }
-        </script>
-        """,
-        height=0,
-    )
-    st.session_state[SCROLL_RESET_FLAG_KEY] = True
+    if st.session_state.get(ACTIVE_PAGE_STATE_KEY) != ACTIVE_PAGE_VALUE:
+        st.session_state.pop(SCROLL_RESET_FLAG_KEY, None)
+
+    if not st.session_state.get(SCROLL_RESET_FLAG_KEY):
+        components.html(
+            """
+            <script>
+            const doc = window.parent ? window.parent.document : document;
+            const main = doc ? doc.querySelector('section.main') : null;
+            if (main) {
+                main.scrollTo(0, 0);
+            } else {
+                window.scrollTo(0, 0);
+            }
+            </script>
+            """,
+            height=0,
+        )
+        st.session_state[SCROLL_RESET_FLAG_KEY] = True
+
+    st.session_state[ACTIVE_PAGE_STATE_KEY] = ACTIVE_PAGE_VALUE
 
 def _reset_conversation_state(system_prompt: str) -> None:
     """Reset conversation-related session state for experiment 1."""
