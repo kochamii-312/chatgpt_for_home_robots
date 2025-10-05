@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-import streamlit as st
+import os
 from datetime import date, datetime, timezone
+
+import streamlit as st
+
+from firebase_utils import save_document
 
 ROLE_PARTICIPANT = "被験者"
 ROLE_DEBUG = "デバッグ"
@@ -84,6 +88,12 @@ CONSENT_TEXT = """
 """
 
 
+FIREBASE_CONSENT_COLLECTION_ENV = "FIREBASE_CONSENT_COLLECTION"
+DEFAULT_CONSENT_COLLECTION = "consent_signatures"
+FIREBASE_CREDENTIALS_ENV = "FIREBASE_CREDENTIALS"
+GOOGLE_APPLICATION_CREDENTIALS_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
+
+
 def get_participant_role() -> str:
     """Return the currently selected participant role."""
 
@@ -111,6 +121,32 @@ def apply_sidebar_hiding() -> None:
     """Inject CSS that hides the sidebar controls."""
 
     st.markdown(SIDEBAR_HIDE_STYLE, unsafe_allow_html=True)
+
+
+def _save_consent_record_to_firestore(entry: dict) -> bool:
+    """Persist consent data to Firestore."""
+
+    collection = (
+        os.getenv(FIREBASE_CONSENT_COLLECTION_ENV, DEFAULT_CONSENT_COLLECTION) or ""
+    ).strip()
+    if not collection:
+        print("[Consent] skipped saving: collection name is not configured")
+        return False
+
+    credentials_source = (
+        os.getenv(FIREBASE_CREDENTIALS_ENV)
+        or os.getenv(GOOGLE_APPLICATION_CREDENTIALS_ENV)
+        or None
+    )
+
+    try:
+        save_document(collection, entry, credentials_source)
+    except Exception as exc:
+        print(f"[Consent] ERROR saving consent record: {exc}")
+        return False
+
+    print(f"[Consent] saved consent record to {collection}")
+    return True
 
 
 def _render_consent_form() -> None:
@@ -228,22 +264,45 @@ def _render_consent_form() -> None:
             for e in errors:
                 st.error(e)
         else:
-            st.session_state["participant_role"] = selected_role
-            st.session_state["consent_given"] = True
-            st.session_state["consent_items_checked"] = checked_items
-            st.session_state["data_publication_agree"] = (data_pub_choice == "データの公表に同意する")
-            st.session_state["participant_signature"] = {
-                "name": participant_name.strip(),
-                "date": participant_date.isoformat(),
+            consent_entry = {
+                "submitted_at": datetime.now(timezone.utc),
+                "participant_role": selected_role,
+                "consent_items": [
+                    {
+                        "id": k,
+                        "label": items[k],
+                        "checked": bool(st.session_state.get(f"consent_item_{k}", False)),
+                    }
+                    for k in items
+                ],
+                "checked_item_ids": checked_items,
+                "data_publication_choice": data_pub_choice,
+                "data_publication_agree": data_pub_choice == "データの公表に同意する",
+                "participant_signature": {
+                    "name": participant_name.strip(),
+                    "date": participant_date.isoformat(),
+                },
+                "researcher_signature": {
+                    "name": researcher_name,
+                    "date": researcher_date.isoformat(),
+                },
             }
-            st.session_state["researcher_signature"] = {
-                "name": researcher_name,
-                "date": researcher_date.isoformat(),
-            }
-            st.session_state["redirect_to_instruction_page"] = True
 
-            st.success("ご同意ありがとうございます。実験画面に進みます。")
-            st.rerun()
+            if not _save_consent_record_to_firestore(consent_entry):
+                st.error("同意情報の保存に失敗しました。時間をおいて再度お試しください。")
+            else:
+                st.session_state["participant_role"] = selected_role
+                st.session_state["consent_given"] = True
+                st.session_state["consent_items_checked"] = checked_items
+                st.session_state["data_publication_agree"] = (
+                    data_pub_choice == "データの公表に同意する"
+                )
+                st.session_state["participant_signature"] = consent_entry["participant_signature"]
+                st.session_state["researcher_signature"] = consent_entry["researcher_signature"]
+                st.session_state["redirect_to_instruction_page"] = True
+
+                st.success("ご同意ありがとうございます。実験画面に進みます。")
+                st.rerun()
 
     st.stop()
 
