@@ -184,6 +184,21 @@ SYSTEM_PROMPT = """
       <ProvisionalOutput>
     </OutputFormat>
   </PromptGuidelines>
+  
+  <ClarificationPolicy>
+    <TaskSchema>target, target_location, action, placement_or_success, safety</TaskSchema>
+    <Gate>
+      Ask only if the answer would change the FunctionSequence within the next step.
+      Otherwise, proceed with the safest reasonable assumption and state it briefly.
+      Limit to one question, yes/no or short choice.
+    </Gate>
+    <Grounding>
+      Each question must reference map/scene/current position explicitly.
+    </Grounding>
+    <BannedQuestions>
+      Preferences, small talk, long-term habits, unrelated personal topics.
+    </BannedQuestions>
+  </ClarificationPolicy>
 </System>
 """
 
@@ -260,6 +275,21 @@ SYSTEM_PROMPT_STANDARD = """
       </ClarifyingQuestion>
     </OutputFormat>
   </PromptGuidelines>
+
+  <ClarificationPolicy>
+    <TaskSchema>target, target_location, action, placement_or_success, safety</TaskSchema>
+    <Gate>
+      Ask only if the answer would change the FunctionSequence within the next step.
+      Otherwise, proceed with the safest reasonable assumption and state it briefly.
+      Limit to one question, yes/no or short choice.
+    </Gate>
+    <Grounding>
+      Each question must reference map/scene/current position explicitly.
+    </Grounding>
+    <BannedQuestions>
+      Preferences, small talk, long-term habits, unrelated personal topics.
+    </BannedQuestions>
+  </ClarificationPolicy>
 </System>
 """
 
@@ -341,6 +371,21 @@ SYSTEM_PROMPT_FRIENDLY = """
       </ClarifyingQuestion>
     </OutputFormat>
   </PromptGuidelines>
+
+  <ClarificationPolicy>
+    <TaskSchema>target, target_location, action, placement_or_success, safety</TaskSchema>
+    <Gate>
+      Ask only if the answer would change the FunctionSequence within the next step.
+      Otherwise, proceed with the safest reasonable assumption and state it briefly.
+      Limit to one question, yes/no or short choice.
+    </Gate>
+    <Grounding>
+      Each question must reference map/scene/current position explicitly.
+    </Grounding>
+    <BannedQuestions>
+      Preferences, small talk, long-term habits, unrelated personal topics.
+    </BannedQuestions>
+  </ClarificationPolicy>
 </System>
 """
 
@@ -425,6 +470,21 @@ SYSTEM_PROMPT_PRATFALL = """
       </ClarifyingQuestion>
     </OutputFormat>
   </PromptGuidelines>
+
+  <ClarificationPolicy>
+    <TaskSchema>target, target_location, action, placement_or_success, safety</TaskSchema>
+    <Gate>
+      Ask only if the answer would change the FunctionSequence within the next step.
+      Otherwise, proceed with the safest reasonable assumption and state it briefly.
+      Limit to one question, yes/no or short choice.
+    </Gate>
+    <Grounding>
+      Each question must reference map/scene/current position explicitly.
+    </Grounding>
+    <BannedQuestions>
+      Preferences, small talk, long-term habits, unrelated personal topics.
+    </BannedQuestions>
+  </ClarificationPolicy>
 </System>
 """
 

@@ -382,15 +382,37 @@ def app():
                         "特になし",
                     ]
                 )
+                kindness = st.radio(
+                    "ロボットはあなたに対してどれくらい「親切さ/丁寧さ」を持って接していましたか？",
+                    ["非常に親切だった", "まあまあ親切だった", "どちらともいえない", "あまり親切でなかった", "全く親切でなかった"],
+                    horizontal=True
+                )
+                pleasantness = st.radio(
+                    "ロボットとの会話はどれくらい「愉快さ」を感じましたか？",
+                    ["非常に愉快だった", "まあまあ愉快だった", "どちらともいえない", "少し不愉快だった", "とても不愉快だった"],
+                    horizontal=True
+                )
+                st.write("「親近感＝心理的距離の近さ」「ソーシャル・プレゼンス＝相手が“そこにいる”感覚」と定義します。")
                 familiarity = st.radio(
-                    "ロボットにどれくらい親近感を持ちましたか？",
-                    ["強く持った", "まあまあ持った", "あまり持ってない", "全く持っていない"],
+                    "ロボットにどれくらい「親近感/親しみやすさ（=心理的距離感の近さ）」を持ちましたか？",
+                    ["強く持った", "まあまあ持った", "どちらともいえない", "あまり持ってない", "全く持っていない"],
                     horizontal=True
                 )
                 social_presence = st.radio(
-                    "対話の相手がそこに存在し、自分と同じ空間を共有している、あるいは自分と関わっている感覚（ソーシャルプレゼンス）をどれくらい持ちましたか？",
-                    ["強く持った", "まあまあ持った", "あまり持ってない", "全く持っていない"],
+                    "対話の相手がそこに存在し、自分と同じ空間を共有している、あるいは自分と関わっている感覚「ソーシャルプレゼンス（=存在感）」をどれくらい持ちましたか？",
+                    ["強く持った", "まあまあ持った", "どちらともいえない", "あまり持ってない", "全く持っていない"],
                     horizontal=True
+                )
+                security = st.radio(
+                    "ロボットに対してどれくらい「安心感/信頼感」を持ちましたか？",
+                    ["強く持った", "まあまあ持った", "どちらともいえない", "あまり持ってない", "全く持っていない"],
+                    horizontal=True
+                )
+                impression = st.text_input(
+                    "「印象に残ったこと」があればお願いします。"
+                )
+                improvement = st.text_input(
+                    "「改善してほしい点」があればお願いします。"
                 )
                 free = st.text_input(
                     "その他に何か感じたことがあればお願いします。"
@@ -398,15 +420,20 @@ def app():
                 submitted = st.form_submit_button("評価を保存")
 
             if submitted:
-                st.warning("評価を保存しました！")
+                st.warning("評価を保存しました！適宜休憩をとってください☕")
                 scores = {
                     "name": name,
                     "success": success,
                     "failure_reason": failure_reason,
                     "failure_reason_others": failure_reason_others,
                     "grices_maxim": grices_maxim,
+                    "kindness": kindness,
+                    "pleasantness": pleasantness,
                     "familiarity": familiarity,
                     "social_presence": social_presence,
+                    "security": security,
+                    "impression": impression,
+                    "improvement": improvement,
                     "free": free,
                 }
                 termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
