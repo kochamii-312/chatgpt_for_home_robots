@@ -49,6 +49,23 @@ Evaluate the **probability of success (0–100%)** if this plan were executed.
 """
 
 
+def _extract_clarifying_question(text: str) -> Optional[str]:
+    """Extract clarifying question text even if the closing tag is missing."""
+    if not isinstance(text, str):
+        return None
+    match = re.search(
+        r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>",
+        text,
+        re.IGNORECASE,
+    )
+    if match:
+        return match.group(1).strip()
+    fallback_match = re.search(r"<ClarifyingQuestion>([\s\S]*)", text, re.IGNORECASE)
+    if fallback_match:
+        return fallback_match.group(1).strip()
+    return None
+
+
 def _analyze_function_sequence(function_sequence: str) -> Tuple[int, List[int]]:
     """関数数と各関数の変数文字数を取得する"""
 
@@ -180,13 +197,9 @@ def _collect_clarifying_history() -> list[dict[str, str]]:
     for message in st.session_state.get("context", []):
         if message.get("role") != "assistant":
             continue
-        q_match = re.search(
-            r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>",
-            message.get("content", ""),
-            re.IGNORECASE,
-        )
-        if q_match:
-            clarifying_questions.append(q_match.group(1).strip())
+        question = _extract_clarifying_question(message.get("content", ""))
+        if question:
+            clarifying_questions.append(question)
 
     chat_inputs = [
         ans.strip()

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import streamlit as st
-from datetime import date
+from datetime import date, datetime, timezone
 
 ROLE_PARTICIPANT = "被験者"
 ROLE_DEBUG = "デバッグ"
@@ -160,7 +160,6 @@ def _render_consent_form() -> None:
             st.info("すべてのチェックを外しました。")
             st.rerun()
 
-    # 同意フォーム本体
     with st.form("consent_form", clear_on_submit=False):
         selected_role = st.radio(
             "利用モードを選択してください",
