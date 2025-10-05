@@ -44,11 +44,20 @@ def show_function_sequence(reply: str):
 
 def show_clarifying_question(reply: str):
     """<ClarifyingQuestion> ... </ClarifyingQuestion> を通常のテキストで表示"""
-    q_match = re.search(r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>", reply, re.IGNORECASE)
-    if not q_match:
-        return
+    q_match = re.search(
+        r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>",
+        reply,
+        re.IGNORECASE,
+    )
+    if q_match:
+        question_text = q_match.group(1)
+    else:
+        fallback_match = re.search(r"<ClarifyingQuestion>([\s\S]*)", reply, re.IGNORECASE)
+        if not fallback_match:
+            return
+        question_text = fallback_match.group(1)
     st.markdown("#### ロボットからの質問")
-    st.write(q_match.group(1).strip())
+    st.write(question_text.strip())
 
 
 def show_information(reply: str):
