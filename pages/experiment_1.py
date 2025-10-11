@@ -100,6 +100,44 @@ def _scroll_to_top_on_first_load() -> None:
 
     st.session_state[ACTIVE_PAGE_STATE_KEY] = ACTIVE_PAGE_VALUE
 
+
+def _render_back_to_top_button() -> None:
+    components.html(
+        """
+        <style>
+        .scroll-to-top-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 99999;
+            background-color: #0F9D58;
+            color: #ffffff;
+            border: none;
+            border-radius: 9999px;
+            width: 3rem;
+            height: 3rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .scroll-to-top-btn:hover {
+            background-color: #0c7a45;
+        }
+        </style>
+        <button class="scroll-to-top-btn" onclick="(function() {
+            const doc = window.parent ? window.parent.document : document;
+            const main = doc ? doc.querySelector('section.main') : null;
+            if (main) {
+                main.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        })()" aria-label="ページの最上部へ移動">▲</button>
+        """,
+        height=0,
+    )
+
 def _reset_conversation_state(system_prompt: str) -> None:
     """Reset conversation-related session state for experiment 1."""
 
@@ -143,6 +181,7 @@ def _update_random_task_selection(label_key: str, labels_key: str, mapping_key: 
 def app():
     require_consent()
     _scroll_to_top_on_first_load()
+    _render_back_to_top_button()
     # st.title("LLMATCH Criticデモアプリ")
     st.markdown("### 実験1 GPTとGPT with Critic")
 
