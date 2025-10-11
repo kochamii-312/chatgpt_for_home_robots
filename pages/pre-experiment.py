@@ -7,6 +7,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
+from chat_display import render_chat_history
 from jsonl import predict_with_model, save_pre_experiment_result
 from move_functions import (
     move_to,
@@ -234,9 +235,7 @@ def app():
         st.session_state["pending_user_input"] = selected_inst
 
     context = st.session_state["context"]
-
-    message = st.chat_message("assistant")
-    message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
+    greeting_text = "こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。"
     input_box = st.chat_input("ロボットへの回答を入力してください", key="pre-experiment_chat_input")
     if input_box:
         st.session_state["chat_input_history"].append(input_box)
@@ -278,20 +277,7 @@ def app():
                     st.rerun()
                 st.stop()
 
-    last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
-        
-    # 画面下部に履歴を全表示（systemは省く）
-
-    for i, msg in enumerate(context):
-        if msg["role"] == "system":
-            continue
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-        
-        # if i == last_assistant_idx:
-        #     show_provisional_output(msg["content"])
-
-        # if i == last_assistant_idx: #and "<FinalOutput>" in msg["content"]:
+    render_chat_history(context, greeting=greeting_text, height=420)
             
     if st.button("⚠️会話をリセット", key="reset_conv"):
         # セッション情報を初期化
