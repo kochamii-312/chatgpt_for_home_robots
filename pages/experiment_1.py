@@ -35,6 +35,37 @@ from image_task_sets import (
     resolve_image_paths,
 )
 
+SUS_OPTIONS = [
+    ("とても当てはまる (5)", 5),
+    ("やや当てはまる (4)", 4),
+    ("どちらでもない (3)", 3),
+    ("あまり当てはまらない (2)", 2),
+    ("まったく当てはまらない (1)", 1),
+]
+
+SUS_QUESTIONS = [
+    ("sus_q1", "このロボットを頻繁に使用したい"),
+    ("sus_q2", "このロボットは必要以上に複雑だと思う"),
+    ("sus_q3", "このロボットは使いやすいと感じた"),
+    ("sus_q4", "このロボットを使うには専門的なサポートが必要だ"),
+    ("sus_q5", "このロボットの様々な機能は統合されていると感じた"),
+    ("sus_q6", "このロボットは一貫性が欠けていると思う"),
+    ("sus_q7", "大半の人はこのロボットをすぐに使いこなせるようになると思う"),
+    ("sus_q8", "このロボットは操作しにくい"),
+    ("sus_q9", "このロボットを使いこなせる自信がある"),
+    ("sus_q10", "このロボットを使い始める前に知らなければならないことがたくさんあると思う"),
+]
+
+NASA_TLX_QUESTIONS = [
+    ("nasa_mental_demand", "精神的要求"),
+    ("nasa_physical_demand", "身体的要求"),
+    ("nasa_temporal_demand", "時間的切迫感"),
+    ("nasa_performance", "作業達成度"),
+    ("nasa_effort", "努力"),
+    ("nasa_frustration", "不満"),
+]
+
+
 load_dotenv()
 
 
@@ -394,6 +425,32 @@ def app():
                 free = st.text_input(
                     "その他に何か感じたことがあればお願いします。"
                 )
+
+                st.markdown("###### SUS（システムユーザビリティ尺度）")
+                sus_scores = {}
+                sus_option_labels = [label for label, _ in SUS_OPTIONS]
+                sus_value_map = dict(SUS_OPTIONS)
+                for key, question in SUS_QUESTIONS:
+                    choice = st.radio(
+                        question,
+                        sus_option_labels,
+                        horizontal=True,
+                        key=f"{key}_experiment1",
+                    )
+                    sus_scores[key] = sus_value_map.get(choice)
+
+                st.markdown("###### NASA TLX（1 = 低い ／ 5 = 高い）")
+                nasa_scores = {}
+                for key, question in NASA_TLX_QUESTIONS:
+                    nasa_scores[key] = st.slider(
+                        question,
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        format="%d",
+                        key=f"{key}_experiment1",
+                    )
                 submitted = st.form_submit_button("評価を保存")
 
             if submitted:
@@ -409,6 +466,8 @@ def app():
                     "impression": impression,
                     "free": free,
                 }
+                scores.update(sus_scores)
+                scores.update(nasa_scores)
                 termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
                 selected_reasons = st.session_state.get("end_reason", [])
                 if isinstance(selected_reasons, str):
