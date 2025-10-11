@@ -461,26 +461,6 @@ def app():
                 name = st.text_input(
                     "あなたの名前やユーザーネーム等（被験者区別用）"
                 )
-                success = st.radio(
-                    "行動計画が実行されたとして、ロボットは成功しますか？", 
-                    ["成功する", "成功しない"], 
-                    horizontal=True
-                )
-                failure_reason = st.multiselect(
-                    "成功しない場合、その理由を教えてください。（複数選択可）",
-                    [
-                        "関数が不適切・不足している",
-                        "変数が不適切・具体的でない",
-                        "虚偽の情報が含まれている",
-                        "会話の中で出てきた必要な情報を含んでいない",
-                        "複数のものがある中で適切なものが選べない",
-                        "以上の理由以外", 
-                        "成功する",
-                    ]
-                )
-                failure_reason_others = st.text_input(
-                    "前の質問で「以上の理由以外」を選んだ方はその内容を書いてください。"
-                )
                 grices_maxim = st.multiselect(
                     "ロボットの発言に関して、以下の内容の中で当てはまるものがあれば選んでください。（複数選択可）",
                     [
@@ -528,9 +508,6 @@ def app():
                 st.warning("評価を保存しました！適宜休憩をとってください☕")
                 scores = {
                     "name": name,
-                    "success": success,
-                    "failure_reason": failure_reason,
-                    "failure_reason_others": failure_reason_others,
                     "grices_maxim": grices_maxim,
                     "kindness": kindness,
                     "pleasantness": pleasantness,
