@@ -1,98 +1,95 @@
+# move_functions.py
+# Thin wrappers that the Streamlit pages import.
+# They call into sim_adapter.SIM so you can later swap the backend.
+
 import os
-import streamlit as st
+from typing import Tuple, Union
 
-DEFAULT_IMAGE_DIR = "images"
+_BACKEND = "simple"
 
-# 実際のロボットの代わりに動作をプリント
-def move_to(room_name):
-    return f"Moved to {room_name}"
-
-def pick_object(obj):
-    return f"Picked up {obj}"
-
-def place_object_next_to(obj, target):
-    return f"Placed {obj} next to {target}"
-
-def place_object_on(obj, target):
-    return f"Placed {obj} on {target}"
-
-def place_object_in(obj, target):
-    return f"Placed {obj} in {target}"
-
-def detect_object(obj):
-    return f"Detect {obj}"
-
-def search_about(obj):
-    return f"Searched about {obj}"
-
-def push(obj):
-    return f"Pushed {obj}"
-
-def say(text):
-    return f"Said {text}"
-
-def _room_to_path(room_name: str) -> str:
-    fname = f"{room_name.lower()}.png"  # "KITCHEN" -> "kitchen.png"
-    image_dir = DEFAULT_IMAGE_DIR
-    house = st.session_state.get("selected_house")
-    subfolder = st.session_state.get("selected_subfolder")
-    if house:
-        image_dir = os.path.join(image_dir, house)
-        if subfolder:
-            image_dir = os.path.join(image_dir, subfolder)
-    return os.path.join(image_dir, fname)
-
-def show_room_image(room_name: str) -> str:
-    """
-    Plan 実行時に呼ばれる表示関数。
-    ローカルにある部屋画像（例: images/house1/kitchen.png）を表示する。
-    """
-    path = get_room_image_path(room_name)
-    if os.path.exists(path):
-        st.image(path, caption=f"{room_name} (local)")
-        return f"Displayed local image for {room_name}: {path}"
+try:
+    if os.getenv("USE_HABITAT", "0") == "1":
+        from habitat_bridge import get_adapter, reset_log, action_log
+        _adapter = get_adapter()
+        _BACKEND = "habitat"
     else:
-        # ローカルに無い場合は控えめにメッセージ（必要なら公開URLのフォールバック実装も可能）
-        st.warning(f"画像が見つかりません: {path}")
-        return f"No local image found for {room_name}"
+        raise ImportError("USE_HABITAT != 1")
+except Exception:
+    from sim_adapter import SIM as _adapter
+    from sim_adapter import SimpleSim as _SimpleSim
+    from sim_adapter import Pose2D as _Pose2D
+    def reset_log(): _adapter.reset_log()
+    def action_log(): return _adapter.action_log
 
-def get_room_image_path(room_name: str) -> str:
-    """Return path to a room image, searching available image folders.
+def move(direction: str, distance_m: float) -> Union[Tuple[float, float], str]:
+    """Move in a relative direction by distance (m)."""
+    return _adapter.move(direction, float(distance_m))
 
-    The user may choose a specific house via ``selected_house`` in the
-    session state.  When not specified (or when the requested image does
-    not exist for the selected house), the function now searches all
-    subdirectories under ``images`` and falls back to the first match.
-    This allows images to be displayed even when no house is selected in
-    the UI.
-    """
+def rotate(direction: str, angle_deg: float):
+    """Rotate left/right by angle (deg)."""
+    _adapter.rotate(direction, float(angle_deg))
+    p = get_pose()
+    return f"yaw={p[2]:.1f}deg"
 
-    file_name = f"{room_name.lower()}.png"
-    house = st.session_state.get("selected_house")
-    subfolder = st.session_state.get("selected_subfolder")
+def go_to_location(location_name: str):
+    """Teleport to a named semantic location (stub for path planning)."""
+    return _adapter.go_to_location(location_name)
 
-    # Directories to search, in order of priority
-    search_dirs = []
-    if house:
-        base_dir = os.path.join(DEFAULT_IMAGE_DIR, house)
-        if subfolder:
-            search_dirs.append(os.path.join(base_dir, subfolder))
-        search_dirs.append(base_dir)
+def stop() -> str:
+    """Stop current motion (no-op in this stub)."""
+    return _adapter.stop()
 
-    # If no house is selected, search all house directories first
-    if not house:
-        for d in os.listdir(DEFAULT_IMAGE_DIR):
-            subdir = os.path.join(DEFAULT_IMAGE_DIR, d)
-            if os.path.isdir(subdir):
-                search_dirs.append(subdir)
 
-    # Finally, look in the top-level images directory
-    search_dirs.append(DEFAULT_IMAGE_DIR)
+def move_to(room_name: str) -> str:
+    """Move robot to the specified room."""
+    return _adapter.move_to(room_name)
 
-    for directory in search_dirs:
-        candidate = os.path.join(directory, file_name)
-        if os.path.exists(candidate):
-            return candidate
+def pick_object(object: str) -> str:
+    """Pick up the specified object."""
+    return _adapter.pick_object(object)
 
-    # Return the default path even if it doesn't exist; caller will warn
-    return os.path.join(search_dirs[0] if search_dirs else DEFAULT_IMAGE_DIR, file_name)
+def place_object_next_to(object: str, target: str) -> str:
+    """Place the object next to the target."""
+    return _adapter.place_object_next_to(object, target)
+
+def place_object_on(object: str, target: str) -> str:
+    """Place the object on the target."""
+    return _adapter.place_object_on(object, target)
+
+def place_object_in(object: str, target: str) -> str:
+    """Place the object in the target."""
+    return _adapter.place_object_in(object, target)
+
+def detect_object(object: str) -> str:
+    """Detect the specified object using YOLO."""
+    return _adapter.detect_object(object)
+
+def search_about(object: str) -> str:
+    """Search information about the specified object."""
+    return _adapter.search_about(object)
+
+def push(object: str) -> str:
+    """Push the specified object."""
+    return _adapter.push(object)
+
+def say(text: str) -> str:
+    """Speak the specified text."""
+    return _adapter.say(text)
+
+
+def get_pose() -> tuple[float, float, float]:
+    p = _adapter.get_pose()
+    # normalize for both backends
+    if isinstance(p, tuple) and len(p) == 3:
+        return p  # already tuple
+    # object with x,y,yaw_deg
+    return (p.x, p.y, p.yaw_deg)
+
+def get_log():
+    try:
+        return list(action_log())
+    except TypeError:
+        return list(action_log)
+
+def reset_log_wrapper():
+    reset_log()

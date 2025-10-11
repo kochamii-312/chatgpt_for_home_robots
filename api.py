@@ -74,6 +74,11 @@ CREATING_DATA_SYSTEM_PROMPT = """
   </Vision>
 
   <Functions>
+    <Function name="move" args="direction:str, distance_m:float">Move robot to the specified direction and distance.</Function>
+    <Function name="rotate" args="direction:str, angle_deg:float">Rotate robot to the specified direction and angle.</Function>
+    <Function name="go_to_location" args="location_name:str">Move robot to the specified room.</Function>
+    <Function name="stop">Stop robot.</Function>
+
     <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
     <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
@@ -145,6 +150,11 @@ SYSTEM_PROMPT = """
   </Vision>
 
   <Functions>
+    <Function name="move" args="direction:str, distance_m:float">Move robot to the specified direction and distance.</Function>
+    <Function name="rotate" args="direction:str, angle_deg:float">Rotate robot to the specified direction and angle.</Function>
+    <Function name="go_to_location" args="location_name:str">Move robot to the specified room.</Function>
+    <Function name="stop">Stop robot.</Function>
+
     <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
     <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
@@ -236,6 +246,11 @@ SYSTEM_PROMPT_STANDARD = """
   </Vision>
 
   <Functions>
+    <Function name="move" args="direction:str, distance_m:float">Move robot to the specified direction and distance.</Function>
+    <Function name="rotate" args="direction:str, angle_deg:float">Rotate robot to the specified direction and angle.</Function>
+    <Function name="go_to_location" args="location_name:str">Move robot to the specified room.</Function>
+    <Function name="stop">Stop robot.</Function>
+
     <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
     <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
@@ -332,6 +347,11 @@ SYSTEM_PROMPT_FRIENDLY = """
   </Vision>
 
   <Functions>
+    <Function name="move" args="direction:str, distance_m:float">Move robot to the specified direction and distance.</Function>
+    <Function name="rotate" args="direction:str, angle_deg:float">Rotate robot to the specified direction and angle.</Function>
+    <Function name="go_to_location" args="location_name:str">Move robot to the specified room.</Function>
+    <Function name="stop">Stop robot.</Function>
+
     <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
     <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
@@ -431,6 +451,11 @@ SYSTEM_PROMPT_PRATFALL = """
   </Vision>
 
   <Functions>
+    <Function name="move" args="direction:str, distance_m:float">Move robot to the specified direction and distance.</Function>
+    <Function name="rotate" args="direction:str, angle_deg:float">Rotate robot to the specified direction and angle.</Function>
+    <Function name="go_to_location" args="location_name:str">Move robot to the specified room.</Function>
+    <Function name="stop">Stop robot.</Function>
+
     <Function name="move_to" args="room_name:str">Move robot to the specified room.</Function>
     <Function name="pick_object" args="object:str">Pick up the specified object.</Function>
     <Function name="place_object_next_to" args="object:str, target:str">Place the object next to the target.</Function>
