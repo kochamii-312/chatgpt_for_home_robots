@@ -9,6 +9,10 @@ import streamlit as st
 
 from firebase_utils import save_document
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 ROLE_PARTICIPANT = "被験者"
 ROLE_DEBUG = "デバッグ"
 
@@ -89,7 +93,6 @@ DEFAULT_CONSENT_COLLECTION = "consent_signatures"
 FIREBASE_CREDENTIALS_ENV = "FIREBASE_CREDENTIALS"
 GOOGLE_APPLICATION_CREDENTIALS_ENV = "GOOGLE_APPLICATION_CREDENTIALS"
 
-
 def get_participant_role() -> str:
     """Return the currently selected participant role."""
 
@@ -134,6 +137,15 @@ def _save_consent_record_to_firestore(entry: dict) -> bool:
         or os.getenv(GOOGLE_APPLICATION_CREDENTIALS_ENV)
         or None
     )
+    # _save_consent_record_to_firestore 内部の try の直前あたりに
+    source = "ADC(default)"
+    if os.getenv("FIREBASE_CREDENTIALS"):
+        source = "FIREBASE_CREDENTIALS(inline JSON)"
+    elif os.getenv("GOOGLE_APPLICATION_CREDENTIALS"):
+        p = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        source = f"GOOGLE_APPLICATION_CREDENTIALS(file at {p})"
+
+    print(f"[Consent] using credential source: {source}")
 
     try:
         save_document(collection, entry, credentials_source)
@@ -157,7 +169,6 @@ def _render_consent_form() -> None:
 
     st.markdown("---")
     st.markdown("### 協力の同意書")
-    st.markdown("慶應義塾大学　理工学部長　殿")
     st.caption("以下の各項目を確認のうえ、チェックを入れてください。")
 
     st.write("　私は，「対話型LLMによる家庭内ロボット行動計画とタスク達成率：人-AIインタラクションの効果」について，目的，方法などに関する以下の説明を文書および口頭により受け，内容について十分理解しました。この書面をもって，私がこの研究に参加することを自由意思で決定したことを示すものとします。")

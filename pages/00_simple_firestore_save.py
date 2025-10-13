@@ -9,6 +9,8 @@ import streamlit as st
 
 from firebase_utils import save_document
 
+from dotenv import load_dotenv
+load_dotenv()
 
 st.set_page_config(page_title="Firestore テスト保存", page_icon="📝")
 
