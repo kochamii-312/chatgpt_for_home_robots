@@ -517,10 +517,7 @@ def app():
                     horizontal=True
                 )
                 impression = st.text_input(
-                    "「印象に残ったこと」があればお願いします。"
-                )
-                improvement = st.text_input(
-                    "「改善してほしい点」があればお願いします。"
+                    "AIとの会話や、ロボットの行動計画について「印象に残ったこと」があればお願いします。"
                 )
                 free = st.text_input(
                     "その他に何か感じたことがあればお願いします。"
@@ -541,7 +538,6 @@ def app():
                     "social_presence": social_presence,
                     "security": security,
                     "impression": impression,
-                    "improvement": improvement,
                     "free": free,
                 }
                 termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
