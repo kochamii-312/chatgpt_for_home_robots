@@ -114,7 +114,7 @@ strips.py         # 計画ロジック補助（STRIPS 風）
 
 ## ✨ Supported by LLMATCH program
 
-This project is supported by LLMATCH program conducted by LLM community by Matso, Iwasawa lab in Tokyo University.
+This project is supported by LLMATCH program conducted by LLM community by Matsuo-Iwasawa lab in the University of Tokyo.
 LLMATCH is a program designed to meet the diverse needs of students—whether you have an idea but don't know how to proceed, want to gain experience in LLM development, or wish to apply LLMs to your research.
 
 このプロジェクトは、東京大学松尾・岩澤研究所LLMコミュニティ主催のLLMATCHプログラムからサポートを受けています。
