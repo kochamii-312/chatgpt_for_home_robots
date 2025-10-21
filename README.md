@@ -48,10 +48,74 @@ ChatGPT for Home Robots は、**LLM のコミュニケーションスタイル**
 
 ---
 
-## ✨ What is LLMATCH? / LLMATCH とは？
+## 🧭 Features / 主な機能
 
-LLMATCH is a program designed to meet the diverse needs of students—whether you have an idea but don't know how to proceed, want to gain experience in LLM development, or wish to apply LLMs to your research.
-
-LLMATCH は、アイデアはあるけどどう進めればいいかわからない、LLM開発の実績を積みたい、自分の研究でLLMを応用したいなど、学生の様々な希望に応えるプログラムです。
+- **Dialogue → Plan(JSON) → Action**: 自然言語から構造化プランを生成し、実行まで接続  
+- **Style Switching**: 情報提供型 / 共感型 / 雑談型の対話スタイル切替  
+- **Evaluation UI**: `streamlit_app.py` による評価・デモ UI（同意取得モジュール `consent.py` あり）  
+- **Planning & Motion Helpers**: `move_functions.py`, `strips.py`, `room_utils.py` など  
+- **Data/Logging**: `clarify_logger.py`, `jsonl.py` でログ・データ出力
 
 ---
+
+## 🚀 Quickstart / クイックスタート
+
+```bash
+# 0) Python
+# Use Python 3.10+ (check requirements.txt for exact pins)
+# requirements.txt is included in the repo.
+# 1) Clone
+git clone https://github.com/kochamii-312/chatgpt_for_home_robots
+cd chatgpt_for_home_robots
+
+# 2) Install
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+
+# 3) Run the Streamlit demo UI
+streamlit run streamlit_app.py
+
+# 4) (Optional) API server (if you use backend endpoints)
+python api.py
+```
+
+---
+
+## 🔧 Configuration / 設定
+
+- Env / Secrets: API キーや評価用の保存先がある場合は .env などで管理
+- Firebase / GCP: firebase_utils.py と .gcloudignore があるため、Firebase/GCP 連携の構成を想定（必要に応じて認証情報を配置）
+- Procfile: プロセス定義があるため、PaaS（Render/Heroku 等）へのデプロイの雛形として利用可能
+
+---
+
+## 🖼️ Suggested Repo Structure Highlights / 構成ハイライト
+```bash
+images/           # サムネイル・GIF 等（README から参照）
+pages/            # UI ページ/セクション（Streamlit マルチページ運用時）
+models/           # モデル関連（プロンプト/重み/設定など）
+tasks/            # タスク定義・サンプル
+api.py            # バックエンド API
+streamlit_app.py  # 評価・デモ UI のエントリ
+consent.py        # 研究用の同意取得
+move_functions.py # アクション/モーション補助
+strips.py         # 計画ロジック補助（STRIPS 風）
+```
+
+---
+
+## 🗣️ Communication Styles / 対話スタイル
+
+- **Logical（情報提供型）**: 手順を簡潔に提示
+- **Empathetic（共感型）**: 感情に寄り添い安心感を提供
+- **Pratfall（雑談型）**: 親近感・温かみを演出
+
+---
+
+## ✨ Supported by LLMATCH program
+
+This project is supported by LLMATCH program conducted by LLM community by Matso, Iwasawa lab in Tokyo University.
+LLMATCH is a program designed to meet the diverse needs of students—whether you have an idea but don't know how to proceed, want to gain experience in LLM development, or wish to apply LLMs to your research.
+
+このプロジェクトは、東京大学松尾・岩澤研究所LLMコミュニティ主催のLLMATCHプログラムからサポートを受けています。
+LLMATCH は、アイデアはあるけどどう進めればいいかわからない、LLM開発の実績を積みたい、自分の研究でLLMを応用したいなど、学生の様々な希望に応えるプログラムです。
