@@ -1,9 +1,29 @@
-import streamlit as st
+
+# run_and_show.py
+# Utilities used by experiment pages to (a) parse function sequences from LLM output,
+# (b) execute them against move_functions, and (c) show results in Streamlit.
+#
+# This version supports TWO formats:
+#   (A) Preferred: <FunctionSequence> with Python-like calls, e.g.:
+#         move("forward", 1.0)
+#         rotate("left", 90)
+#         go_to_location("キッチン")
+#         stop()
+#   (B) Fallback XML-ish tags (line or whole text), e.g.:
+#         <move_to>storage</move_to>
+#         <move>back</move>
+#         <rotate>left,90</rotate>
+#         <place_object_in>wood,fireplace</place_object_in>  (unsupported → warning)
+
 import re
 import ast
-from strips import parse_step
+import streamlit as st
 from typing import Callable, Dict, Any
+
+# Import the four required robot functions
 from move_functions import move, rotate, go_to_location, stop, get_log, reset_log
+
+# --- Basic helpers -----------------------------------------------------------
 
 def extract_between(tag: str, text: str) -> str | None:
     m = re.search(fr"<{tag}>([\s\S]*?)</{tag}>", text or "", re.IGNORECASE)
@@ -60,7 +80,6 @@ def _safe_eval_call(expr: str, env: Dict[str, Callable]) -> Any:
     except Exception as e:
         return f"ExecError in {fname}: {e}"
 
-
 # --- Fallback: simple tag-based parser --------------------------------------
 
 # Map loose direction synonyms
@@ -69,31 +88,6 @@ _DIR_MAP = {
     "back": "backward", "backward": "backward", "後退": "backward", "後ろ": "backward",
     "left": "left", "leftward": "left", "右": "right", "right": "right", "左": "left",
 }
-
-def _extract_self_closing_tags(text: str):
-    pattern = re.compile(r"<([A-Za-z0-9_]+)([^/>]*)/>")
-    tags = []
-    for m in pattern.finditer(text):
-        tag = m.group(1)
-        attrs = m.group(2)
-        # 属性パース
-        kvs = re.findall(r'([A-Za-z0-9_]+)="([^"]*)"', attrs)
-        tags.append((tag, dict(kvs)))
-    return tags
-
-def _fallback_tag_with_attrs(tag: str, attrs: dict):
-    t = tag.lower()
-    if t == "move":
-        direction = attrs.get("direction", "forward")
-        dist = attrs.get("distance_m", "1.0")
-        return f'move("{direction}", {dist})'
-    if t == "pick_object":
-        obj = attrs.get("object", "")
-        return f'pick_object("{obj}")'
-    if t == "say":
-        text = attrs.get("text", "")
-        return f'say("{text}")'
-    return None
 
 def _fallback_tag_to_call(tag: str, content: str):
     """
@@ -168,91 +162,22 @@ def _fallback_parse_whole_reply(text: str):
             calls.append(call)
     return calls
 
-FUNCTION_DOCS = """
-- **move_to(room_name:str)**
-  指定した部屋へロボットを移動します。
-
-- **pick_object(object:str)**
-  指定した物体をつかみます。
-
-- **place_object_next_to(object:str, target:str)**
-  指定した物体をターゲットの横に置きます。
-
-- **place_object_on(object:str, target:str)**
-  指定した物体をターゲットの上に置きます。
-
-- **place_object_in(object:str, target:str)**
-  指定した物体をターゲットの中に入れます。
-
-- **detect_object(object:str)**
-  指定した物体を検出します。
-
-- **search_about(object:str)**
-  指定した物体に関する情報を検索します。
-
-- **push(object:str)**
-  指定した物体を押します。
-
-- **say(text:str)**
-  指定したテキストを発話します。
-"""
+# --- Streamlit renderers & runner -------------------------------------------
 
 def show_function_sequence(reply: str):
-    """<FunctionSequence> ... </FunctionSequence> をコードブロックで表示"""
-    func_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", reply, re.IGNORECASE)
-    if not func_match:
+    """
+    If <FunctionSequence> is present, show it in a pretty block for the user.
+    """
+    fs = extract_between("FunctionSequence", reply or "")
+    if not fs:
         return
-    st.markdown("#### ロボット行動計画")
-    st.code(func_match.group(0), language="xml")
-    with st.expander("行動計画で使用される関数", expanded=False):
-        st.markdown(FUNCTION_DOCS)
+    st.markdown("##### FunctionSequence")
+    st.code(fs.strip(), language="python")
 
 def show_clarifying_question(reply: str):
-    """<ClarifyingQuestion> ... </ClarifyingQuestion> を通常のテキストで表示"""
-    q_match = re.search(
-        r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>",
-        reply,
-        re.IGNORECASE,
-    )
-    if q_match:
-        question_text = q_match.group(1)
-    else:
-        fallback_match = re.search(r"<ClarifyingQuestion>([\s\S]*)", reply, re.IGNORECASE)
-        if not fallback_match:
-            return
-        question_text = fallback_match.group(1)
-    st.markdown("#### ロボットからの質問")
-    st.write(question_text.strip())
-
-
-def show_information(reply: str):
-    """<Information> ... </Information> を蓄積して表示"""
-    info_match = re.search(r"<Information>([\s\S]*?)</Information>", reply, re.IGNORECASE)
-    if not info_match:
-        return
-
-    items = re.findall(r"<li>(.*?)</li>", info_match.group(1))
-    if "information_items" not in st.session_state:
-        st.session_state.information_items = []
-    for item in items:
-        if item not in st.session_state.information_items:
-            st.session_state.information_items.append(item)
-
-    aggregated = "".join(f"<li>{item}</li>" for item in st.session_state.information_items)
-    st.subheader("Information")
-    st.markdown("<ul>" + aggregated + "</ul>", unsafe_allow_html=True)
-
-
-def show_provisional_output(reply: str):
-    """<ProvisionalOutput> 内の関数列と確認質問のみを表示"""
-    prov_match = re.search(
-        r"<ProvisionalOutput>([\s\S]*?)</ProvisionalOutput>", reply, re.IGNORECASE
-    )
-    if not prov_match:
-        return
-    provisional = prov_match.group(1)
-    show_function_sequence(provisional)
-    show_clarifying_question(provisional)
+    q = extract_between("ClarifyingQuestion", reply or "")
+    if q:
+        st.info(f"🤖 質問: {q}")
 
 def run_plan_and_show(reply: str):
     """

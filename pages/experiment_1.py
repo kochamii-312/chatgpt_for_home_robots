@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
 from jsonl import predict_with_model, save_experiment_1_result
-from move_functions import (
+from move_functions_ import (
     move_to,
     pick_object,
     place_object_next_to,
@@ -34,6 +34,37 @@ from image_task_sets import (
     load_image_task_sets,
     resolve_image_paths,
 )
+
+SUS_OPTIONS = [
+    ("とても当てはまる (5)", 5),
+    ("やや当てはまる (4)", 4),
+    ("どちらでもない (3)", 3),
+    ("あまり当てはまらない (2)", 2),
+    ("まったく当てはまらない (1)", 1),
+]
+
+SUS_QUESTIONS = [
+    ("sus_q1", "このロボットを頻繁に使用したい"),
+    ("sus_q2", "このロボットは必要以上に複雑だと思う"),
+    ("sus_q3", "このロボットは使いやすいと感じた"),
+    ("sus_q4", "このロボットを使うには専門的なサポートが必要だ"),
+    ("sus_q5", "このロボットの様々な機能は統合されていると感じた"),
+    ("sus_q6", "このロボットは一貫性が欠けていると思う"),
+    ("sus_q7", "大半の人はこのロボットをすぐに使いこなせるようになると思う"),
+    ("sus_q8", "このロボットは操作しにくい"),
+    ("sus_q9", "このロボットを使いこなせる自信がある"),
+    ("sus_q10", "このロボットを使い始める前に知らなければならないことがたくさんあると思う"),
+]
+
+NASA_TLX_QUESTIONS = [
+    ("nasa_mental_demand", "精神的要求"),
+    ("nasa_physical_demand", "身体的要求"),
+    ("nasa_temporal_demand", "時間的切迫感"),
+    ("nasa_performance", "作業達成度"),
+    ("nasa_effort", "努力"),
+    ("nasa_frustration", "不満"),
+]
+
 
 load_dotenv()
 
@@ -68,6 +99,44 @@ def _scroll_to_top_on_first_load() -> None:
         st.session_state[SCROLL_RESET_FLAG_KEY] = True
 
     st.session_state[ACTIVE_PAGE_STATE_KEY] = ACTIVE_PAGE_VALUE
+
+
+def _render_back_to_top_button() -> None:
+    components.html(
+        """
+        <style>
+        .scroll-to-top-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 99999;
+            background-color: #0F9D58;
+            color: #ffffff;
+            border: none;
+            border-radius: 9999px;
+            width: 3rem;
+            height: 3rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .scroll-to-top-btn:hover {
+            background-color: #0c7a45;
+        }
+        </style>
+        <button class="scroll-to-top-btn" onclick="(function() {
+            const doc = window.parent ? window.parent.document : document;
+            const main = doc ? doc.querySelector('section.main') : null;
+            if (main) {
+                main.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        })()" aria-label="ページの最上部へ移動">▲</button>
+        """,
+        height=0,
+    )
 
 def _reset_conversation_state(system_prompt: str) -> None:
     """Reset conversation-related session state for experiment 1."""
@@ -112,6 +181,7 @@ def _update_random_task_selection(label_key: str, labels_key: str, mapping_key: 
 def app():
     require_consent()
     _scroll_to_top_on_first_load()
+    _render_back_to_top_button()
     # st.title("LLMATCH Criticデモアプリ")
     st.markdown("### 実験1 GPTとGPT with Critic")
 
@@ -352,26 +422,7 @@ def app():
                 name = st.text_input(
                     "あなたの名前やユーザーネーム等（被験者区別用）"
                 )
-                success = st.radio(
-                    "行動計画が実行されたとして、ロボットは成功しますか？", 
-                    ["成功する", "成功しない"], 
-                    horizontal=True
-                )
-                failure_reason = st.multiselect(
-                    "成功しない場合、その理由を教えてください。（複数選択可）",
-                    [
-                        "関数が不適切・不足している",
-                        "変数が不適切・具体的でない",
-                        "虚偽の情報が含まれている",
-                        "会話の中で出てきた必要な情報を含んでいない",
-                        "複数のものがある中で適切なものが選べない",
-                        "以上の理由以外", 
-                        "成功する",
-                    ]
-                )
-                failure_reason_others = st.text_input(
-                    "前の質問で「以上の理由以外」を選んだ方はその内容を書いてください。"
-                )
+                
                 grices_maxim = st.multiselect(
                     "ロボットの発言に関して、以下の内容の中で当てはまるものがあれば選んでください。（複数選択可）",
                     [
@@ -413,15 +464,38 @@ def app():
                 free = st.text_input(
                     "その他に何か感じたことがあればお願いします。"
                 )
+
+                st.markdown("###### SUS（システムユーザビリティ尺度）")
+                sus_scores = {}
+                sus_option_labels = [label for label, _ in SUS_OPTIONS]
+                sus_value_map = dict(SUS_OPTIONS)
+                for key, question in SUS_QUESTIONS:
+                    choice = st.radio(
+                        question,
+                        sus_option_labels,
+                        horizontal=True,
+                        key=f"{key}_experiment1",
+                    )
+                    sus_scores[key] = sus_value_map.get(choice)
+
+                st.markdown("###### NASA TLX（1 = 低い ／ 5 = 高い）")
+                nasa_scores = {}
+                for key, question in NASA_TLX_QUESTIONS:
+                    nasa_scores[key] = st.slider(
+                        question,
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        format="%d",
+                        key=f"{key}_experiment1",
+                    )
                 submitted = st.form_submit_button("評価を保存")
 
             if submitted:
                 st.warning("評価を保存しました！適宜休憩をとってください☕")
                 scores = {
                     "name": name,
-                    "success": success,
-                    "failure_reason": failure_reason,
-                    "failure_reason_others": failure_reason_others,
                     "grices_maxim": grices_maxim,
                     "kindness": kindness,
                     "pleasantness": pleasantness,
@@ -431,6 +505,8 @@ def app():
                     "impression": impression,
                     "free": free,
                 }
+                scores.update(sus_scores)
+                scores.update(nasa_scores)
                 termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
                 selected_reasons = st.session_state.get("end_reason", [])
                 if isinstance(selected_reasons, str):
