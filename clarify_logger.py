@@ -37,7 +37,7 @@ import datetime
 import os
 import re
 
-from firebase_utils import save_document
+from utils.firebase_utils import save_document
 from dotenv import load_dotenv
 
 load_dotenv()

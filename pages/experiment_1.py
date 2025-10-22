@@ -23,7 +23,7 @@ from move_functions import (
 )
 from run_and_show import (
     run_plan_and_show,
-    show_clarifying_question,
+    show_spoken_response,
     show_function_sequence,
 )
 from run_and_show import show_provisional_output
@@ -388,7 +388,7 @@ def app():
                 if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
-                show_clarifying_question(msg["content"])
+                show_spoken_response(msg["content"])
     assistant_messages = [m for m in context if m["role"] == "assistant"]
     if assistant_messages:
         label, p, th = predict_with_model()

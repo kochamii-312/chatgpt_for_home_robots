@@ -13,7 +13,7 @@ from jsonl import (
     show_jsonl_block,
 )
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
-from run_and_show import run_plan_and_show, show_clarifying_question, show_function_sequence, show_information
+from run_and_show import run_plan_and_show, show_spoken_response, show_function_sequence, show_information
 from tasks.ui import render_random_room_task, reset_random_room_task
 
 load_dotenv()
@@ -214,7 +214,7 @@ def app():
                 if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
                     run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
-                show_clarifying_question(msg["content"])
+                show_spoken_response(msg["content"])
                 show_information(msg["content"])
         # 最後のアシスタント直後にボタンを出す（計画があるときのみ）
         if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:

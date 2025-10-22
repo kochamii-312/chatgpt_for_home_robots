@@ -9,7 +9,7 @@ import streamlit as st
 
 from typing import Any, List, Optional, Tuple
 from dotenv import load_dotenv
-from firebase_utils import save_document
+from utils.firebase_utils import save_document
 from api import client
 
 load_dotenv()
@@ -418,8 +418,7 @@ def save_pre_experiment_result(human_score: int):
         "instruction": instruction,
         "function_sequence": function_sequence,
         "information": information,
-        "clarification_question": clarifications,
-        "user_answers": user_answers,
+        "clarification_question": clarifying_history,
         "similarity": similarity,
         "human_score": human_score,
         "mode": st.session_state.get("mode", "")

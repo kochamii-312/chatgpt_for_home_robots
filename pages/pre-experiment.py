@@ -16,7 +16,7 @@ from move_functions import (
 )
 from run_and_show import (
     run_plan_and_show,
-    show_clarifying_question,
+    show_spoken_response,
     show_function_sequence,
 )
 from run_and_show import show_provisional_output
@@ -45,7 +45,7 @@ def load_ground_truth_map():
 
 def show_provisional_output(reply: str):
     show_function_sequence(reply)
-    show_clarifying_question(reply)
+    show_spoken_response(reply)
     run_plan_and_show(reply)
 
 def finalize_and_render_plan(label: str):

@@ -42,22 +42,22 @@ def show_function_sequence(reply: str):
     with st.expander("行動計画で使用される関数", expanded=False):
         st.markdown(FUNCTION_DOCS)
 
-def show_clarifying_question(reply: str):
-    """<ClarifyingQuestion> ... </ClarifyingQuestion> を通常のテキストで表示"""
+def show_spoken_response(reply: str):
+    """<SpokenResponse> ... </SpokenResponse> を通常のテキストで表示"""
     q_match = re.search(
-        r"<ClarifyingQuestion>([\s\S]*?)</ClarifyingQuestion>",
+        r"<SpokenResponse>([\s\S]*?)</SpokenResponse>",
         reply,
         re.IGNORECASE,
     )
     if q_match:
-        question_text = q_match.group(1)
+        response_text = q_match.group(1)
     else:
-        fallback_match = re.search(r"<ClarifyingQuestion>([\s\S]*)", reply, re.IGNORECASE)
+        fallback_match = re.search(r"<SpokenResponse>([\s\S]*)", reply, re.IGNORECASE)
         if not fallback_match:
             return
-        question_text = fallback_match.group(1)
-    st.markdown("#### ロボットからの質問")
-    st.write(question_text.strip())
+        response_text = fallback_match.group(1)
+    st.markdown("#### ロボットの発言")
+    st.write(response_text.strip())
 
 
 def show_information(reply: str):
@@ -87,7 +87,7 @@ def show_provisional_output(reply: str):
         return
     provisional = prov_match.group(1)
     show_function_sequence(provisional)
-    show_clarifying_question(provisional)
+    show_spoken_response(provisional)
 
 def run_plan_and_show(reply: str):
     """<FunctionSequence> を見つけて実行し、結果を表示"""

@@ -15,7 +15,7 @@ from consent import (
 from dotenv import load_dotenv
 
 from api import (
-    SYSTEM_PROMPT_LOGICAL_DINING,
+    DINING_LOGICAL_SYSTEM_PROMPT,
     SYSTEM_PROMPT_FRIENDLY,
     SYSTEM_PROMPT_PRATFALL,
     build_bootstrap_user_message,
@@ -23,7 +23,7 @@ from api import (
 )
 from jsonl import predict_with_model, save_experiment_2_result
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
-from run_and_show import run_plan_and_show, show_clarifying_question, show_function_sequence
+from run_and_show import run_plan_and_show, show_spoken_response, show_function_sequence
 from image_task_sets import (
     build_task_set_choices,
     extract_task_lines,
@@ -69,34 +69,6 @@ load_dotenv()
 
 configure_page(hide_sidebar_for_participant=True)
 
-
-SCROLL_RESET_FLAG_KEY = "experiment2_scroll_reset_done"
-ACTIVE_PAGE_STATE_KEY = "current_active_page"
-ACTIVE_PAGE_VALUE = "experiment_2"
-
-
-def _scroll_to_top_on_first_load() -> None:
-    if st.session_state.get(ACTIVE_PAGE_STATE_KEY) != ACTIVE_PAGE_VALUE:
-        st.session_state.pop(SCROLL_RESET_FLAG_KEY, None)
-
-    if not st.session_state.get(SCROLL_RESET_FLAG_KEY):
-        components.html(
-            """
-            <script>
-            const doc = window.parent ? window.parent.document : document;
-            const main = doc ? doc.querySelector('section.main') : null;
-            if (main) {
-                main.scrollTo(0, 0);
-            } else {
-                window.scrollTo(0, 0);
-            }
-            </script>
-            """,
-            height=0,
-        )
-        st.session_state[SCROLL_RESET_FLAG_KEY] = True
-
-    st.session_state[ACTIVE_PAGE_STATE_KEY] = ACTIVE_PAGE_VALUE
 
 def _reset_conversation_state(system_prompt: str) -> None:
     """Reset conversation-related session state for experiment 2."""
@@ -230,14 +202,13 @@ def _extract_between(tag: str, text: str) -> str | None:
 
 def app():
     # require_consent()
-    _scroll_to_top_on_first_load()
     st.markdown("### 実験2 異なるコミュニケーションタイプの比較")
 
     if should_hide_sidebar():
         apply_sidebar_hiding()
 
     prompt_options = {
-        "LOGICAL_DINING": SYSTEM_PROMPT_LOGICAL_DINING,
+        "DINING_LOGICAL": DINING_LOGICAL_SYSTEM_PROMPT,
         "2": SYSTEM_PROMPT_FRIENDLY,
         "3": SYSTEM_PROMPT_PRATFALL,
     }
@@ -338,31 +309,13 @@ def app():
     else:
         st.info("タスクが登録されていません。")
 
-    image_candidates = []
-    if isinstance(payload, dict):
-        image_candidates = [str(p) for p in payload.get("images", []) if isinstance(p, str)]
-
-    existing_images, missing_images = resolve_image_paths(image_candidates)
-
-    st.session_state["selected_image_paths"] = existing_images
-
-    if missing_images:
-        st.warning(
-            "以下の画像ファイルが見つかりません: " + ", ".join(missing_images)
-        )
-
-    st.markdown("#### ③指定されたタスクを行う場所")
-    if house:
-        meta_lines.append(f"家: {house}")
-    if room:
-        meta_lines.append(f"部屋: {room}")
-    if meta_lines:
-        st.write(" / ".join(meta_lines))
-    if existing_images:
-        for path in existing_images:
-            st.image(path, caption=os.path.basename(path))
-    else:
-        st.info("画像が設定されていません。")
+    st.markdown("#### ③場所に関する情報")
+    st.markdown("""
+        キッチン棚にあるもの
+        - スプーン
+        - フォーク
+        - 
+    """)
 
     # 1) セッションにESMとコンテキストを初期化
     if (
@@ -407,7 +360,7 @@ def app():
             # 既存のヘルパー関数をそのまま利用
             if msg["role"] == "assistant":
                 show_function_sequence(msg["content"])
-                show_clarifying_question(msg["content"])
+                show_spoken_response(msg["content"])
     
     # 3. [フェーズ2: 実行ループ] 実行すべき行動計画（キュー）があるか？
     if queue:
@@ -453,15 +406,6 @@ def app():
 
         if user_input: # ユーザー入力があった場合のみコンテキストに追加
              context.append({"role": "user", "content": user_input})
-             # 画像の追加（既存ロジック）
-             selected_paths = st.session_state.get("selected_image_paths", [])
-             if selected_paths:
-                context.append(
-                    build_bootstrap_user_message(
-                        text="Here are the selected images. Use them for scene understanding and disambiguation.",
-                        local_image_paths=selected_paths,
-                    )
-                )
 
         # [!!!] LLM呼び出しのコアロジック [!!!]
         with st.chat_message("assistant"):
@@ -469,7 +413,13 @@ def app():
                 # (A) ESMから最新の状態XMLを取得
                 current_state_xml = esm.get_state_as_xml_prompt()
                 # (B) 最新の状態でシステムプロンプトを構築
-                system_prompt_content = st.session_state.system_prompt_template.format(current_state_xml=current_state_xml)
+                house = (payload.get("house") if isinstance(payload, dict) else "") or ""
+                room  = (payload.get("room")  if isinstance(payload, dict) else "") or ""
+                system_prompt_content = st.session_state.system_prompt_template.format(
+                    current_state_xml=current_state_xml,
+                    house=house,
+                    room=room,
+                )
                 system_message = {"role": "system", "content": system_prompt_content}
                 
                 # (C) APIに渡すメッセージリストを作成
