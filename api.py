@@ -122,20 +122,7 @@ CREATING_DATA_SYSTEM_PROMPT = """
 
 SYSTEM_PROMPT_LOGICAL_DINING = """
 <System>
-  <CurrentState>
-    <RobotStatus>
-      <Location>living_room</Location>
-      <Holding>null</Holding>
-    </RobotStatus>
-    <Environment>
-      <kitchen_shelf>["plate", "plate", "fork", "fork"]</kitchen_shelf>
-      <dining_table>["knife", "knife"]</dining_table>
-    </Environment>
-    <TaskGoal>
-      <Target>dining_table</Target>
-      <Needed>{"plate": 2, "fork": 2}</Needed>
-    </TaskGoal>
-  </CurrentState>
+  {current_state_xml}
 
   <Role>
     You are a household service robot that collaborates with a human to prepare the dinner table efficiently and precisely.

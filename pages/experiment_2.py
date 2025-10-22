@@ -15,9 +15,9 @@ from consent import (
 from dotenv import load_dotenv
 
 from api import (
+    SYSTEM_PROMPT_LOGICAL_DINING,
     SYSTEM_PROMPT_FRIENDLY,
     SYSTEM_PROMPT_PRATFALL,
-    SYSTEM_PROMPT_STANDARD,
     build_bootstrap_user_message,
     client,
 )
@@ -31,6 +31,7 @@ from image_task_sets import (
     resolve_image_paths,
 )
 from two_classify import prepare_data  # 既存関数を利用
+from esm import ExternalStateManager
 
 SUS_OPTIONS = [
     ("とても当てはまる (5)", 5),
@@ -97,48 +98,26 @@ def _scroll_to_top_on_first_load() -> None:
 
     st.session_state[ACTIVE_PAGE_STATE_KEY] = ACTIVE_PAGE_VALUE
 
-
-def _render_back_to_top_button() -> None:
-    components.html(
-        """
-        <style>
-        .scroll-to-top-btn {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            z-index: 99999;
-            background-color: #0F9D58;
-            color: #ffffff;
-            border: none;
-            border-radius: 9999px;
-            width: 3rem;
-            height: 3rem;
-            font-size: 1.5rem;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        }
-
-        .scroll-to-top-btn:hover {
-            background-color: #0c7a45;
-        }
-        </style>
-        <button class="scroll-to-top-btn" onclick="(function() {
-            const doc = window.parent ? window.parent.document : document;
-            const main = doc ? doc.querySelector('section.main') : null;
-            if (main) {
-                main.scrollTo({ top: 0, behavior: 'smooth' });
-            } else {
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-        })()" aria-label="ページの最上部へ移動">▲</button>
-        """,
-        height=0,
-    )
-
 def _reset_conversation_state(system_prompt: str) -> None:
-    """Reset conversation-related session state for experiment 1."""
+    """Reset conversation-related session state for experiment 2."""
 
-    st.session_state.context = [{"role": "system", "content": system_prompt}]
+    # 1. ESM（状態）の初期化
+    st.session_state.esm = ExternalStateManager() 
+    
+    # 2. 実行すべき行動計画のキュー（名前を action_plan_queue に統一）
+    st.session_state.action_plan_queue = [] 
+    
+    # 3. フェーズ1（目標設定）が完了したかのフラグ
+    st.session_state.goal_set = False 
+    
+    # 4. システムプロンプトを「テンプレート」として保持
+    #    (LLM呼び出しの度に {current_state_xml} を埋め込むため)
+    st.session_state.system_prompt_template = system_prompt 
+    
+    # 5. contextは「空」で開始する
+    st.session_state.context = [] 
+    
+    # --- 以下は既存のリセットロジック ---
     st.session_state.active = True
     st.session_state.conv_log = {
         "label": "",
@@ -147,7 +126,6 @@ def _reset_conversation_state(system_prompt: str) -> None:
     st.session_state.saved_jsonl = []
     st.session_state.turn_count = 0
     st.session_state.force_end = False
-    # st.session_state.end_reason = []
     st.session_state["chat_input_history"] = []
     st.session_state["experiment2_followup_prompt"] = False
     st.session_state.pop("experiment2_followup_choice", None)
@@ -179,8 +157,22 @@ def strip_tags(text: str) -> str:
     return TAG_RE.sub("", text or "").strip()
 
 def extract_between(tag: str, text: str) -> str | None:
-    m = re.search(fr"<{tag}>([\s\S]*?)</{tag}>", text or "", re.IGNORECASE)
-    return m.group(1).strip() if m else None
+    match = re.search(fr"<{tag}>([\s\S]*?)</{tag}>", text or "", re.IGNORECASE)
+    return match.group(1).strip() if match else None
+
+def extract_xml_tag(xml_string, tag_name):
+    """指定されたタグの内容を抽出する"""
+    pattern = f"<{tag_name}>(.*?)</{tag_name}>"
+    match = re.search(pattern, xml_string, re.DOTALL | re.IGNORECASE)
+    return match.group(1).strip() if match else None
+
+def parse_function_sequence(sequence_str):
+    """FunctionSequenceの番号付きリストをパースする"""
+    if not sequence_str:
+        return []
+    # "1. go to..." "2. pick up..." などを抽出
+    actions = re.findall(r'^\s*\d+\.\s*(.*)', sequence_str, re.MULTILINE)
+    return [action.strip() for action in actions]
 
 def run_plan_and_show(reply: str):
     """<Plan> ... </Plan> を見つけて実行し、結果を表示"""
@@ -236,65 +228,16 @@ def _extract_between(tag: str, text: str) -> str | None:
     m = re.search(fr"<{tag}>([\s\S]*?)</{tag}>", text or "", re.IGNORECASE)
     return m.group(1).strip() if m else ""
 
-def get_critic_label(context):
-    # 1) 入力抽出（最新ユーザー発話と直近アシスタント出力から FS/Information）
-    instruction = next((m.get("content","") for m in context if m.get("role")=="user"), "")
-    last_assistant = next((m.get("content","") for m in reversed(context) if m.get("role")=="assistant"), "")
-    function_sequence = _extract_between("FunctionSequence", last_assistant) or ""
-    information      = _extract_between("Information",      last_assistant) or ""
-
-    text = _build_text_for_model(instruction, function_sequence, information)
-
-    # 2) モデル+保存閾値のロード（後方互換：旧モデルは閾値0.5扱い）
-    model_path = st.session_state.get("model_path", "models/critic_model_latest.joblib")
-    obj = joblib.load(model_path)
-    if isinstance(obj, dict):
-        model = obj.get("model", obj)
-        saved_th = float(obj.get("threshold", 0.5))
-    else:
-        model = obj
-        saved_th = 0.5
-
-    # 3) 確率計算
-    if hasattr(model, "predict_proba"):
-        p = float(model.predict_proba([text])[0, 1])
-    elif hasattr(model, "decision_function"):
-        import numpy as np
-        z = model.decision_function([text])[0]
-        p = float(1 / (1 + np.exp(-z)))
-    else:
-        p = float(model.predict([text])[0])
-
-    # 4) 誤検知対策：最低閾値＋高信頼マージン＋ガード
-    th_min  = float(st.session_state.get("critic_min_threshold", 0.60))  # ←必要に応じて0.65〜0.70も可
-    margin  = float(st.session_state.get("critic_margin", 0.15))
-    th_eff  = max(saved_th, th_min)
-
-    has_plan = bool(function_sequence.strip())
-    turns    = int(st.session_state.get("turn_count", 0))
-    high_conf = (p >= th_eff + margin)
-
-    label = "sufficient" if (p >= th_eff and (high_conf or has_plan or turns >= 2)) else "insufficient"
-
-    # デバッグ用に保持
-    st.session_state["critic_debug"] = {
-        "p": p, "saved_th": saved_th, "th_eff": th_eff, "margin": margin,
-        "has_plan": has_plan, "turns": turns, "label": label
-    }
-    return label
-
 def app():
-    require_consent()
+    # require_consent()
     _scroll_to_top_on_first_load()
-    _render_back_to_top_button()
-    # st.title("LLMATCH Criticデモアプリ")
     st.markdown("### 実験2 異なるコミュニケーションタイプの比較")
 
     if should_hide_sidebar():
         apply_sidebar_hiding()
 
     prompt_options = {
-        "1": SYSTEM_PROMPT_STANDARD,
+        "LOGICAL_DINING": SYSTEM_PROMPT_LOGICAL_DINING,
         "2": SYSTEM_PROMPT_FRIENDLY,
         "3": SYSTEM_PROMPT_PRATFALL,
     }
@@ -421,23 +364,16 @@ def app():
     else:
         st.info("画像が設定されていません。")
 
-    # 1) セッションにコンテキストを初期化（systemだけ先に入れて保持）
+    # 1) セッションにESMとコンテキストを初期化
     if (
-        "context" not in st.session_state
-        or st.session_state.get("system_prompt") != system_prompt
+        "esm" not in st.session_state
+        or st.session_state.get("system_prompt_template") != system_prompt
     ):
-        st.session_state["context"] = [{"role": "system", "content": system_prompt}]
-        st.session_state["system_prompt"] = system_prompt
-        st.session_state.conv_log = {
-            "final_answer": "",
-            "label": "",
-            "clarifying_steps": []
-        }
-        st.session_state["chat_input_history"] = []
-        st.session_state.turn_count = 0
-        st.session_state.force_end = False
-        st.session_state.end_reason = []
-        st.session_state.active = True
+        _reset_conversation_state(system_prompt) 
+
+    # セッションからESMオブジェクトを取得
+    esm = st.session_state.esm
+    
     if "active" not in st.session_state:
         st.session_state.active = True
     if "turn_count" not in st.session_state:
@@ -455,71 +391,143 @@ def app():
     st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。" \
     "質問された情報が写真にない場合は、\"仮想の情報\"を答えて構いません。" \
     "自動で評価フォームが表示されるまで会話を続けてください。")
-    context = st.session_state["context"]
 
-    message = st.chat_message("assistant")
-    message.write("こんにちは、私は家庭用ロボットです！あなたの指示に従って行動します。")
+    # 1. 会話履歴をセッションステートから取得
+    context = st.session_state.context
+    esm = st.session_state.esm
+    queue = st.session_state.action_plan_queue
     should_stop = False
-    if should_stop:
-        user_input = None
-    elif st.session_state.get("force_end"):
-        user_input = None
-    else:
-        user_input = st.chat_input("ロボットへの回答を入力してください", key="experiment_2_chat_input")
-        if user_input:
-            st.session_state["chat_input_history"].append(user_input)
-    if user_input:
-        context.append({"role": "user", "content": user_input})
-        selected_paths = st.session_state.get("selected_image_paths", [])
-        if selected_paths:
-            context.append(
-                build_bootstrap_user_message(
-                    text="Here are the selected images. Use them for scene understanding and disambiguation.",
-                    local_image_paths=selected_paths,
-                )
-            )
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=context
-        )
-        reply = response.choices[0].message.content.strip()
-        print("Assistant:", reply)
-        context.append({"role": "assistant", "content": reply})
-        print("context: ", context)
-        st.session_state.turn_count += 1
-        
-    # 画面下部に履歴を全表示（systemは省く）
-    last_assistant_idx = max((i for i, m in enumerate(context) if m["role"] == "assistant"), default=None)
-    
-    for i, msg in enumerate(context):
+
+    # 2. 既存の会話履歴を表示（システムプロンプトは除く）
+    for msg in context:
         if msg["role"] == "system":
             continue
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
+            # 既存のヘルパー関数をそのまま利用
             if msg["role"] == "assistant":
-                if i == last_assistant_idx and "<FunctionSequence>" in msg["content"]:
-                    run_plan_and_show(msg["content"])
                 show_function_sequence(msg["content"])
                 show_clarifying_question(msg["content"])
+    
+    # 3. [フェーズ2: 実行ループ] 実行すべき行動計画（キュー）があるか？
+    if queue:
+        next_action = queue[0]
+        st.info(f"次の行動計画: **{next_action}**")
+        
+        # 実行ボタン
+        if st.button(f"▶️ 実行: {next_action}", key="run_next_step", type="primary"):
+            action_to_run = queue.pop(0) # キューの先頭を取り出す
+            st.session_state.action_plan_queue = queue # キューを更新
+
+            # [!!!] ここで実際のロボットAPIを呼び出す（代わりにESMを更新）[!!!]
+            with st.spinner(f"実行中: {action_to_run}..."):
+                # time.sleep(1) # import time が必要
+                esm.update_state_from_action(action_to_run)
+            
+            # 実行結果を会話履歴（コンテキスト）に追加
+            exec_msg = f"（実行完了: {action_to_run}。ロボットの状態を更新しました。）"
+            context.append({"role": "user", "content": exec_msg}) # 実行結果をLLMに伝える
+            st.chat_message("user").write(exec_msg)
+
+            # キューが空になったら、LLMに次の計画を尋ねる
+            if not queue:
+                st.info("サブタスクが完了しました。LLMに次の計画を問い合わせます...")
+                context.append({"role": "user", "content": "このサブタスクは完了しました。現在の状態に基づき、次のサブタスクを計画してください。"})
+                # LLM呼び出しフラグを立てる（この後の処理で共通化）
+                st.session_state.trigger_llm_call = True
+            
+            st.rerun() # 画面を再描画して次のステップを表示
+
+    # 4. LLM呼び出しのトリガー（ユーザー入力 or 計画完了）
+    user_input = None
+    if not queue: # キューが空の場合のみ、ユーザー入力を受け付ける
+        if not st.session_state.get("force_end"):
+            user_input = st.chat_input("ロボットへの回答を入力してください", key="experiment_2_chat_input")
+            if user_input:
+                st.session_state["chat_input_history"].append(user_input)
+                st.session_state.trigger_llm_call = True
+
+    # 5. [フェーズ1 & 2: LLM呼び出し]
+    if st.session_state.get("trigger_llm_call"):
+        st.session_state.trigger_llm_call = False # フラグをリセット
+
+        if user_input: # ユーザー入力があった場合のみコンテキストに追加
+             context.append({"role": "user", "content": user_input})
+             # 画像の追加（既存ロジック）
+             selected_paths = st.session_state.get("selected_image_paths", [])
+             if selected_paths:
+                context.append(
+                    build_bootstrap_user_message(
+                        text="Here are the selected images. Use them for scene understanding and disambiguation.",
+                        local_image_paths=selected_paths,
+                    )
+                )
+
+        # [!!!] LLM呼び出しのコアロジック [!!!]
+        with st.chat_message("assistant"):
+            with st.spinner("ロボットが考えています..."):
+                # (A) ESMから最新の状態XMLを取得
+                current_state_xml = esm.get_state_as_xml_prompt()
+                # (B) 最新の状態でシステムプロンプトを構築
+                system_prompt_content = st.session_state.system_prompt_template.format(current_state_xml=current_state_xml)
+                system_message = {"role": "system", "content": system_prompt_content}
+                
+                # (C) APIに渡すメッセージリストを作成
+                messages_for_api = [system_message] + context
+
+                # (D) LLM API 呼び出し
+                response = client.chat.completions.create(
+                    model="gpt-4o-mini", # または "gpt-4-turbo"
+                    messages=messages_for_api
+                )
+                reply = response.choices[0].message.content.strip()
+                
+                # (E) 応答をコンテキストに追加
+                context.append({"role": "assistant", "content": reply})
+                st.session_state.turn_count += 1
+                
+                # (F) [フェーズ1] Goalが設定されたかパース
+                goal_def_str = extract_xml_tag(reply, "TaskGoalDefinition")
+                if goal_def_str and "Goal:" in goal_def_str and not st.session_state.goal_set:
+                    if esm.set_task_goal_from_llm(goal_def_str):
+                        st.session_state.goal_set = True
+                        st.success("タスク目標を設定しました！")
+                    else:
+                        st.error("LLMが生成したタスク目標のパースに失敗しました。")
+                
+                # (G) [フェーズ2] 行動計画が生成されたかパース
+                plan_str = extract_xml_tag(reply, "FunctionSequence")
+                if plan_str:
+                    actions = parse_function_sequence(plan_str)
+                    if actions:
+                        st.session_state.action_plan_queue.extend(actions)
+                        st.info(f"{len(actions)}ステップの計画を受信しました。")
+                
+                # (H) 画面を再描画して、LLMの応答と（もしあれば）実行ボタンを表示
+                st.rerun()
+
+    # 6. 評価モデルの表示（既存のまま、ただし自動停止は無効化済み）
     assistant_messages = [m for m in context if m["role"] == "assistant"]
     if assistant_messages:
-        label, p, th = predict_with_model()
+        # (注：predict_with_modelは古いロジックに依存するため、期待通り動作しない可能性があります)
+        label, p, th = predict_with_model() 
         st.caption(f"評価モデルの予測: {label} (p={p:.3f}, th={th:.3f})")
     else:
         label, p, th = None, None, None
         st.caption("評価モデルの予測: ---")
 
+    # 7. 評価フォームの表示（should_stop判定ロジックは変更済み）
     last_assistant_content = assistant_messages[-1]["content"] if assistant_messages else ""
     has_plan = "<FunctionSequence>" in last_assistant_content
     high_conf = (p is not None and th is not None and p >= th + 0.15)
-
-    # should_stop 判定（既存のまま）
+    
     end_message = ""
     if st.session_state.get("force_end"):
         should_stop = True
         end_message = "ユーザーが会話を終了しました。"
     else:
-        if label == "sufficient" and (has_plan or high_conf or st.session_state.turn_count >= 2):
+        # (自動停止は無効化済み)
+        if False and label == "sufficient" and (has_plan or high_conf or st.session_state.turn_count >= 2):
             should_stop = True
             end_message = "モデルがsufficientを出力したため終了します。"
 

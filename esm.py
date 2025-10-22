@@ -25,10 +25,25 @@ class ExternalStateManager:
         LLMとの対話で決定した「タスク目標」をパースして、self.current_state に格納する。
         LLMが "Goal: {target: 'dining_table', items: {'plate': 2}}" のようなJSONを出力
         """
-        # goal_description_from_llmをパースする処理
-        self.current_state['task_goal']['target_location'] = target_location
-        self.current_state['task_goal']['items_needed'] = items_needed
-        print(f"Goal Set: {self.current_state['task_goal']}")
+        try:
+            # "Goal: " の後の辞書部分 {...} を正規表現で抽出
+            match = re.search(r'Goal:\s*(\{.*\})', goal_description_from_llm, re.DOTALL)
+            if not match:
+                print(f"Error: Could not find 'Goal: {{...}}' pattern in: {goal_description_from_llm}")
+                return False
+
+            goal_str = match.group(1)
+            # 文字列を安全にPythonの辞書に変換
+            goal_dict = ast.literal_eval(goal_str) 
+            
+            self.current_state['task_goal']['target_location'] = goal_dict.get('target_location')
+            self.current_state['task_goal']['items_needed'] = goal_dict.get('items_needed', {})
+            print(f"Goal Set: {self.current_state['task_goal']}")
+            return True # パース成功
+        except Exception as e:
+            print(f"Error parsing task goal: {e}")
+            print(f"Received string: {goal_description_from_llm}")
+            return False # パース失敗
 
     def get_state_as_xml_prompt(self):
         """
