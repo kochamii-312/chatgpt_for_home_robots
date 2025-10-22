@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 
 from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
 from jsonl import predict_with_model, save_experiment_1_result
-from move_functions_ import (
+from move_functions import (
     move_to,
     pick_object,
     place_object_next_to,

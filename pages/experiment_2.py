@@ -22,7 +22,7 @@ from api import (
     client,
 )
 from jsonl import predict_with_model, save_experiment_2_result
-from move_functions_ import move_to, pick_object, place_object_next_to, place_object_on
+from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import run_plan_and_show, show_clarifying_question, show_function_sequence
 from image_task_sets import (
     build_task_set_choices,

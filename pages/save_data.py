@@ -12,7 +12,7 @@ from jsonl import (
     save_jsonl_entry,
     show_jsonl_block,
 )
-from move_functions_ import move_to, pick_object, place_object_next_to, place_object_on
+from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import run_plan_and_show, show_clarifying_question, show_function_sequence, show_information
 from tasks.ui import render_random_room_task, reset_random_room_task
 
