@@ -364,8 +364,9 @@ def app():
             st.write(msg["content"])
             # 既存のヘルパー関数をそのまま利用
             if msg["role"] == "assistant":
-                show_function_sequence(msg["content"])
-                show_spoken_response(msg["content"])
+                reply_xml = msg.get("full_reply", msg.get("content", ""))
+                show_function_sequence(reply_xml)
+                # show_spoken_response(reply_xml)
     
     # 3. [フェーズ2: 実行ループ] 実行すべき行動計画（キュー）があるか？
     if queue:
@@ -403,6 +404,12 @@ def app():
             st.session_state["chat_input_history"].append(user_input)
             st.session_state.trigger_llm_call = True
 
+            # ユーザーが入力した=既存の計画に介入した→したがって古い行動計画（キュー）を破棄する
+            if queue:
+                st.warning("ユーザーが介入しました。既存の行動計画を破棄します。")
+                st.session_state.action_plan_queue = []
+                queue = []
+
     # 5. [フェーズ1 & 2: LLM呼び出し]
     if st.session_state.get("trigger_llm_call"):
         st.session_state.trigger_llm_call = False # フラグをリセット
@@ -438,9 +445,17 @@ def app():
                 reply = response.choices[0].message.content.strip()
                 
                 # (E) 応答をコンテキストに追加
-                context.append({"role": "assistant", "content": reply})
-                st.session_state.turn_count += 1
+                spoken_response = extract_xml_tag(reply, "SpokenResponse")
+                if not spoken_response:
+                    spoken_response = strip_tags(reply) or "(...)"
                 
+                context.append({
+                    "role": "assistant",
+                    "content": spoken_response,
+                    "full_reply": reply
+                })
+                st.session_state.turn_count += 1
+
                 # (F) [フェーズ1] Goalが設定されたかパース
                 goal_def_str = extract_xml_tag(reply, "TaskGoalDefinition")
                 if goal_def_str and "Goal:" in goal_def_str and not st.session_state.goal_set:
@@ -591,12 +606,12 @@ def app():
         st.multiselect(
             "会話を終了したい理由",
             [
-                "行動計画は実行可能でさらなる質問は不要",
-                "同じ質問が繰り返される",
-                "計画は確定している",
-                "LLMから質問されない",
-                "その他",
+                "タスクを完了した！",
+                "LLMからの返答が来ない",
+                "その他のバグ",
+                "上記以外",
             ],
+            default=["タスクを完了した！"],
             key="end_reason",
         )
     if st.session_state.get("experiment2_followup_prompt"):
