@@ -15,9 +15,9 @@ from consent import (
 from dotenv import load_dotenv
 
 from api import (
-    DINING_LOGICAL_SYSTEM_PROMPT,
-    SYSTEM_PROMPT_FRIENDLY,
-    SYSTEM_PROMPT_PRATFALL,
+    LOGICAL_DINING_SYSTEM_PROMPT,
+    LOGICAL_FLOWER_SYSTEM_PROMPT,
+    LOGICAL_PRESENT_SYSTEM_PROMPT,
     build_bootstrap_user_message,
     client,
 )
@@ -146,6 +146,11 @@ def parse_function_sequence(sequence_str):
     actions = re.findall(r'^\s*\d+\.\s*(.*)', sequence_str, re.MULTILINE)
     return [action.strip() for action in actions]
 
+def safe_format_prompt(template: str, **kwargs) -> str:
+    # {current_state_xml},{house},{room} だけを置換し、他の { ... } は触らない
+    pattern = re.compile(r"\{(current_state_xml|house|room)\}")
+    return pattern.sub(lambda m: str(kwargs.get(m.group(1), m.group(0))), template)
+
 def run_plan_and_show(reply: str):
     """<Plan> ... </Plan> を見つけて実行し、結果を表示"""
     plan_match = re.search(r"<Plan>(.*?)</Plan>", reply, re.S)
@@ -208,9 +213,9 @@ def app():
         apply_sidebar_hiding()
 
     prompt_options = {
-        "DINING_LOGICAL": DINING_LOGICAL_SYSTEM_PROMPT,
-        "2": SYSTEM_PROMPT_FRIENDLY,
-        "3": SYSTEM_PROMPT_PRATFALL,
+        "DINING": LOGICAL_DINING_SYSTEM_PROMPT,
+        "FLOWER": LOGICAL_FLOWER_SYSTEM_PROMPT,
+        "PRESENT": LOGICAL_PRESENT_SYSTEM_PROMPT,
     }
     prompt_keys = list(prompt_options.keys())
     if "prompt_label" not in st.session_state:
@@ -341,17 +346,17 @@ def app():
         st.session_state["experiment2_followup_prompt"] = False
 
     st.markdown("#### ④ロボットとの会話")
-    st.write("最初に②のタスクを入力し、③の写真を見ながらロボットの質問に対して答えてください。" \
-    "質問された情報が写真にない場合は、\"仮想の情報\"を答えて構いません。" \
-    "自動で評価フォームが表示されるまで会話を続けてください。")
+    st.write("最初に②のタスクを入力し、ロボットと自由に会話してください。" \
+    "最終的にはロボットと一緒に、タスクを達成させてください。" 
+    )
 
-    # 1. 会話履歴をセッションステートから取得
+    # 1. 会話履歴とESMをセッションステートから取得
     context = st.session_state.context
     esm = st.session_state.esm
     queue = st.session_state.action_plan_queue
     should_stop = False
 
-    # 2. 既存の会話履歴を表示（システムプロンプトは除く）
+    # 2. 既存の会話履歴を表示
     for msg in context:
         if msg["role"] == "system":
             continue
@@ -386,25 +391,24 @@ def app():
             if not queue:
                 st.info("サブタスクが完了しました。LLMに次の計画を問い合わせます...")
                 context.append({"role": "user", "content": "このサブタスクは完了しました。現在の状態に基づき、次のサブタスクを計画してください。"})
-                # LLM呼び出しフラグを立てる（この後の処理で共通化）
                 st.session_state.trigger_llm_call = True
             
             st.rerun() # 画面を再描画して次のステップを表示
 
     # 4. LLM呼び出しのトリガー（ユーザー入力 or 計画完了）
     user_input = None
-    if not queue: # キューが空の場合のみ、ユーザー入力を受け付ける
-        if not st.session_state.get("force_end"):
-            user_input = st.chat_input("ロボットへの回答を入力してください", key="experiment_2_chat_input")
-            if user_input:
-                st.session_state["chat_input_history"].append(user_input)
-                st.session_state.trigger_llm_call = True
+    if not st.session_state.get("force_end"):
+        user_input = st.chat_input("ロボットへの回答を入力してください", key="experiment_2_chat_input")
+        if user_input:
+            st.session_state["chat_input_history"].append(user_input)
+            st.session_state.trigger_llm_call = True
 
     # 5. [フェーズ1 & 2: LLM呼び出し]
     if st.session_state.get("trigger_llm_call"):
         st.session_state.trigger_llm_call = False # フラグをリセット
 
-        if user_input: # ユーザー入力があった場合のみコンテキストに追加
+        # [変更点] ユーザー入力があった場合のみコンテキストに追加
+        if user_input: 
              context.append({"role": "user", "content": user_input})
 
         # [!!!] LLM呼び出しのコアロジック [!!!]
@@ -415,7 +419,8 @@ def app():
                 # (B) 最新の状態でシステムプロンプトを構築
                 house = (payload.get("house") if isinstance(payload, dict) else "") or ""
                 room  = (payload.get("room")  if isinstance(payload, dict) else "") or ""
-                system_prompt_content = st.session_state.system_prompt_template.format(
+                system_prompt_content = safe_format_prompt(
+                    st.session_state.system_prompt_template,
                     current_state_xml=current_state_xml,
                     house=house,
                     room=room,
@@ -448,38 +453,22 @@ def app():
                 # (G) [フェーズ2] 行動計画が生成されたかパース
                 plan_str = extract_xml_tag(reply, "FunctionSequence")
                 if plan_str:
+                    # [変更点] 介入時に古い計画がクリアされているため、extendでOK
                     actions = parse_function_sequence(plan_str)
                     if actions:
                         st.session_state.action_plan_queue.extend(actions)
                         st.info(f"{len(actions)}ステップの計画を受信しました。")
                 
-                # (H) 画面を再描画して、LLMの応答と（もしあれば）実行ボタンを表示
+                # (H) 画面を再描画
                 st.rerun()
 
-    # 6. 評価モデルの表示（既存のまま、ただし自動停止は無効化済み）
-    assistant_messages = [m for m in context if m["role"] == "assistant"]
-    if assistant_messages:
-        # (注：predict_with_modelは古いロジックに依存するため、期待通り動作しない可能性があります)
-        label, p, th = predict_with_model() 
-        st.caption(f"評価モデルの予測: {label} (p={p:.3f}, th={th:.3f})")
-    else:
-        label, p, th = None, None, None
-        st.caption("評価モデルの予測: ---")
-
-    # 7. 評価フォームの表示（should_stop判定ロジックは変更済み）
-    last_assistant_content = assistant_messages[-1]["content"] if assistant_messages else ""
-    has_plan = "<FunctionSequence>" in last_assistant_content
-    high_conf = (p is not None and th is not None and p >= th + 0.15)
-    
+    # 7. 評価フォームの表示（should_stop判定ロジックは変更済み）  
     end_message = ""
     if st.session_state.get("force_end"):
         should_stop = True
         end_message = "ユーザーが会話を終了しました。"
     else:
-        # (自動停止は無効化済み)
-        if False and label == "sufficient" and (has_plan or high_conf or st.session_state.turn_count >= 2):
-            should_stop = True
-            end_message = "モデルがsufficientを出力したため終了します。"
+        pass
 
     if should_stop:
         if st.session_state.active == True:
@@ -611,15 +600,14 @@ def app():
             key="end_reason",
         )
     if st.session_state.get("experiment2_followup_prompt"):
-        st.markdown("**3つのモード** で1回ずつ実験を終えましたか？")
-        if st.button("🙅‍♂️いいえ → ①のモードを変えて再度実験", key="followup_no", type="primary"):
+        if st.button("次の実験へ→", key="followup_no", type="primary"):
             st.session_state["experiment2_followup_prompt"] = False
             st.session_state.pop("experiment2_followup_choice", None)
             _reset_conversation_state(system_prompt)
-            st.rerun()
-        if st.button("🙆‍♂️はい → 実験終了", key="followup_yes", type="primary"):
-            st.session_state["experiment2_followup_prompt"] = False
-            st.session_state.pop("experiment2_followup_choice", None)
-            st.success("実験お疲れ様でした！ご協力ありがとうございました。")
-            st.balloons()
+            st.switch_page("02_empathetic.py")
+        # if st.button("🙆‍♂️はい → 実験終了", key="followup_yes", type="primary"):
+        #     st.session_state["experiment2_followup_prompt"] = False
+        #     st.session_state.pop("experiment2_followup_choice", None)
+        #     st.success("実験お疲れ様でした！ご協力ありがとうございました。")
+        #     st.balloons()
 app()

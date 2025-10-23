@@ -1,0 +1,56 @@
+{
+  "LOGICAL_DINING": {
+    "task": "夕食のテーブル準備",
+    "prompt_group": "logical",
+    "prompt": "",
+    "taskinfo": ""
+  },
+  "LOGICAL_FLOWER": {
+    "task": "花束を活ける",
+    "prompt_group": "logical",
+    "prompt": "",
+    "taskinfo": ""
+  },
+  "LOGICAL_PRESENT": {
+    "task": "プレゼントを包む",
+    "prompt_group": "logical",
+    "prompt": "",
+    "taskinfo": ""
+  },
+  "EMPATHETIC_DINING": {
+    "task": "夕食のテーブル準備",
+    "prompt_group": "empathetic",
+    "prompt": "",
+    "taskinfo": ""
+  },
+  "EMPATHETIC_FLOWER": {
+    "task": "花束を活ける",
+    "prompt_group": "empathetic",
+    "prompt": "",
+    "taskinfo": ""
+  },
+  "EMPATHETIC_PRESENT": {
+    "task": "プレゼントを包む",
+    "prompt_group": "empathetic",
+    "prompt": "",
+    "taskinfo": ""
+  },
+  "FRIENDLY_DINING": {
+    "task": "夕食のテーブル準備",
+    "prompt_group": "friendly",
+    "prompt": "",
+    "taskinfo": ""
+  },
+  "FRIENDLY_FLOWER": {
+    "task": "花束を活ける",
+    "prompt_group": "friendly",
+    "prompt": "",
+    "taskinfo": ""
+  },
+  "FRIENDLY_PRESENT": {
+    "task": "プレゼントを包む",
+    "prompt_group": "friendly",
+    "prompt": "",
+    "taskinfo": ""
+  }
+}
