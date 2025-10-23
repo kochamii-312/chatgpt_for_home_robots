@@ -345,9 +345,13 @@ def app():
     if "experiment2_followup_prompt" not in st.session_state:
         st.session_state["experiment2_followup_prompt"] = False
 
-    st.markdown("#### ④ロボットとの会話")
+    st.markdown("#### ④ロボットの現在の状態")
+    st.caption("ExternalStateManager (ESM) が保持している状態です。ロボットの行動に応じて更新されます。")
+    st.json(esm.current_state)
+
+    st.markdown("#### ⑤ロボットとの会話")
     st.write("最初に②のタスクを入力し、ロボットと自由に会話してください。" \
-    "最終的にはロボットと一緒に、タスクを達成させてください。" 
+    "最終的にはロボットと一緒に、タスクを達成させてください。"
     )
 
     # 1. 会話履歴とESMをセッションステートから取得
@@ -489,7 +493,7 @@ def app():
         if st.session_state.active == True:
             st.success(end_message)
             with st.form("evaluation_form"):
-                st.subheader("⑤評価フォーム")
+                st.subheader("⑥評価フォーム")
                 name = st.text_input(
                     "あなたの名前やユーザーネーム等（被験者区別用）"
                 )
