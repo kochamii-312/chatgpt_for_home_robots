@@ -82,7 +82,7 @@ class ExternalStateManager:
             if action.startswith("go to the"):
                 location = action.replace("go to the", "").strip()
                 state["robot_status"]["location"] = location
-                return(f"Robot moved to {location}")
+                print(f"Robot moved to {location}")
             
             elif action.startswith("pick up the"):
                 item = action.replace("pick up the", "").strip()
@@ -90,9 +90,9 @@ class ExternalStateManager:
                 if item in state["environment"].get(location, []):
                     state["environment"][location].remove(item)
                     state["robot_status"]["holding"] = item
-                    return(f"Robot picked up {item} from {location}")
+                    print(f"Robot picked up {item} from {location}")
                 else:
-                    return(f"Item {item} not found at {location}")
+                    print(f"Item {item} not found at {location}")
 
             elif action.startswith("put down the"):
                 item = action.replace("put down the", "").strip()
@@ -100,26 +100,26 @@ class ExternalStateManager:
                 if state["robot_status"]["holding"] == item:
                     state["environment"].setdefault(location, []).append(item)
                     state["robot_status"]["holding"] = None
-                    return(f"Robot put down {item} at {location}")
+                    print(f"Robot put down {item} at {location}")
                 else:
-                    return(f"Robot is not holding {item}")
+                    print(f"Robot is not holding {item}")
 
             elif action.startswith("find a/an"):
                 item = action.replace("find a", "").replace("find an", "").strip()
                 found = False
                 for loc, items in state["environment"].items():
                     if item in items:
-                        return(f"Found {item} at {loc}")
+                        print(f"Found {item} at {loc}")
                         found = True
                         break
                 if not found:
-                    return(f"{item} not found in the environment")
+                    print(f"{item} not found in the environment")
 
             elif action.startswith("open the drawer"):
-                return("Robot opened the drawer (no state change implemented)")
+                print("Robot opened the drawer (no state change implemented)")
             
             elif action.startswith("close the drawer"):
-                return("Robot closed the drawer (no state change implemented)")
+                print("Robot closed the drawer (no state change implemented)")
             
             elif "in the drawer" in action and action.startswith("put"):
                 item_match = re.search(r'put (.*?) in the drawer', action)
@@ -129,9 +129,9 @@ class ExternalStateManager:
                     if state["robot_status"]["holding"] == item:
                         state["environment"].setdefault(location, []).append(item)
                         state["robot_status"]["holding"] = None
-                        return(f"Robot put {item} in the drawer at {location}")
+                        print(f"Robot put {item} in the drawer at {location}")
                     else:
-                        return(f"Robot is not holding {item}")
+                        print(f"Robot is not holding {item}")
 
             elif "out of the drawer" in action and action.startswith("take"):
                 item_match = re.search(r'take (.*?) out of the drawer', action)
@@ -141,15 +141,15 @@ class ExternalStateManager:
                     if item in state["environment"].get(location, []):
                         state["environment"][location].remove(item)
                         state["robot_status"]["holding"] = item
-                        return(f"Robot took {item} out of the drawer at {location}")
+                        print(f"Robot took {item} out of the drawer at {location}")
                     else:
-                        return(f"Item {item} not found in the drawer at {location}")
+                        print(f"Item {item} not found in the drawer at {location}")
             
             elif action.startswith("done"):
-                return("Task completed.")
+                print("Task completed.")
             
             else:
-                return(f"Unrecognized action: {action}")
+                print(f"Unrecognized action: {action}")
         
         except Exception as e:
             return(f"State Update Error: {e} on action: {action}")
