@@ -365,12 +365,18 @@ def app():
         if msg["role"] == "system":
             continue
         with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-            # 既存のヘルパー関数をそのまま利用
+            # assistant は full_reply（XML含む）を優先して表示
             if msg["role"] == "assistant":
                 reply_xml = msg.get("full_reply", msg.get("content", ""))
+                # 関数シーケンスの表示（既存）
                 show_function_sequence(reply_xml)
-                # show_spoken_response(reply_xml)
+                # 生の応答（XML等）をコードブロックで表示
+                st.code(reply_xml, language="xml")
+                # SpokenResponse 部分（もしあれば）を人間向けに表示
+                spoken = extract_xml_tag(reply_xml, "SpokenResponse") or strip_tags(reply_xml)
+                st.write(spoken)
+            else:
+                st.write(msg["content"])
     
     # 3. [フェーズ2: 実行ループ] 実行すべき行動計画（キュー）があるか？
     if queue:
@@ -459,7 +465,10 @@ def app():
                     "full_reply": reply
                 })
                 st.session_state.turn_count += 1
-
+                # ここで画面にも応答をそのまま表示（生のXMLとspoken）
+                st.write(spoken_response)
+                st.code(reply, language="xml")
+                
                 # (F) [フェーズ1] Goalが設定されたかパース
                 goal_def_str = extract_xml_tag(reply, "TaskGoalDefinition")
                 if goal_def_str and "Goal:" in goal_def_str and not st.session_state.goal_set:
