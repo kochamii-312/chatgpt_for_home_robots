@@ -365,18 +365,12 @@ def app():
         if msg["role"] == "system":
             continue
         with st.chat_message(msg["role"]):
-            # assistant は full_reply（XML含む）を優先して表示
+            st.write(msg["content"])
+            # 既存のヘルパー関数をそのまま利用
             if msg["role"] == "assistant":
                 reply_xml = msg.get("full_reply", msg.get("content", ""))
-                # 関数シーケンスの表示（既存）
                 show_function_sequence(reply_xml)
-                # 生の応答（XML等）をコードブロックで表示
-                st.code(reply_xml, language="xml")
-                # SpokenResponse 部分（もしあれば）を人間向けに表示
-                spoken = extract_xml_tag(reply_xml, "SpokenResponse") or strip_tags(reply_xml)
-                st.write(spoken)
-            else:
-                st.write(msg["content"])
+                # show_spoken_response(reply_xml)
     
     # 3. [フェーズ2: 実行ループ] 実行すべき行動計画（キュー）があるか？
     if queue:
