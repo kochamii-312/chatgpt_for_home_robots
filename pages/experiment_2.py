@@ -207,7 +207,7 @@ def _extract_between(tag: str, text: str) -> str | None:
 
 def app():
     # require_consent()
-    st.markdown("### 実験2 異なるコミュニケーションタイプの比較")
+    st.markdown("### 実験 異なるコミュニケーションタイプの比較")
 
     if should_hide_sidebar():
         apply_sidebar_hiding()
@@ -222,8 +222,9 @@ def app():
         st.session_state["prompt_label"] = random.choice(prompt_keys)
 
     default_prompt_label = st.session_state["prompt_label"]
+    st.markdown("#### ①プロンプト選択（自動）")
     prompt_label = st.selectbox(
-        "### ①プロンプト選択（自動）",
+        "選択肢",
         prompt_keys,
         index=prompt_keys.index(default_prompt_label)
         if default_prompt_label in prompt_keys
@@ -316,10 +317,21 @@ def app():
 
     st.markdown("#### ③場所に関する情報")
     st.markdown("""
-        キッチン棚にあるもの
+        キッチンの引き出し（kitchen_drawer）にあるもの
+        - お箸
         - スプーン
         - フォーク
-        - 
+        - ナイフ
+        - はさみ
+        - 剣山
+        \n
+        キッチン棚（kitchen_shelf）にあるもの
+        - お皿
+        - サラダボール
+        - おわん
+        - グラス
+        - ワイングラス
+        - ティーカップ
     """)
 
     # 1) セッションにESMとコンテキストを初期化
@@ -338,8 +350,6 @@ def app():
         st.session_state.turn_count = 0
     if "force_end" not in st.session_state:
         st.session_state.force_end = False
-    if "end_reason" not in st.session_state:
-        st.session_state.end_reason = []
     if "chat_input_history" not in st.session_state:
         st.session_state["chat_input_history"] = []
     if "experiment2_followup_prompt" not in st.session_state:
@@ -584,52 +594,45 @@ def app():
                 }
                 scores.update(sus_scores)
                 scores.update(nasa_scores)
-                termination_label = "会話を強制的に終了" if st.session_state.get("force_end") else ""
-                selected_reasons = st.session_state.get("end_reason", [])
-                if isinstance(selected_reasons, str):
-                    termination_reason = selected_reasons
-                else:
-                    termination_reason = "、".join(selected_reasons)
+                termination_label = "タスク完了ボタンが押されました" if st.session_state.get("force_end") else ""
                 save_experiment_2_result(
                     scores,
-                    termination_reason,
                     termination_label,
                 )
                 st.session_state.active = False
                 st.session_state["experiment2_followup_prompt"] = True
                 st.session_state.pop("experiment2_followup_choice", None)
 
-    cols = st.columns([1, 1, 2])
-    with cols[0]:
+    st.markdown("#### トラブルシューティング")
+    cols1 = st.columns([2, 1])
+    with cols1[0]:
+        st.markdown("**🤔「実行します」のあとロボットの実行が始まらない場合→**")
+    with cols1[1]:
+        st.button("▶️実行を始める")
+    cols2 = st.columns([2, 1])
+    with cols2[0]:
+        st.markdown("**🚨バグが起きた場合（LLMからの回答がない等）→**")
+    with cols2[1]:
         if st.button("⚠️会話をリセット", key="reset_conv"):
             _reset_conversation_state(system_prompt)
             st.rerun()
+    cols = st.columns([2, 1])
+    with cols[0]:
+        st.markdown("**😊ロボットとのタスクが完了した場合→**")
     with cols[1]:
-        if st.button("🚨会話を終了", key="force_end_button"):
+        if st.button("✅タスク完了！", key="force_end_button"):
             st.session_state.force_end = True
-            st.session_state.end_reason = st.session_state.get("end_reason", [])
             st.rerun()
-    with cols[2]:
-        st.multiselect(
-            "会話を終了したい理由",
-            [
-                "タスクを完了した！",
-                "LLMからの返答が来ない",
-                "その他のバグ",
-                "上記以外",
-            ],
-            default=["タスクを完了した！"],
-            key="end_reason",
-        )
     if st.session_state.get("experiment2_followup_prompt"):
         if st.button("次の実験へ→", key="followup_no", type="primary"):
             st.session_state["experiment2_followup_prompt"] = False
             st.session_state.pop("experiment2_followup_choice", None)
             _reset_conversation_state(system_prompt)
-            st.switch_page("02_empathetic.py")
+            st.switch_page("pages/02_empathetic.py")
         # if st.button("🙆‍♂️はい → 実験終了", key="followup_yes", type="primary"):
         #     st.session_state["experiment2_followup_prompt"] = False
         #     st.session_state.pop("experiment2_followup_choice", None)
         #     st.success("実験お疲れ様でした！ご協力ありがとうございました。")
         #     st.balloons()
+
 app()
