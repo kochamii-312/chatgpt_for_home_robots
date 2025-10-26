@@ -10,8 +10,13 @@ class ExternalStateManager:
                 "holding": None
             },
             "environment": {
-                "kitchen_shelf": ["plate", "salad_bowl", "Japanese_soup_bowl", "wooden_bowl", "chopsticks", "spoon", "knife", "fork", "glass", "wine_glass", "teacup", "teapot"],
-                "dining_table": []
+                "kitchen_shelf": ["plate", "salad_bowl", "Japanese_soup_bowl", "wooden_bowl", "glass", "wine_glass", "teacup", "teapot"],
+                "kitchen_drawer": ["chopsticks", "spoon", "knife", "fork", "scissors", "flower_frog"],
+                "dining_table": ["tissue", "flower in a vase", "laptop"],
+                "living_room": ["sofa", "low table", "book shelf", "houseplant", "air conditioner", "air cleaner","TV", "DVDs", "video games", "floor lamp"],
+                "top_shelf": ["vase"],
+                "closet": ["suits", "shirt", "t-shirt", "skirt", "dress", "coats", "cap", "hat", "bags"],
+                "storeroom": ["newspaper", "suitcase", "golf bags", "heater", "electric fan"],
             },
             "task_goal": {
                 "target_location": None,
