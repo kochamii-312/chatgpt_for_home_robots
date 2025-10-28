@@ -16,8 +16,14 @@ from dotenv import load_dotenv
 
 from api import (
     LOGICAL_DINING_SYSTEM_PROMPT,
+    EMPAHETIC_DINING_SYSTEM_PROMPT,
+    SMALL_TALK_DINING_SYSTEM_PROMPT,
     LOGICAL_FLOWER_SYSTEM_PROMPT,
+    EMPAHETIC_FLOWER_SYSTEM_PROMPT,
+    SMALL_TALK_FLOWER_SYSTEM_PROMPT,
     LOGICAL_PRESENT_SYSTEM_PROMPT,
+    EMPAHETIC_PRESENT_SYSTEM_PROMPT,
+    SMALL_TALK_PRESENT_SYSTEM_PROMPT,
     build_bootstrap_user_message,
     client,
 )
@@ -213,9 +219,15 @@ def app():
         apply_sidebar_hiding()
 
     prompt_options = {
-        "DINING": LOGICAL_DINING_SYSTEM_PROMPT,
-        "FLOWER": LOGICAL_FLOWER_SYSTEM_PROMPT,
-        "PRESENT": LOGICAL_PRESENT_SYSTEM_PROMPT,
+        "LOGICAL_DINING": LOGICAL_DINING_SYSTEM_PROMPT,
+        "EMPATHETIC_DINING": EMPAHETIC_DINING_SYSTEM_PROMPT,
+        "SMALL_TALK_DINING": SMALL_TALK_DINING_SYSTEM_PROMPT,
+        "LOGICAL_FLOWER": LOGICAL_FLOWER_SYSTEM_PROMPT,
+        "EMPATHETIC_FLOWER": EMPAHETIC_FLOWER_SYSTEM_PROMPT,
+        "SMALL_TALK_FLOWER": SMALL_TALK_FLOWER_SYSTEM_PROMPT,
+        "LOGICAL_PRESENT": LOGICAL_PRESENT_SYSTEM_PROMPT,
+        "EMPATHETIC_PRESENT": EMPAHETIC_PRESENT_SYSTEM_PROMPT,
+        "SMALL_TALK_PRESENt": SMALL_TALK_PRESENT_SYSTEM_PROMPT
     }
     prompt_keys = list(prompt_options.keys())
     if "prompt_label" not in st.session_state:
@@ -309,30 +321,12 @@ def app():
 
     st.markdown("#### ②指定されたタスク")
     st.write("下のタスクをそのまま画面下部のチャットに入力してください。")
-    if task_lines:
-        for line in task_lines:
-            st.info(f"{line}")
-    else:
-        st.info("タスクが登録されていません。")
-
-    st.markdown("#### ③場所に関する情報")
-    st.markdown("""
-        キッチンの引き出し（kitchen_drawer）にあるもの
-        - お箸
-        - スプーン
-        - フォーク
-        - ナイフ
-        - はさみ
-        - 剣山
-        \n
-        キッチン棚（kitchen_shelf）にあるもの
-        - お皿
-        - サラダボール
-        - おわん
-        - グラス
-        - ワイングラス
-        - ティーカップ
-    """)
+    st.info("ごはんできたからテーブルの準備しよう")
+    # if task_lines:
+    #     for line in task_lines:
+    #         st.info(f"{line}")
+    # else:
+    #     st.info("タスクが登録されていません。")
 
     # 1) セッションにESMとコンテキストを初期化
     if (
@@ -355,11 +349,11 @@ def app():
     if "experiment2_followup_prompt" not in st.session_state:
         st.session_state["experiment2_followup_prompt"] = False
 
-    st.markdown("#### ④ロボットの現在の状態")
+    st.markdown("#### ③ロボットの現在の状態")
     st.caption("ExternalStateManager (ESM) が保持している状態です。ロボットの行動に応じて更新されます。")
     st.json(esm.current_state)
 
-    st.markdown("#### ⑤ロボットとの会話")
+    st.markdown("#### ④ロボットとの会話")
     st.write("最初に②のタスクを入力し、ロボットと自由に会話してください。" \
     "最終的にはロボットと一緒に、タスクを達成させてください。"
     )
@@ -470,8 +464,8 @@ def app():
                 })
                 st.session_state.turn_count += 1
                 # ここで画面にも応答をそのまま表示（生のXMLとspoken）
-                st.write(spoken_response)
-                st.code(reply, language="xml")
+                # st.write(spoken_response)
+                # st.code(reply, language="xml")
                 
                 # (F) [フェーズ1] Goalが設定されたかパース
                 goal_def_str = extract_xml_tag(reply, "TaskGoalDefinition")
