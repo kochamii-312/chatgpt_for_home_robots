@@ -621,7 +621,12 @@ def app():
     with cols1[0]:
         st.markdown("**🤔「実行します」のあとロボットの実行が始まらない場合→**")
     with cols1[1]:
-        st.button("▶️実行を始める")
+        if st.button("▶️実行を始める", key="manual_request_next_plan"):
+            next_plan_request = "行動計画も出力して"
+            context.append({"role": "user", "content": next_plan_request})
+            st.chat_message("user").write(next_plan_request)
+            st.session_state.trigger_llm_call = True
+            st.rerun()
     cols2 = st.columns([2, 1])
     with cols2[0]:
         st.markdown("**🚨バグが起きた場合（LLMからの回答がない等）→**")
