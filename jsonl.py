@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from datetime import datetime, timezone
 from itertools import zip_longest
 from pathlib import Path
 
@@ -537,6 +538,57 @@ def _strip_visible_text(text: Optional[str]) -> str:
     cleaned = re.sub(r"<li>\s*", "- ", cleaned)
     cleaned = re.sub(r"</?([A-Za-z0-9_]+)(\s[^>]*)?>", "", cleaned)
     return cleaned.strip()
+
+
+def _collect_conversation_history(include_system: bool = False) -> list[dict[str, Any]]:
+    """Return the current conversation history stored in session state."""
+
+    history: list[dict[str, Any]] = []
+    for message in st.session_state.get("context", []):
+        role = message.get("role")
+        if not role:
+            continue
+        if not include_system and role == "system":
+            continue
+
+        entry: dict[str, Any] = {"role": role}
+        content = message.get("content")
+        if isinstance(content, str):
+            entry["content"] = content
+
+        if role == "assistant":
+            full_reply = message.get("full_reply")
+            if isinstance(full_reply, str) and full_reply:
+                entry["full_reply"] = full_reply
+
+        history.append(entry)
+
+    return history
+
+
+def save_conversation_history_to_firestore(
+    termination_label: str,
+    metadata: Optional[dict[str, Any]] = None,
+    collection_override: Optional[str] = "experiment_2_results",
+) -> None:
+    """Persist the current conversation history with the specified termination label."""
+
+    conversation_history = _collect_conversation_history()
+    entry: dict[str, Any] = {
+        "event_type": "conversation_reset",
+        "termination_label": termination_label,
+        "conversation_history": conversation_history,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    if metadata:
+        entry.update(metadata)
+
+    prompt_label = st.session_state.get("prompt_label")
+    if prompt_label:
+        entry["prompt_label"] = prompt_label
+
+    _save_to_firestore(entry, collection_override=collection_override)
 
 
 def save_experiment_2_result(
