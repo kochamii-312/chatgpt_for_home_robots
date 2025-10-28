@@ -16,7 +16,11 @@ from consent import (
 from dotenv import load_dotenv
 
 from api import build_bootstrap_user_message, client
-from jsonl import predict_with_model, save_experiment_2_result
+from jsonl import (
+    predict_with_model,
+    save_conversation_history_to_firestore,
+    save_experiment_2_result,
+)
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import run_plan_and_show, show_spoken_response, show_function_sequence
 from image_task_sets import (
@@ -607,10 +611,14 @@ def app():
                 }
                 scores.update(sus_scores)
                 scores.update(nasa_scores)
-                termination_label = "タスク完了ボタンが押されました" if st.session_state.get("force_end") else ""
+                termination_label = (
+                    "タスク完了ボタンが押されました"
+                    if st.session_state.get("force_end")
+                    else ""
+                )
                 save_experiment_2_result(
                     scores,
-                    termination_label,
+                    termination_label=termination_label,
                 )
                 st.session_state.active = False
                 st.session_state["experiment2_followup_prompt"] = True
@@ -627,6 +635,10 @@ def app():
         st.markdown("**🚨バグが起きた場合（LLMからの回答がない等）→**")
     with cols2[1]:
         if st.button("⚠️会話をリセット", key="reset_conv"):
+            save_conversation_history_to_firestore(
+                "会話をリセットしました",
+                metadata={"experiment_page": PROMPT_GROUP},
+            )
             _reset_conversation_state(system_prompt)
             st.rerun()
     cols = st.columns([2, 1])
