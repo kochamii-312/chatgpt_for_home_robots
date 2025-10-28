@@ -28,8 +28,8 @@ from image_task_sets import (
 from two_classify import prepare_data  # 既存関数を利用
 from esm import ExternalStateManager
 
-PROMPT_GROUP = "logical"
-NEXT_PAGE = "pages/02_empathetic.py"
+PROMPT_GROUP = "smalltalk"
+NEXT_PAGE = None
 
 PROMPT_TASKINFO_PATH = Path(__file__).resolve().parent.parent / "json" / "prompt_taskinfo_sets.json"
 _PROMPT_TASKINFO_CACHE: dict[str, dict[str, str]] | None = None
