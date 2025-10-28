@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT
 from jsonl import (
     remove_last_jsonl_entry,
+    save_conversation_history_to_firestore,
     save_jsonl_entry,
     show_jsonl_block,
 )
@@ -245,6 +246,11 @@ def app():
                 show_jsonl_block()
                 st.warning("会話を終了しました。ありがとうございました！")
                 if st.button("⚠️会話をリセット", key="reset_conv"):
+                    save_conversation_history_to_firestore(
+                        "会話をリセットしました",
+                        metadata={"page": "save_data"},
+                        collection_override="conversation_resets",
+                    )
                     st.session_state.context = [{"role": "system", "content": CREATING_DATA_SYSTEM_PROMPT}]
                     st.session_state.active = True
                     st.session_state.conv_log = {

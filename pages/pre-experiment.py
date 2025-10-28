@@ -7,7 +7,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 from api import client, SYSTEM_PROMPT, build_bootstrap_user_message
-from jsonl import predict_with_model, save_pre_experiment_result
+from jsonl import (
+    predict_with_model,
+    save_conversation_history_to_firestore,
+    save_pre_experiment_result,
+)
 from move_functions import (
     move_to,
     pick_object,
@@ -267,6 +271,11 @@ def app():
             if st.session_state.active == False:
                 st.warning("会話を終了しました。ありがとうございました！")
                 if st.button("⚠️会話をリセット", key="reset_conv"):
+                    save_conversation_history_to_firestore(
+                        "会話をリセットしました",
+                        metadata={"page": "pre_experiment"},
+                        collection_override="pre_experiment_results",
+                    )
                     st.session_state.context = [{"role": "system", "content": SYSTEM_PROMPT}]
                     st.session_state.active = True
                     st.session_state.conv_log = {
@@ -294,6 +303,11 @@ def app():
         # if i == last_assistant_idx: #and "<FinalOutput>" in msg["content"]:
             
     if st.button("⚠️会話をリセット", key="reset_conv"):
+        save_conversation_history_to_firestore(
+            "会話をリセットしました",
+            metadata={"page": "pre_experiment"},
+            collection_override="pre_experiment_results",
+        )
         # セッション情報を初期化
         st.session_state.context = [{"role": "system", "content": system_prompt}]
         st.session_state.active = True
