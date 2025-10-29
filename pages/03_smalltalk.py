@@ -76,14 +76,52 @@ SUS_QUESTIONS = [
 ]
 
 NASA_TLX_QUESTIONS = [
-    ("nasa_mental_demand", "精神的要求"),
-    ("nasa_physical_demand", "身体的要求"),
-    ("nasa_temporal_demand", "時間的切迫感"),
-    ("nasa_performance", "作業達成度"),
-    ("nasa_effort", "努力"),
-    ("nasa_frustration", "不満"),
+    ("nasa_mental_demand", "あなたは、ロボットと会話をするにあたって、精神的要求（思考，意志決定，計算，記憶，観察，検索，等）がどれくらい要求されましたか？"),
+    ("nasa_physical_demand", "あなたは、ロボットと会話をするにあたって、身体的要求（押す，引く，回す， 操作する等）がどれくらい要求されましたか？"),
+    ("nasa_temporal_demand", "あなたは、ロボットと会話をするにあたって、時間的切迫感（作業や要素作業の頻度や速さ）をどの程度感じましたか？"),
+    ("nasa_performance", "ロボットと会話をするにあたって、あなた自身が設定した作業（指示）は、どの程度ロボットによって達成されたと考えますか？"),
+    ("nasa_effort", "あなたはその作業達成率に到達するのに、どのくらい（精神的および身体的に）努力しましたか？"),
+    ("nasa_frustration", "あなたは、ロボットと会話をするにあたってどのくらい不安，落胆，いらいら，ストレス，不快感を感じましたか？"),
 ]
 
+
+GodSpeed_anthroporphism_QUESTIONS = [
+    ("godspeed_anthroporphism1", "Fake 偽物のような (1) - Natural 自然な (5)"),
+    ("godspeed_anthroporphism2", "Machinelike 機械的 (1) - Humanlike 人間的 (5)"),
+    ("godspeed_anthroporphism3", "Unconscious 意識を持たない (1) - Contious 意識を持っている (5)"),
+    ("godspeed_anthroporphism4", "Artificial 人工的 (1) - Lifelike 生物的 (5)"),
+    ("godspeed_anthroporphism5", "Moving rigidly ぎこちない動き (1) - Moving elegantly 洗練された動き (1)")
+]
+
+GodSpeed_animacy_QUESTIONS = [
+    ("godspeed_animacy1", "Dead 死んでいる (1) - Alive 生きている (5)"),
+    ("godspeed_animacy2", "Stagnant 活気のない (1) - Lively 生き生きとした (5)"),
+    ("godspeed_animacy3", "Mechanical 機械的な (1) - Organic 有機的な (5)"),
+    ("godspeed_animacy4", "Inert 不活発な (1) - Interactive 対話的な (5)"),
+    ("godspeed_animacy5", "Apathetic 無関心な (1) - Responsive 反応のある (5)")
+]
+
+GodSpeed_likebility_QUESTIONS = [
+    ("godspeed_likeability1", "Dislike 嫌い (1) - Like 好き (5)"),
+    ("godspeed_likeability2", "Unfriendly 親しみにくい (1) - Friendly 親しみやすい (5)"),
+    ("godspeed_likeability3", "Unkind 不親切な (1) - Kind 親切な (5)"),
+    ("godspeed_likeability4", "Unpleasant 不愉快な (1) - Pleasant 愉快な (5)"),
+    ("godspeed_likeability5", "Awful ひどい (1) - Nice 良い (5)")
+]
+
+GodSpeed_perceived_intelligence_QUESTIONS = [
+    ("godspeed_intelligence1", "Incompetent 無能な (1) - Competent 有能な (5)"),
+    ("godspeed_intelligence2", "Ignorant 無知な (1) - Knowledgeable 物知りな (5)"),
+    ("godspeed_intelligence3", "Irresponsible 無責任な (1) - Responsible 責任のある (5)"),
+    ("godspeed_intelligence4", "Unintelligent 知的でない (1) - Intelligent 知的な (5)"),
+    ("godspeed_intelligence5", "Foolish 愚かな (1) - Sensible 賢明な (5)")
+]
+
+GodSpeed_perceived_safety_QUESTIONS = [
+    ("godspeed_safety1", "Anxious 不安な (1) - Relaxed 落ち着いた (5)"),
+    ("godspeed_safety2", "Agitated 動揺している (1) - Calm 冷静な (5)"),
+    ("godspeed_safety3", "Quiescent 平穏な (1) - Surprised 驚いた (5)")
+]
 
 load_dotenv()
 
@@ -594,23 +632,92 @@ def app():
                         format="%d",
                         key=f"{key}_experiment2",
                     )
+
+                st.markdown("###### Godspeed ロボットの印象について")
+                st.markdown("**・人間らしさ（Anthropomorphism）**: 以下のスケールに基づいてこのロボットの印象を評価してください。")
+                godspeed_anthroporphism_scores = {}
+                for key, question in GodSpeed_anthroporphism_QUESTIONS:
+                    godspeed_anthroporphism_scores[key] = st.slider(
+                        question,
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        format="%d",
+                        key=f"{key}_experiment2",
+                    )
+                st.markdown("**・生命感（Animacy）**: 以下のスケールに基づいてこのロボットの印象を評価してください。")
+                godspeed_animacy_scores = {}
+                for key, question in GodSpeed_animacy_QUESTIONS:
+                    godspeed_animacy_scores[key] = st.slider(
+                        question,
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        format="%d",
+                        key=f"{key}_experiment2",
+                    )
+                st.markdown("**・好感度（Likeability）**: 以下のスケールに基づいてこのロボットの印象を評価してください。")
+                godspeed_likeability_scores = {}
+                for key, question in GodSpeed_likebility_QUESTIONS:
+                    godspeed_likeability_scores[key] = st.slider(
+                        question,
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        format="%d",
+                        key=f"{key}_experiment2",
+                    )
+                st.markdown("**・知能の知覚（Perceived Intelligence）**: 以下のスケールに基づいてあなたの心の状態を評価してください。")
+                godspeed_intelligence_scores = {}
+                for key, question in GodSpeed_perceived_intelligence_QUESTIONS:
+                    godspeed_intelligence_scores[key] = st.slider(
+                        question,
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        format="%d",
+                        key=f"{key}_experiment2",
+                    )
+                st.markdown("**・安全性の知覚（Perceived Safety）**")
+                godspeed_safety_scores = {}
+                for key, question in GodSpeed_perceived_safety_QUESTIONS:
+                    godspeed_safety_scores[key] = st.slider(
+                        question,
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        format="%d",
+                        key=f"{key}_experiment2",
+                    )
+
+                impression = st.text_input(
+                    "AIとの会話や、ロボットの行動計画について「印象に残ったこと」があればお願いします。"
+                )
+                free = st.text_input(
+                    "その他に何か感じたことがあればお願いします。"
+                )
+
                 submitted = st.form_submit_button("評価を保存")
 
             if submitted:
                 st.warning("評価を保存しました！適宜休憩をとってください☕")
                 scores = {
                     "name": name,
-                    "grices_maxim": grices_maxim,
-                    "kindness": kindness,
-                    "pleasantness": pleasantness,
-                    "familiarity": familiarity,
-                    "social_presence": social_presence,
-                    "security": security,
                     "impression": impression,
                     "free": free,
                 }
-                scores.update(sus_scores)
+                # scores.update(sus_scores)
                 scores.update(nasa_scores)
+                scores.update(godspeed_anthroporphism_scores)
+                scores.update(godspeed_animacy_scores)
+                scores.update(godspeed_likeability_scores)
+                scores.update(godspeed_intelligence_scores)
+                scores.update(godspeed_safety_scores)
                 termination_label = (
                     "タスク完了ボタンが押されました"
                     if st.session_state.get("force_end")
