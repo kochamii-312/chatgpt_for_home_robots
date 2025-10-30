@@ -376,8 +376,6 @@ def app():
         task_lines = extract_task_lines(payload)
 
     st.markdown("#### ②指定されたタスク")
-    if selected_task_name:
-        st.write(f"タスク: {selected_task_name}")
     st.write("下のタスクをそのまま画面下部のチャットに入力してください。")
     if selected_taskinfo:
         st.info(selected_taskinfo)
@@ -410,9 +408,105 @@ def app():
     if "experiment2_followup_prompt" not in st.session_state:
         st.session_state["experiment2_followup_prompt"] = False
 
-    st.markdown("#### ③ロボットの現在の状態")
+    st.markdown("#### ③現在の状態")
     st.caption("ExternalStateManager (ESM) が保持している状態です。ロボットの行動に応じて更新されます。")
     st.json(esm.current_state)
+
+        
+    current_state = esm.current_state
+    
+    # --- 1. ロボットの状態 ---
+    st.markdown("##### 🤖 ロボット")
+    col1, col2 = st.columns(2)
+    
+    # esm.py のキーに合わせて指定
+    robot_stat = current_state.get("robot_status", {})
+    location = robot_stat.get("location", "不明")
+    holding = robot_stat.get("holding", "なし")
+
+    # 'living_room' -> 'Living Room' のように整形して表示
+    col1.metric("現在地", location.replace("_", " ").title()) 
+    col2.metric("掴んでいる物", str(holding) if holding else "なし")
+    
+    st.divider() # 区切り線
+
+    # --- 2. 環境の状態 ---
+    st.markdown("##### 🏠 環境（場所ごとのアイテム）")
+    environment_state = current_state.get("environment", {})
+    
+    # 場所が多いため2列に分けて表示
+    env_cols = st.columns(2)
+    
+    # 辞書のキー（場所）を半分に分ける
+    locations = list(environment_state.keys())
+    mid_point = (len(locations) + 1) // 2
+    locations_col1 = locations[:mid_point]
+    locations_col2 = locations[mid_point:]
+
+    # 左側の列
+    with env_cols[0]:
+        for loc in locations_col1:
+            items = environment_state.get(loc, [])
+            # 'kitchen_shelf' -> 'Kitchen Shelf'
+            loc_label = loc.replace("_", " ").title()
+            
+            with st.expander(f"{loc_label} ({len(items)}個)"):
+                if items:
+                    st.multiselect(
+                        f"（{loc_label}にある物）",
+                        items,
+                        default=items,
+                        disabled=True,
+                        label_visibility="collapsed" # ラベルを非表示に
+                    )
+                else:
+                    st.info("（何もありません）")
+
+    # 右側の列
+    with env_cols[1]:
+        for loc in locations_col2:
+            items = environment_state.get(loc, [])
+            loc_label = loc.replace("_", " ").title()
+            
+            with st.expander(f"{loc_label} ({len(items)}個)"):
+                if items:
+                    st.multiselect(
+                        f"（{loc_label}にある物）",
+                        items,
+                        default=items,
+                        disabled=True,
+                        label_visibility="collapsed"
+                    )
+                else:
+                    st.info("（何もありません）")
+
+    # --- 3. タスク目標 (ついでに表示) ---
+    st.divider()
+    st.markdown("##### 🎯 現在のタスク目標")
+    task_goal = current_state.get("task_goal", {})
+    target_loc = task_goal.get("target_location", "未設定")
+    items_needed = task_goal.get("items_needed", {})
+
+    col_t1, col_t2 = st.columns(2)
+    col_t1.metric("目標地点", str(target_loc).title() if target_loc else "未設定")
+    
+    if items_needed:
+        # 辞書 { 'itemA': 2, 'itemB': 1 } をリスト表示
+        item_list = [f"{item} (x{count})" for item, count in items_needed.items()]
+        col_t2.markdown("**必要なアイテム:**")
+        col_t2.dataframe(
+            item_list, 
+            use_container_width=True, 
+            hide_index=True, 
+            column_config={"value": "アイテム (個数)"}
+        )
+    else:
+        col_t2.metric("必要なアイテム", "なし")
+
+
+    # --- 元のJSONはデバッグ用に折りたたんで残す ---
+    with st.expander("詳細な状態（JSON）"):
+        st.json(current_state)
 
     st.markdown("#### ④ロボットとの会話")
     st.write("最初に②のタスクを入力し、ロボットと自由に会話してください。" \
