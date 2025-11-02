@@ -479,7 +479,7 @@ def app():
 
     st.markdown("#### ④ロボットとの会話")
     st.write("最初に②のタスクを入力し、ロボットと自由に会話してください。" \
-    "最終的にはロボットと一緒に、タスクを達成させてください。"
+    "最終的にはロボットと「分担」しながら、タスクを達成させてください。"
     )
 
     # 1. 会話履歴とESMをセッションステートから取得
@@ -523,9 +523,9 @@ def app():
             # キューが空になったら、LLMに次の計画を尋ねる
             if not queue:
                 st.info("サブタスクが完了しました。LLMに次の計画を問い合わせます...")
-                context.append({"role": "user", "content": "このサブタスクは完了しました。現在の状態に基づき、次のサブタスクを計画してください。"})
+                # LLMが次の計画を生成すべきことを示す特殊なフラグを設定
+                st.session_state.next_plan_request = "現在のタスク目標に基づき、現在の状態から次のサブタスクの行動計画（FunctionSequence）を生成してください。"
                 st.session_state.trigger_llm_call = True
-            
             st.rerun() # 画面を再描画して次のステップを表示
 
     # 4. LLM呼び出しのトリガー（ユーザー入力 or 計画完了）
@@ -762,7 +762,7 @@ def app():
     st.markdown("#### トラブルシューティング")
     cols1 = st.columns([2, 1])
     with cols1[0]:
-        st.markdown("**🤔「実行します」のあとロボットの実行が始まらない場合→**")
+        st.markdown("**🤔「〇〇します」のあとロボットの実行が始まらない場合→**")
     with cols1[1]:
         if st.button("▶️実行を始める", key="manual_request_next_plan"):
             next_plan_request = "行動計画も出力して"
