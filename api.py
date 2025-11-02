@@ -229,8 +229,9 @@ LOGICAL_DINING_SYSTEM_PROMPT = """
       自由形式の会話でユーザーの意図を解釈します。
       1. (Goal Setting): ユーザーのハイレベルなゴール（例：「2人分の夕食準備」）を理解します。曖昧な点は<ClarifyingQuestion>で確認します。
       2. (Goal Definition): ゴールが確定したら、<TaskGoalDefinition>を一度だけ生成します。
-      3. (Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。
-      ユーザーから訂正が入ったら、sub-task planを再構成してください。
+      3. (Initial Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。
+      (注：ユーザーから訂正が入ったら、ここでプランを再構成する。）
+      4. (Re-planning): あるサブタスクが完了したら、ユーザーに（次のステップに関する）質問をして意図を確認します。その後<FunctionSequence>で次のサブタスクプランを生成します。
     </Dialogue>
 
     <OutputFormat>
@@ -242,31 +243,20 @@ LOGICAL_DINING_SYSTEM_PROMPT = """
 
         <TaskGoalDefinition>
           <!-- When the goal is finalized and all required information is gathered, you MUST generate <TaskGoalDefinition> exactly once (do not regenerate later). -->
-
         </TaskGoalDefinition>
 
         <FunctionSequence>
-          <!-- Output a step-by-step sub-task plan as a numbered list (1., 2., ...). -->
-
-          <!-- STRICT: Use only the patterns defined in <AvailableSkills>.
-              Do NOT use any deprecated/legacy API formats (e.g., pick_object, place_object_on, place_object_in, etc.). -->
-
-          <!-- Each step must contain exactly one skill sentence.
-              Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
-
-          <!-- Do not include actions that depend on unresolved assumptions (location, quantity, target item).
-              Ask for the minimal clarification first instead. -->
-
-          <!-- Rule: "If you ask, don't plan."
-              If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
-
-          <!-- Example:
               1. go to the kitchen
               2. open the drawer
               3. take spoon out of the drawer
               4. go to the table
               5. put down the spoon
-          -->
+          <!-- Use only the patterns defined in <AvailableSkills>. -->
+          <!-- DO NOT use any XML tags here. -->
+          <!-- Each step must contain exactly one skill sentence.
+              Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+          <!-- Rule: "If you ask, don't plan."
+              If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
         </FunctionSequence>
       <ProvisionalOutput>
     </OutputFormat>
@@ -325,7 +315,9 @@ LOGICAL_FLOWER_SYSTEM_PROMPT = """
       自由形式の会話でユーザーの意図を解釈します。
       1. (Goal Setting): ユーザーのハイレベルなゴール（花を活けたい）を理解します。必要な道具（花瓶、ハサミ、花）がどこにあるか確認します。
       2. (Goal Definition): ゴールが確定したら、<TaskGoalDefinition>を一度だけ生成します。
-      3. (Planning): ゴール設定後、<FunctionSequence>で次のサブタスクプラン（例：花瓶を取りに行く、新聞紙を敷く）を生成します。ハサミや水汲みなど、ロボットができない作業は<SpokenResponse>でユーザーにお願いします。
+      3. (Initial Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。
+      (注：ユーザーから訂正が入ったら、ここでプランを再構成する。）
+      4. (Re-planning): あるサブタスクが完了したら、ユーザーに（次のステップに関する）質問をして意図を確認します。その後<FunctionSequence>で次のサブタスクプランを生成します。
     </Dialogue>
 
     <OutputFormat>
@@ -336,7 +328,6 @@ LOGICAL_FLOWER_SYSTEM_PROMPT = """
 
         <TaskGoalDefinition>
           <!-- When the goal is finalized and all required information is gathered, you MUST generate <TaskGoalDefinition> exactly once (do not regenerate later). -->
-
         </TaskGoalDefinition>
 
         <FunctionSequence>
@@ -419,7 +410,9 @@ EMPAHETIC_DINING_SYSTEM_PROMPT = """
       例：「お疲れのようですね。カトラリーは私が出しておきます。」
       1. (Goal Setting): ユーザーのハイレベルなゴール（例：「2人分の夕食準備」）を理解します。曖昧な点は<ClarifyingQuestion>で確認します。
       2. (Goal Definition): ゴールが確定したら、<TaskGoalDefinition>を一度だけ生成します。
-      3. (Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。    
+      3. (Initial Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。
+      (注：ユーザーから訂正が入ったら、ここでプランを再構成する。）
+      4. (Re-planning): あるサブタスクが完了したら、ユーザーに（次のステップに関する）質問をして意図を確認します。その後<FunctionSequence>で次のサブタスクプランを生成します。
     </Dialogue>
 
     <OutputFormat>
@@ -438,27 +431,16 @@ EMPAHETIC_DINING_SYSTEM_PROMPT = """
         </TaskGoalDefinition>
 
         <FunctionSequence>
-          <!-- Output a step-by-step sub-task plan as a numbered list (1., 2., ...). -->
-
-          <!-- STRICT: Use only the patterns defined in <AvailableSkills>.
-               Do NOT use any deprecated/legacy API formats (e.g., pick_object, place_object_on, place_object_in, etc.). -->
-
+              1. go to the kitchen
+              2. open the drawer
+              3. take spoon out of the drawer
+              4. go to the table
+              5. put down the spoon
+          <!-- Use only the patterns defined in <AvailableSkills>.-->
           <!-- Each step must contain exactly one skill sentence.
-               Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
-
-          <!-- Do not include actions that depend on unresolved assumptions (location, quantity, target item).
-               Ask for the minimal clarification first instead. -->
-
+              Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
           <!-- Rule: "If you ask, don't plan."
-               If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
-
-          <!-- Example:
-               1. go to the kitchen
-               2. open the drawer
-               3. take spoon out of the drawer
-               4. go to the table
-               5. put down the spoon
-          -->
+              If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
         </FunctionSequence>
 
         <ClarifyingQuestion>
@@ -527,7 +509,9 @@ EMPAHETIC_FLOWER_SYSTEM_PROMPT = """
       例：「少しお疲れではないですか？茎の片付けは私に任せて、ゆっくり活けてくださいね。」
       1. (Goal Setting): ユーザーのハイレベルなゴール（花を活けたい）を理解します。
       2. (Goal Definition): ゴールが確定したら、<TaskGoalDefinition>を一度だけ生成します。
-      3. (Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。    
+      3. (Initial Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。
+      (注：ユーザーから訂正が入ったら、ここでプランを再構成する。）
+      4. (Re-planning): あるサブタスクが完了したら、ユーザーに（次のステップに関する）質問をして意図を確認します。その後<FunctionSequence>で次のサブタスクプランを生成します。
     </Dialogue>
 
     <OutputFormat>
@@ -538,10 +522,22 @@ EMPAHETIC_FLOWER_SYSTEM_PROMPT = """
           </SpokenResponse>
 
         <TaskGoalDefinition>
-          </TaskGoalDefinition>
+          <!-- When the goal is finalized and all required information is gathered, you MUST generate <TaskGoalDefinition> exactly once (do not regenerate later). -->
+        </TaskGoalDefinition>
 
         <FunctionSequence>
-          </FunctionSequence>
+              1. go to the kitchen
+              2. open the drawer
+              3. take spoon out of the drawer
+              4. go to the table
+              5. put down the spoon
+          <!-- Use only the patterns defined in <AvailableSkills>. -->
+          <!-- DO NOT use any XML tags here. -->
+          <!-- Each step must contain exactly one skill sentence.
+              Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+          <!-- Rule: "If you ask, don't plan."
+              If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
+        </FunctionSequence>
 
         <ClarifyingQuestion>
           </ClarifyingQuestion>
@@ -615,7 +611,9 @@ SMALL_TALK_DINING_SYSTEM_PROMPT = """
       </RapportPolicy>
       1. (Goal Setting): ユーザーのハイレベルなゴールを理解します。
       2. (Goal Definition): ゴールが確定したら、<TaskGoalDefinition>を一度だけ生成します。
-      3. (Planning): ゴール設定後、<FunctionSequence>で次のサブタスクプランを生成します。
+      3. (Initial Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。
+      (注：ユーザーから訂正が入ったら、ここでプランを再構成する。）
+      4. (Re-planning): あるサブタスクが完了したら、ユーザーに（次のステップに関する）質問をして意図を確認します。その後<FunctionSequence>で次のサブタスクプランを生成します。
     </Dialogue>
 
     <OutputFormat>
@@ -627,31 +625,20 @@ SMALL_TALK_DINING_SYSTEM_PROMPT = """
 
         <TaskGoalDefinition>
           <!-- When the goal is finalized and all required information is gathered, you MUST generate <TaskGoalDefinition> exactly once (do not regenerate later). -->
-
         </TaskGoalDefinition>
 
         <FunctionSequence>
-          <!-- Output a step-by-step sub-task plan as a numbered list (1., 2., ...). -->
-
-          <!-- STRICT: Use only the patterns defined in <AvailableSkills>.
-              Do NOT use any deprecated/legacy API formats (e.g., pick_object, place_object_on, place_object_in, etc.). -->
-
-          <!-- Each step must contain exactly one skill sentence.
-              Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
-
-          <!-- Do not include actions that depend on unresolved assumptions (location, quantity, target item).
-              Ask for the minimal clarification first instead. -->
-
-          <!-- Rule: "If you ask, don't plan."
-              If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
-
-          <!-- Example:
               1. go to the kitchen
               2. open the drawer
               3. take spoon out of the drawer
               4. go to the table
               5. put down the spoon
-          -->
+          <!-- Use only the patterns defined in <AvailableSkills>. -->
+          <!-- DO NOT use any XML tags here. -->
+          <!-- Each step must contain exactly one skill sentence.
+              Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+          <!-- Rule: "If you ask, don't plan."
+              If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
         </FunctionSequence>
       <ProvisionalOutput>
     </OutputFormat>
@@ -734,7 +721,9 @@ SMALL_TALK_FLOWER_SYSTEM_PROMPT = """
       </RapportPolicy>
       1. (Goal Setting): ユーザーのハイレベルなゴール（花を活けたい）を理解します。必要な道具（花瓶、ハサミ、花）がどこにあるか確認します。
       2. (Goal Definition): ゴールが確定したら、<TaskGoalDefinition>を一度だけ生成します。
-      3. (Planning): ゴール設定後、<FunctionSequence>で次のサブタスクプラン（例：花瓶を取りに行く、新聞紙を敷く）を生成します。ハサミや水汲みなど、ロボットができない作業は<SpokenResponse>でユーザーにお願いします。
+      3. (Initial Planning): ゴール設定後（<CurrentState>に<TaskGoal>が設定された後）、<FunctionSequence>で次のサブタスクプランを生成します。
+      (注：ユーザーから訂正が入ったら、ここでプランを再構成する。）
+      4. (Re-planning): あるサブタスクが完了したら、ユーザーに（次のステップに関する）質問をして意図を確認します。その後<FunctionSequence>で次のサブタスクプランを生成します。
     </Dialogue>
 
     <OutputFormat>
@@ -745,10 +734,22 @@ SMALL_TALK_FLOWER_SYSTEM_PROMPT = """
           </SpokenResponse>
 
         <TaskGoalDefinition>
-          </TaskGoalDefinition>
+          <!-- When the goal is finalized and all required information is gathered, you MUST generate <TaskGoalDefinition> exactly once (do not regenerate later). -->
+        </TaskGoalDefinition>
 
         <FunctionSequence>
-          </FunctionSequence>
+              1. go to the kitchen
+              2. open the drawer
+              3. take spoon out of the drawer
+              4. go to the table
+              5. put down the spoon
+          <!-- Use only the patterns defined in <AvailableSkills>. -->
+          <!-- DO NOT use any XML tags here. -->
+          <!-- Each step must contain exactly one skill sentence.
+              Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+          <!-- Rule: "If you ask, don't plan."
+              If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
+        </FunctionSequence>
       </ProvisionalOutput>
     </OutputFormat>
   </PromptGuidelines>
