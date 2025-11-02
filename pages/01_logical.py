@@ -5,6 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 import streamlit.components.v1 as components
+import yaml
 from consent import (
     apply_sidebar_hiding,
     configure_page,
@@ -32,7 +33,7 @@ from esm import ExternalStateManager
 PROMPT_GROUP = "logical"
 NEXT_PAGE = "pages/02_empathetic.py"
 
-PROMPT_TASKINFO_PATH = Path(__file__).resolve().parent.parent / "json" / "prompt_taskinfo_sets.json"
+PROMPT_TASKINFO_PATH = Path(__file__).resolve().parent.parent / "json" / "prompt_taskinfo_sets.yaml"
 _PROMPT_TASKINFO_CACHE: dict[str, dict[str, str]] | None = None
 
 
@@ -40,7 +41,7 @@ def load_prompt_taskinfo_sets() -> dict[str, dict[str, str]]:
     global _PROMPT_TASKINFO_CACHE
     if _PROMPT_TASKINFO_CACHE is None:
         with PROMPT_TASKINFO_PATH.open(encoding="utf-8") as f:
-            _PROMPT_TASKINFO_CACHE = json.load(f)
+            _PROMPT_TASKINFO_CACHE = yaml.safe_load(f)
     return _PROMPT_TASKINFO_CACHE
 
 
