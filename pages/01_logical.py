@@ -1,10 +1,8 @@
 import json
-import os
 import random
 import re
 from pathlib import Path
 
-import joblib
 import streamlit as st
 import streamlit.components.v1 as components
 from consent import (
@@ -17,7 +15,6 @@ from dotenv import load_dotenv
 
 from api import build_bootstrap_user_message, client
 from jsonl import (
-    predict_with_model,
     save_conversation_history_to_firestore,
     save_experiment_2_result,
 )
@@ -300,38 +297,10 @@ def app():
 
     st.session_state[prompt_label_state_key] = prompt_label
 
-    st.session_state.setdefault("critic_min_threshold", 0.60)
+    st.write("※会話をリセットしてもこの選択は変わりません。")
 
-    with st.expander("評価モデル・タスク調整（任意）", expanded=False):
-        # 評価モデル selectbox
-        model_files = sorted(
-            f for f in os.listdir("models") if f.endswith(".joblib")
-        )
-        if model_files:
-            latest_model = max(
-                model_files,
-                key=lambda f: os.path.getmtime(os.path.join("models", f)),
-            )
-            stored_model = st.session_state.get("model_path")
-            current_model = os.path.basename(stored_model) if stored_model else None
-            if current_model not in model_files:
-                current_model = latest_model
-            selected_model = st.selectbox(
-                "評価モデル（自動）",
-                model_files,
-                index=model_files.index(current_model),
-            )
-            st.session_state["model_path"] = os.path.join("models", selected_model)
-
-        st.session_state["critic_min_threshold"] = st.slider("critic_min_threshold", 0.5, 0.9, 0.60, 0.01)
-        st.session_state["critic_margin"]       = st.slider("critic_margin", 0.0, 0.3, 0.15, 0.01)
-
-        use_force = st.checkbox("しきい値を上書きする（force）", value=True)
-        if use_force:
-            st.session_state["critic_force_threshold"] = st.slider("force_threshold", 0.50, 0.90, 0.60, 0.01)
-        else:
-            st.session_state.pop("critic_force_threshold", None)
-
+    payload = None
+    with st.expander("タスク調整（任意）", expanded=False):
         task_sets = load_image_task_sets()
         if not task_sets:
             st.warning("写真とタスクのセットが保存されていません。まず『写真とタスクの選定・保存』ページで作成してください。")
@@ -339,6 +308,7 @@ def app():
             st.session_state["experiment2_selected_task_set"] = None
             st.session_state["experiment2_task_labels"] = []
             st.session_state["experiment2_label_to_key"] = {}
+            payload = {}
         else:
             choice_pairs = build_task_set_choices(task_sets)
             labels = [label for label, _ in choice_pairs]
@@ -367,11 +337,14 @@ def app():
                 selected_task_name = label_to_key.get(selected_label)
                 st.session_state["experiment2_selected_task_set"] = selected_task_name
                 payload = task_sets.get(selected_task_name, {}) if selected_task_name else {}
-        house = payload.get("house") if isinstance(payload, dict) else ""
-        room = payload.get("room") if isinstance(payload, dict) else ""
-        meta_lines = []
+    if not isinstance(payload, dict):
+        payload = {}
 
-        task_lines = extract_task_lines(payload)
+    house = payload.get("house") if isinstance(payload, dict) else ""
+    room = payload.get("room") if isinstance(payload, dict) else ""
+    meta_lines = []
+
+    task_lines = extract_task_lines(payload)
 
     st.markdown("#### ②指定されたタスク")
     st.write("下のタスクをそのまま画面下部のチャットに入力してください。")
