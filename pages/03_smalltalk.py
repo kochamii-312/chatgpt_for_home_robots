@@ -301,7 +301,6 @@ def app():
 
     st.session_state[prompt_label_state_key] = prompt_label
 
-    st.write("※会話をリセットしてもこの選択は変わりません。")
     st.session_state.setdefault("critic_min_threshold", 0.60)
 
     with st.expander("評価モデル・タスク調整（任意）", expanded=False):
