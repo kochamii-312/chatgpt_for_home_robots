@@ -5,6 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 import streamlit.components.v1 as components
+import yaml
 from consent import (
     apply_sidebar_hiding,
     configure_page,
@@ -32,7 +33,7 @@ from esm import ExternalStateManager
 PROMPT_GROUP = "empathetic"
 NEXT_PAGE = "pages/03_smalltalk.py"
 
-PROMPT_TASKINFO_PATH = Path(__file__).resolve().parent.parent / "json" / "prompt_taskinfo_sets.json"
+PROMPT_TASKINFO_PATH = Path(__file__).resolve().parent.parent / "json" / "prompt_taskinfo_sets.yaml"
 _PROMPT_TASKINFO_CACHE: dict[str, dict[str, str]] | None = None
 
 
@@ -40,7 +41,7 @@ def load_prompt_taskinfo_sets() -> dict[str, dict[str, str]]:
     global _PROMPT_TASKINFO_CACHE
     if _PROMPT_TASKINFO_CACHE is None:
         with PROMPT_TASKINFO_PATH.open(encoding="utf-8") as f:
-            _PROMPT_TASKINFO_CACHE = json.load(f)
+            _PROMPT_TASKINFO_CACHE = yaml.safe_load(f)
     return _PROMPT_TASKINFO_CACHE
 
 
@@ -489,131 +490,255 @@ def app():
     context = st.session_state.context
     esm = st.session_state.esm
     queue = st.session_state.action_plan_queue
+    current_state = esm.current_state
     should_stop = False
+    end_message = ""
 
-    # 2. 既存の会話履歴を表示
-    for msg in context:
-        if msg["role"] == "system":
-            continue
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-            # 既存のヘルパー関数をそのまま利用
-            if msg["role"] == "assistant":
-                reply_xml = msg.get("full_reply", msg.get("content", ""))
-                show_function_sequence(reply_xml)
-                # show_spoken_response(reply_xml)
-    
-    # 3. [フェーズ2: 実行ループ] 実行すべき行動計画（キュー）があるか？
-    if queue:
-        next_action = queue[0]
-        st.info(f"次の行動計画: **{next_action}**")
-        
-        # 実行ボタン
-        if st.button(f"▶️ 実行: {next_action}", key="run_next_step", type="primary"):
-            action_to_run = queue.pop(0) # キューの先頭を取り出す
-            st.session_state.action_plan_queue = queue # キューを更新
+    tab_conversation, tab_state = st.tabs([
+        "④ロボットとの会話",
+        "③現在の状態",
+    ])
 
-            # [!!!] ここで実際のロボットAPIを呼び出す（代わりにESMを更新）[!!!]
-            with st.spinner(f"実行中: {action_to_run}..."):
-                # time.sleep(1) # import time が必要
-                esm.update_state_from_action(action_to_run)
-            
-            # 実行結果を会話履歴（コンテキスト）に追加
-            exec_msg = f"（実行完了: {action_to_run}。ロボットの状態を更新しました。）"
-            context.append({"role": "user", "content": exec_msg}) # 実行結果をLLMに伝える
-            st.chat_message("user").write(exec_msg)
+    with tab_conversation:
+        st.markdown("#### ④ロボットとの会話")
+        st.write(
+            "最初に②のタスクを入力し、ロボットと自由に会話してください。"
+            "最終的にはロボットと一緒に、タスクを達成させてください。"
+        )
 
-            # キューが空になったら、LLMに次の計画を尋ねる
-            if not queue:
-                st.info("サブタスクが完了しました。LLMに次の計画を問い合わせます...")
-                context.append({"role": "user", "content": "このサブタスクは完了しました。現在の状態に基づき、次のサブタスクを計画してください。"})
+        # 2. 既存の会話履歴を表示
+        for msg in context:
+            if msg["role"] == "system":
+                continue
+            with st.chat_message(msg["role"]):
+                st.write(msg["content"])
+                # 既存のヘルパー関数をそのまま利用
+                if msg["role"] == "assistant":
+                    reply_xml = msg.get("full_reply", msg.get("content", ""))
+                    show_function_sequence(reply_xml)
+                    # show_spoken_response(reply_xml)
+
+        # 3. [フェーズ2: 実行ループ] 実行すべき行動計画（キュー）があるか？
+        if queue:
+            next_action = queue[0]
+            st.info(f"次の行動計画: **{next_action}**")
+
+            # 実行ボタン
+            if st.button(f"▶️ 実行: {next_action}", key="run_next_step", type="primary"):
+                action_to_run = queue.pop(0)  # キューの先頭を取り出す
+                st.session_state.action_plan_queue = queue  # キューを更新
+
+                # [!!!] ここで実際のロボットAPIを呼び出す（代わりにESMを更新）[!!!]
+                with st.spinner(f"実行中: {action_to_run}..."):
+                    # time.sleep(1) # import time が必要
+                    esm.update_state_from_action(action_to_run)
+
+                # 実行結果を会話履歴（コンテキスト）に追加
+                exec_msg = (
+                    f"（実行完了: {action_to_run}。ロボットの状態を更新しました。）"
+                )
+                context.append({"role": "user", "content": exec_msg})  # 実行結果をLLMに伝える
+                st.chat_message("user").write(exec_msg)
+
+                # キューが空になったら、LLMに次の計画を尋ねる
+                if not queue:
+                    st.info("サブタスクが完了しました。LLMに次の計画を問い合わせます...")
+                    # LLMが次の計画を生成すべきことを示す特殊なフラグを設定
+                    st.session_state.next_plan_request = "現在のタスク目標に基づき、現在の状態から次のサブタスクの行動計画（FunctionSequence）を生成してください。"
+                    st.session_state.trigger_llm_call = True
+                st.rerun() # 画面を再描画して次のステップを表示
+
+        # 4. LLM呼び出しのトリガー（ユーザー入力 or 計画完了）
+        user_input = None
+        if not st.session_state.get("force_end"):
+            user_input = st.chat_input(
+                "ロボットへの回答を入力してください",
+                key="experiment_2_chat_input",
+            )
+            if user_input:
+                st.session_state["chat_input_history"].append(user_input)
                 st.session_state.trigger_llm_call = True
-            
-            st.rerun() # 画面を再描画して次のステップを表示
 
-    # 4. LLM呼び出しのトリガー（ユーザー入力 or 計画完了）
-    user_input = None
-    if not st.session_state.get("force_end"):
-        user_input = st.chat_input("ロボットへの回答を入力してください", key="experiment_2_chat_input")
-        if user_input:
-            st.session_state["chat_input_history"].append(user_input)
-            st.session_state.trigger_llm_call = True
+                # ユーザーが入力した=既存の計画に介入した→したがって古い行動計画（キュー）を破棄する
+                if queue:
+                    st.warning("ユーザーが介入しました。既存の行動計画を破棄します。")
+                    st.session_state.action_plan_queue = []
+                    queue = []
 
-            # ユーザーが入力した=既存の計画に介入した→したがって古い行動計画（キュー）を破棄する
-            if queue:
-                st.warning("ユーザーが介入しました。既存の行動計画を破棄します。")
-                st.session_state.action_plan_queue = []
-                queue = []
+        # 5. [フェーズ1 & 2: LLM呼び出し]
+        if st.session_state.get("trigger_llm_call"):
+            st.session_state.trigger_llm_call = False  # フラグをリセット
 
-    # 5. [フェーズ1 & 2: LLM呼び出し]
-    if st.session_state.get("trigger_llm_call"):
-        st.session_state.trigger_llm_call = False # フラグをリセット
+            # [変更点] ユーザー入力があった場合のみコンテキストに追加
+            if user_input:
+                context.append({"role": "user", "content": user_input})
 
-        # [変更点] ユーザー入力があった場合のみコンテキストに追加
-        if user_input: 
-             context.append({"role": "user", "content": user_input})
+            # [!!!] LLM呼び出しのコアロジック [!!!]
+            with st.chat_message("assistant"):
+                with st.spinner("ロボットが考えています..."):
+                    # (A) ESMから最新の状態XMLを取得
+                    current_state_xml = esm.get_state_as_xml_prompt()
+                    # (B) 最新の状態でシステムプロンプトを構築
+                    house = (payload.get("house") if isinstance(payload, dict) else "") or ""
+                    room = (payload.get("room") if isinstance(payload, dict) else "") or ""
+                    system_prompt_content = safe_format_prompt(
+                        st.session_state.system_prompt_template,
+                        current_state_xml=current_state_xml,
+                        house=house,
+                        room=room,
+                    )
+                    system_message = {"role": "system", "content": system_prompt_content}
 
-        # [!!!] LLM呼び出しのコアロジック [!!!]
-        with st.chat_message("assistant"):
-            with st.spinner("ロボットが考えています..."):
-                # (A) ESMから最新の状態XMLを取得
-                current_state_xml = esm.get_state_as_xml_prompt()
-                # (B) 最新の状態でシステムプロンプトを構築
-                house = (payload.get("house") if isinstance(payload, dict) else "") or ""
-                room  = (payload.get("room")  if isinstance(payload, dict) else "") or ""
-                system_prompt_content = safe_format_prompt(
-                    st.session_state.system_prompt_template,
-                    current_state_xml=current_state_xml,
-                    house=house,
-                    room=room,
-                )
-                system_message = {"role": "system", "content": system_prompt_content}
-                
-                # (C) APIに渡すメッセージリストを作成
-                messages_for_api = [system_message] + context
+                    # (C) APIに渡すメッセージリストを作成
+                    messages_for_api = [system_message] + context
 
-                # (D) LLM API 呼び出し
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini", # または "gpt-4-turbo"
-                    messages=messages_for_api
-                )
-                reply = response.choices[0].message.content.strip()
-                
-                # (E) 応答をコンテキストに追加
-                spoken_response = extract_xml_tag(reply, "SpokenResponse")
-                if not spoken_response:
-                    spoken_response = strip_tags(reply) or "(...)"
-                
-                context.append({
-                    "role": "assistant",
-                    "content": spoken_response,
-                    "full_reply": reply
-                })
-                st.session_state.turn_count += 1
-                # ここで画面にも応答をそのまま表示（生のXMLとspoken）
-                # st.write(spoken_response)
-                # st.code(reply, language="xml")
-                
-                # (F) [フェーズ1] Goalが設定されたかパース
-                goal_def_str = extract_xml_tag(reply, "TaskGoalDefinition")
-                if goal_def_str and "Goal:" in goal_def_str and not st.session_state.goal_set:
-                    if esm.set_task_goal_from_llm(goal_def_str):
-                        st.session_state.goal_set = True
-                        st.success("タスク目標を設定しました！")
+                    # (D) LLM API 呼び出し
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",  # または "gpt-4-turbo"
+                        messages=messages_for_api,
+                    )
+                    reply = response.choices[0].message.content.strip()
+
+                    # (E) 応答をコンテキストに追加
+                    spoken_response = extract_xml_tag(reply, "SpokenResponse")
+                    if not spoken_response:
+                        spoken_response = strip_tags(reply) or "(...)"
+
+                    context.append(
+                        {
+                            "role": "assistant",
+                            "content": spoken_response,
+                            "full_reply": reply,
+                        }
+                    )
+                    st.session_state.turn_count += 1
+
+                    # (F) [フェーズ1] Goalが設定されたかパース
+                    goal_def_str = extract_xml_tag(reply, "TaskGoalDefinition")
+                    if (
+                        goal_def_str
+                        and "Goal:" in goal_def_str
+                        and not st.session_state.goal_set
+                    ):
+                        if esm.set_task_goal_from_llm(goal_def_str):
+                            st.session_state.goal_set = True
+                            st.success("タスク目標を設定しました！")
+                        else:
+                            st.error("LLMが生成したタスク目標のパースに失敗しました。")
+
+                    # (G) [フェーズ2] 行動計画が生成されたかパース
+                    plan_str = extract_xml_tag(reply, "FunctionSequence")
+                    if plan_str:
+                        # [変更点] 介入時に古い計画がクリアされているため、extendでOK
+                        actions = parse_function_sequence(plan_str)
+                        if actions:
+                            st.session_state.action_plan_queue.extend(actions)
+                            st.info(f"{len(actions)}ステップの計画を受信しました。")
+
+                    # (H) 画面を再描画
+                    st.rerun()
+
+    if st.session_state.get("force_end"):
+        should_stop = True
+        end_message = "ユーザーが会話を終了しました。"
+
+    with tab_state:
+        st.markdown("#### ③現在の状態")
+        st.caption(
+            "ExternalStateManager (ESM) が保持している状態です。ロボットの行動に応じて更新されます。"
+        )
+
+        # --- 1. ロボットの状態 ---
+        st.markdown("##### 🤖 ロボット")
+        col1, col2 = st.columns(2)
+
+        # esm.py のキーに合わせて指定
+        robot_stat = current_state.get("robot_status", {})
+        location = robot_stat.get("location", "不明")
+        holding = robot_stat.get("holding", "なし")
+
+        # 'living_room' -> 'Living Room' のように整形して表示
+        col1.metric("現在地", location.replace("_", " ").title())
+        col2.metric("掴んでいる物", str(holding) if holding else "なし")
+
+        st.divider()  # 区切り線
+
+        # --- 2. 環境の状態 ---
+        st.markdown("##### 🏠 環境（場所ごとのアイテム）")
+        environment_state = current_state.get("environment", {})
+
+        # 場所が多いため2列に分けて表示
+        env_cols = st.columns(2)
+
+        # 辞書のキー（場所）を半分に分ける
+        locations = list(environment_state.keys())
+        mid_point = (len(locations) + 1) // 2
+        locations_col1 = locations[:mid_point]
+        locations_col2 = locations[mid_point:]
+
+        # 左側の列
+        with env_cols[0]:
+            for loc in locations_col1:
+                items = environment_state.get(loc, [])
+                # 'kitchen_shelf' -> 'Kitchen Shelf'
+                loc_label = loc.replace("_", " ").title()
+
+                with st.expander(f"{loc_label} ({len(items)}個)"):
+                    if items:
+                        st.multiselect(
+                            f"（{loc_label}にある物）",
+                            items,
+                            default=items,
+                            disabled=True,
+                            label_visibility="collapsed",  # ラベルを非表示に
+                        )
                     else:
-                        st.error("LLMが生成したタスク目標のパースに失敗しました。")
-                
-                # (G) [フェーズ2] 行動計画が生成されたかパース
-                plan_str = extract_xml_tag(reply, "FunctionSequence")
-                if plan_str:
-                    # [変更点] 介入時に古い計画がクリアされているため、extendでOK
-                    actions = parse_function_sequence(plan_str)
-                    if actions:
-                        st.session_state.action_plan_queue.extend(actions)
-                        st.info(f"{len(actions)}ステップの計画を受信しました。")
-                
-                # (H) 画面を再描画
-                st.rerun()
+                        st.info("（何もありません）")
+
+        # 右側の列
+        with env_cols[1]:
+            for loc in locations_col2:
+                items = environment_state.get(loc, [])
+                loc_label = loc.replace("_", " ").title()
+
+                with st.expander(f"{loc_label} ({len(items)}個)"):
+                    if items:
+                        st.multiselect(
+                            f"（{loc_label}にある物）",
+                            items,
+                            default=items,
+                            disabled=True,
+                            label_visibility="collapsed",
+                        )
+                    else:
+                        st.info("（何もありません）")
+
+        # --- 3. タスク目標 (ついでに表示) ---
+        st.divider()
+        st.markdown("##### 🎯 現在のタスク目標")
+        task_goal = current_state.get("task_goal", {})
+        target_loc = task_goal.get("target_location", "未設定")
+        items_needed = task_goal.get("items_needed", {})
+
+        col_t1, col_t2 = st.columns(2)
+        col_t1.metric("目標地点", str(target_loc).title() if target_loc else "未設定")
+
+        if items_needed:
+            # 辞書 { 'itemA': 2, 'itemB': 1 } をリスト表示
+            item_list = [f"{item} (x{count})" for item, count in items_needed.items()]
+            col_t2.markdown("**必要なアイテム:**")
+            col_t2.dataframe(
+                item_list,
+                use_container_width=True,
+                hide_index=True,
+                column_config={"value": "アイテム (個数)"},
+            )
+        else:
+            col_t2.metric("必要なアイテム", "なし")
+
+        # --- 元のJSONはデバッグ用に折りたたんで残す ---
+        with st.expander("詳細な状態（JSON）"):
+            st.json(current_state)
 
     # 7. 評価フォームの表示（should_stop判定ロジックは変更済み）  
     end_message = ""
