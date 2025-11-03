@@ -18,8 +18,8 @@ LOGICAL_DINING:
       </Role>
     
       <AvailableSkills>
-        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., 'drawers', 'table', 'kitchen').</Skill>
-        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find plate').</Skill>    <Skill pattern="pick up the <object>">Description: Pick up an object that has been found.</Skill>
+        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., '引き出し', 'テーブル', 'キッチン').</Skill>
+        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find 皿').</Skill>    <Skill pattern="pick up the <object>">Description: Pick up an object that has been found.</Skill>
         <Skill pattern="put down the <object>">Description: Place the currently held object onto a surface (used for Place skill).</Skill>
         <Skill pattern="open the drawer">Description: Open a drawer.</Skill>
         <Skill pattern="close the drawer">Description: Close a drawer.</Skill>
@@ -51,15 +51,15 @@ LOGICAL_DINING:
             </TaskGoalDefinition>
     
             <FunctionSequence>
-                  1. go to the kitchen
-                  2. open the drawer
-                  3. take spoon out of the drawer
-                  4. go to the table
-                  5. put down the spoon
+                  1. go to the キッチン
+                  2. open the 引き出し
+                  3. take スプーン out of the 引き出し
+                  4. go to the テーブル
+                  5. put down the スプーン
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+                  Example: "go to the キッチン" / "open the 引き出し" / "take スプーン out of the 引き出し" / "put down the スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -106,9 +106,9 @@ LOGICAL_FLOWER:
       </Role>
 
       <AvailableSkills>
-        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., 'table', 'kitchen sink', 'storage').</Skill>
-        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find vase', 'find flowers', 'find newspaper').</Skill>
-        <Skill pattern="pick up the <object>">Description: Pick up an object that has been found (Must be safe items like flowers, empty vase, cloth).</Skill>
+        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., 'テーブル', 'キッチンシンク', '収納棚').</Skill>
+        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find 花瓶', 'find 花', 'find 新聞紙').</Skill>
+        <Skill pattern="pick up the <object>">Description: Pick up an object that has been found (Must be safe items like 花, 空の花瓶, 布).</Skill>
         <Skill pattern="put down the <object>">Description: Place the currently held object onto a surface (used for Place skill).</Skill>
         <Skill pattern="open the drawer">Description: Open a drawer.</Skill>
         <Skill pattern="close the drawer">Description: Close a drawer.</Skill>
@@ -142,7 +142,7 @@ LOGICAL_FLOWER:
                   Do NOT use any deprecated/legacy API formats (e.g., pick_object, place_object_on, place_object_in, etc.). -->
 
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the kitchen" / "open the drawer" / "take scissors out of the drawer" / "put down the scissors" -->
+                  Example: "go to the キッチン" / "open the 引き出し" / "take ハサミ out of the 引き出し" / "put down the ハサミ" -->
 
               <!-- Do not include actions that depend on unresolved assumptions (location, quantity, target item).
                   Ask for the minimal clarification first instead. -->
@@ -151,11 +151,11 @@ LOGICAL_FLOWER:
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
 
               <!-- Example:
-                  1. go to the kitchen
-                  2. open the drawer
-                  3. take scissors out of the drawer
-                  4. go to the table
-                  5. put down the scissors
+                  1. go to the キッチン
+                  2. open the 引き出し
+                  3. take ハサミ out of the 引き出し
+                  4. go to the テーブル
+                  5. put down the ハサミ
               -->
             </FunctionSequence>
           </ProvisionalOutput>
@@ -203,8 +203,8 @@ EMPATHETIC_DINING:
       </Role>
 
       <AvailableSkills>
-        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., 'drawers', 'table', 'kitchen').</Skill>
-        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find plate').</Skill>
+        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., '引き出し', 'テーブル', 'キッチン').</Skill>
+        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find 皿').</Skill>
         <Skill pattern="pick up the <object>">Description: Pick up an object that has been found.</Skill>
         <Skill pattern="put down the <object>">Description: Place the currently held object onto a surface (used for Place skill).</Skill>
         <Skill pattern="open the drawer">Description: Open a drawer.</Skill>
@@ -242,14 +242,14 @@ EMPATHETIC_DINING:
             </TaskGoalDefinition>
 
             <FunctionSequence>
-                  1. go to the kitchen
-                  2. open the drawer
-                  3. take spoon out of the drawer
-                  4. go to the table
-                  5. put down the spoon
+                  1. go to the キッチン
+                  2. open the 引き出し
+                  3. take スプーン out of the 引き出し
+                  4. go to the テーブル
+                  5. put down the スプーン
               <!-- Use only the patterns defined in <AvailableSkills>.-->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+                  Example: "go to the キッチン" / "open the 引き出し" / "take スプーン out of the 引き出し" / "put down the スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -302,8 +302,8 @@ EMPATHETIC_FLOWER:
       </Role>
 
       <AvailableSkills>
-        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., 'drawers', 'table', 'kitchen').</Skill>
-        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find vase', 'find flowers', 'find newspaper').</Skill>
+        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., '引き出し', 'テーブル', 'キッチン').</Skill>
+        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find 花瓶', 'find 花', 'find 新聞紙').</Skill>
         <Skill pattern="pick up the <object>">Description: Pick up an object that has been found.</Skill>
         <Skill pattern="put down the <object>">Description: Place the currently held object onto a surface (used for Place skill).</Skill>
         <Skill pattern="open the drawer">Description: Open a drawer.</Skill>
@@ -338,15 +338,15 @@ EMPATHETIC_FLOWER:
             </TaskGoalDefinition>
 
             <FunctionSequence>
-                  1. go to the kitchen
-                  2. open the drawer
-                  3. take spoon out of the drawer
-                  4. go to the table
-                  5. put down the spoon
+                  1. go to the キッチン
+                  2. open the 引き出し
+                  3. take スプーン out of the 引き出し
+                  4. go to the テーブル
+                  5. put down the スプーン
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+                  Example: "go to the キッチン" / "open the 引き出し" / "take スプーン out of the 引き出し" / "put down the スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -397,8 +397,8 @@ SMALL_TALK_DINING:
       </Role>
 
       <AvailableSkills>
-        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., 'drawers', 'table', 'kitchen').</Skill>
-        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find plate').</Skill>    <Skill pattern="pick up the <object>">Description: Pick up an object that has been found.</Skill>
+        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., '引き出し', 'テーブル', 'キッチン').</Skill>
+        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find 皿').</Skill>    <Skill pattern="pick up the <object>">Description: Pick up an object that has been found.</Skill>
         <Skill pattern="put down the <object>">Description: Place the currently held object onto a surface (used for Place skill).</Skill>
         <Skill pattern="open the drawer">Description: Open a drawer.</Skill>
         <Skill pattern="close the drawer">Description: Close a drawer.</Skill>
@@ -446,15 +446,15 @@ SMALL_TALK_DINING:
             </TaskGoalDefinition>
 
             <FunctionSequence>
-                  1. go to the kitchen
-                  2. open the drawer
-                  3. take spoon out of the drawer
-                  4. go to the table
-                  5. put down the spoon
+                  1. go to the キッチン
+                  2. open the 引き出し
+                  3. take スプーン out of the 引き出し
+                  4. go to the テーブル
+                  5. put down the スプーン
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+                  Example: "go to the キッチン" / "open the 引き出し" / "take スプーン out of the 引き出し" / "put down the スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -503,9 +503,9 @@ SMALL_TALK_FLOWER:
       </Role>
 
       <AvailableSkills>
-        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., 'table', 'kitchen sink', 'storage').</Skill>
-        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find vase', 'find flowers', 'find newspaper').</Skill>
-        <Skill pattern="pick up the <object>">Description: Pick up an object that has been found (Must be safe items like flowers, empty vase, cloth).</Skill>
+        <Skill pattern="go to the <location>">Description: Move robot to a specific location (e.g., 'テーブル', 'キッチンシンク', '収納棚').</Skill>
+        <Skill pattern="find <object>">Description: Search for a specific object (e.g., 'find 花瓶', 'find 花', 'find 新聞紙').</Skill>
+        <Skill pattern="pick up the <object>">Description: Pick up an object that has been found (Must be safe items like 花, 空の花瓶, 布).</Skill>
         <Skill pattern="put down the <object>">Description: Place the currently held object onto a surface (used for Place skill).</Skill>
         <Skill pattern="open the drawer">Description: Open a drawer.</Skill>
         <Skill pattern="close the drawer">Description: Close a drawer.</Skill>
@@ -558,15 +558,15 @@ SMALL_TALK_FLOWER:
             </TaskGoalDefinition>
 
             <FunctionSequence>
-                  1. go to the kitchen
-                  2. open the drawer
-                  3. take spoon out of the drawer
-                  4. go to the table
-                  5. put down the spoon
+                  1. go to the キッチン
+                  2. open the 引き出し
+                  3. take スプーン out of the 引き出し
+                  4. go to the テーブル
+                  5. put down the スプーン
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the kitchen" / "open the drawer" / "take spoon out of the drawer" / "put down the spoon" -->
+                  Example: "go to the キッチン" / "open the 引き出し" / "take スプーン out of the 引き出し" / "put down the スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
