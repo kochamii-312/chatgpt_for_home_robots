@@ -298,46 +298,7 @@ def app():
 
     st.session_state[prompt_label_state_key] = prompt_label
 
-    payload = None
-    with st.expander("タスク調整（任意）", expanded=False):
-        task_sets = load_image_task_sets()
-        if not task_sets:
-            st.warning("写真とタスクのセットが保存されていません。まず『写真とタスクの選定・保存』ページで作成してください。")
-            st.session_state["selected_image_paths"] = []
-            st.session_state["experiment2_selected_task_set"] = None
-            st.session_state["experiment2_task_labels"] = []
-            st.session_state["experiment2_label_to_key"] = {}
-            payload = {}
-        else:
-            choice_pairs = build_task_set_choices(task_sets)
-            labels = [label for label, _ in choice_pairs]
-            label_to_key = {label: key for label, key in choice_pairs}
-
-            st.session_state["experiment2_task_labels"] = labels
-            st.session_state["experiment2_label_to_key"] = label_to_key
-
-            if not labels:
-                st.warning("保存済みのタスクが読み込めませんでした。")
-                st.session_state["selected_image_paths"] = []
-                st.session_state["experiment2_selected_task_set"] = None
-                st.session_state["experiment2_task_labels"] = []
-                st.session_state["experiment2_label_to_key"] = {}
-                payload = {}
-            else:
-                stored_label = st.session_state.get("experiment2_selected_task_label")
-                if stored_label not in labels:
-                    stored_label = random.choice(labels)
-                selected_label = st.selectbox(
-                    "タスク",
-                    labels,
-                    index=labels.index(stored_label),
-                )
-                st.session_state["experiment2_selected_task_label"] = selected_label
-                selected_task_name = label_to_key.get(selected_label)
-                st.session_state["experiment2_selected_task_set"] = selected_task_name
-                payload = task_sets.get(selected_task_name, {}) if selected_task_name else {}
-    if not isinstance(payload, dict):
-        payload = {}
+    payload = {}
 
     house = payload.get("house") if isinstance(payload, dict) else ""
     room = payload.get("room") if isinstance(payload, dict) else ""
