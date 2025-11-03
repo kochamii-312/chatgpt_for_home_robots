@@ -425,12 +425,11 @@ def app():
                 # [!!!] ここで実際のロボットAPIを呼び出す（代わりにESMを更新）[!!!]
                 with st.spinner(f"実行中: {action_to_run}..."):
                     # time.sleep(1) # import time が必要
-                    esm.update_state_from_action(action_to_run)
+                    execution_log = esm.update_state_from_action(action_to_run)
 
                 # 実行結果を会話履歴（コンテキスト）に追加
-                exec_msg = (
-                    f"（実行完了: {action_to_run}。ロボットの状態を更新しました。）"
-                )
+                exec_details = execution_log or "ロボットの状態を更新しました。"
+                exec_msg = f"（実行完了: {action_to_run}。\n{exec_details}）"
                 context.append({"role": "user", "content": exec_msg})  # 実行結果をLLMに伝える
                 st.chat_message("user").write(exec_msg)
 
