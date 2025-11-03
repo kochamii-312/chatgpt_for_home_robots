@@ -744,6 +744,7 @@ def app():
                 scores.update(godspeed_likeability_scores)
                 scores.update(godspeed_intelligence_scores)
                 scores.update(godspeed_safety_scores)
+                scores.update(trust_scores)
                 termination_label = (
                     "タスク完了ボタンが押されました"
                     if st.session_state.get("force_end")
