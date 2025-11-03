@@ -389,12 +389,12 @@ def app():
     end_message = ""
 
     tab_conversation, tab_state = st.tabs([
-        "④ロボットとの会話",
-        "③現在の状態",
+        "ロボットとの会話",
+        "現在の状態",
     ])
 
     with tab_conversation:
-        st.markdown("#### ④ロボットとの会話")
+        st.markdown("#### ③ロボットとの会話")
         st.write(
             "最初に②のタスクを入力し、ロボットと自由に会話してください。"
             "最終的にはロボットと一緒に、タスクを達成させてください。"
@@ -537,7 +537,7 @@ def app():
         end_message = "ユーザーが会話を終了しました。"
 
     with tab_state:
-        st.markdown("#### ③現在の状態")
+        st.markdown("#### 現在の状態")
         st.caption(
             "ExternalStateManager (ESM) が保持している状態です。ロボットの行動に応じて更新されます。"
         )
@@ -816,10 +816,9 @@ def app():
                 st.session_state["experiment2_followup_prompt"] = True
                 st.session_state.pop("experiment2_followup_choice", None)
 
-    st.markdown("#### トラブルシューティング")
     cols1 = st.columns([2, 1])
     with cols1[0]:
-        st.markdown("**🤔「〇〇します」のあとロボットの実行が始まらない場合→**")
+        st.markdown("🤔「〇〇します」のあとロボットの実行が始まらない場合→")
     with cols1[1]:
         if st.button("▶️実行を始める", key="manual_request_next_plan"):
             next_plan_request = "行動計画も出力して"
@@ -829,9 +828,9 @@ def app():
             st.rerun()
     cols2 = st.columns([2, 1])
     with cols2[0]:
-        st.markdown("**🚨バグが起きた場合（LLMからの回答がない等）→**")
+        st.markdown("🔄️会話をもう一度やり直したい")
     with cols2[1]:
-        if st.button("⚠️会話をリセット", key="reset_conv"):
+        if st.button("⚠️会話をクリア", key="reset_conv"):
             save_conversation_history_to_firestore(
                 "会話をリセットしました",
                 metadata={"experiment_page": PROMPT_GROUP},
@@ -840,9 +839,9 @@ def app():
             st.rerun()
     cols = st.columns([2, 1])
     with cols[0]:
-        st.markdown("**😊ロボットとのタスクが完了した場合→**")
+        st.markdown("✅ロボットとのタスクが完了した場合")
     with cols[1]:
-        if st.button("✅タスク完了！", key="force_end_button"):
+        if st.button("🎉タスク完了！", key="force_end_button"):
             st.session_state.force_end = True
             st.rerun()
     if st.session_state.get("experiment2_followup_prompt"):
