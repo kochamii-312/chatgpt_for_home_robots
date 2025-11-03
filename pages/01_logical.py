@@ -120,6 +120,15 @@ GodSpeed_perceived_safety_QUESTIONS = [
     ("godspeed_safety3", "Quiescent 平穏な (1) - Surprised 驚いた (5)")
 ]
 
+Trust_scale_QUESTIONS = [
+    ("trust1", "このロボットは能力が高いと信じている"),
+    ("trust2", "私はこのロボットを信頼している"),
+    ("trust3", "このロボットの助言（アドバイス）は信頼できる"),
+    ("trust4", "私はこのロボットに頼れる"),
+    ("trust5", "このロボットの動作（ふるまい）は一貫していると思う"),
+    ("trust6", "このロボットの助言に従うとき、このロボットは最善を尽くしてくれると信頼している"),
+]
+
 load_dotenv()
 
 
@@ -609,12 +618,6 @@ def app():
                 name = st.text_input(
                     "あなたの名前やユーザーネーム等（被験者区別用）"
                 )
-                impression = st.text_input(
-                    "AIとの会話や、ロボットの行動計画について「印象に残ったこと」があればお願いします。"
-                )
-                free = st.text_input(
-                    "その他に何か感じたことがあればお願いします。"
-                )
 
                 # st.markdown("###### SUS（システムユーザビリティ尺度）")
                 # sus_scores = {}
@@ -704,6 +707,20 @@ def app():
                         key=f"{key}_experiment2",
                     )
 
+                st.markdown("#### 信頼尺度（Trust Scale）")
+                trust_scores = {}
+                for key, question in Trust_scale_QUESTIONS:
+                    trust_scores[key] = st.slider(
+                        question,
+                        min_value=1,
+                        max_value=5,
+                        value=3,
+                        step=1,
+                        format="%d",
+                        key=f"{key}_experiment2",
+                    )
+                
+                st.markdown("#### 自由記述")
                 impression = st.text_input(
                     "AIとの会話や、ロボットの行動計画について「印象に残ったこと」があればお願いします。"
                 )
@@ -747,7 +764,7 @@ def app():
             st.markdown("🤔ロボット行動時、赤いボタンが出てこない場合→")
         with cols1[1]:
             if st.button("▶️実行を始める", key="manual_request_next_plan"):
-                next_plan_request = "行動計画も出力して"
+                next_plan_request = "正しい形式で番号付き行動計画リストも出力して"
                 context.append({"role": "user", "content": next_plan_request})
                 st.chat_message("user").write(next_plan_request)
                 st.session_state.trigger_llm_call = True

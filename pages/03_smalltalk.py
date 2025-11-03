@@ -783,7 +783,7 @@ def app():
             st.markdown("🤔ロボット行動時、赤いボタンが出てこない場合→")
         with cols1[1]:
             if st.button("▶️実行を始める", key="manual_request_next_plan"):
-                next_plan_request = "行動計画も出力して"
+                next_plan_request = "正しい形式で番号付き行動計画リストも出力して"
                 context.append({"role": "user", "content": next_plan_request})
                 st.chat_message("user").write(next_plan_request)
                 st.session_state.trigger_llm_call = True
