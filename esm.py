@@ -84,7 +84,13 @@ class ExternalStateManager:
         実行された行動（文字列）をパースし、seld.current_state を更新する。
         これが「状態の逐次更新」の核となる部分です。
         """
-        print(f"Action Executed: {executed_action_string}")
+        log_messages = []
+
+        def log(message):
+            print(message)
+            log_messages.append(message)
+
+        log(f"Action Executed: {executed_action_string}")
         action = executed_action_string.lower().strip()
         state = self.current_state
 
@@ -92,7 +98,7 @@ class ExternalStateManager:
             if action.startswith("go to the"):
                 location = action.replace("go to the", "").strip()
                 state["robot_status"]["location"] = location
-                print(f"Robot moved to {location}")
+                log(f"Robot moved to {location}")
             
             elif action.startswith("pick up the"):
                 item = action.replace("pick up the", "").strip()
@@ -100,9 +106,9 @@ class ExternalStateManager:
                 if item in state["environment"].get(location, []):
                     state["environment"][location].remove(item)
                     state["robot_status"]["holding"] = item
-                    print(f"Robot picked up {item} from {location}")
+                    log(f"Robot picked up {item} from {location}")
                 else:
-                    print(f"Item {item} not found at {location}")
+                    log(f"Item {item} not found at {location}")
 
             elif action.startswith("put down the"):
                 item = action.replace("put down the", "").strip()
@@ -110,26 +116,26 @@ class ExternalStateManager:
                 if state["robot_status"]["holding"] == item:
                     state["environment"].setdefault(location, []).append(item)
                     state["robot_status"]["holding"] = None
-                    print(f"Robot put down {item} at {location}")
+                    log(f"Robot put down {item} at {location}")
                 else:
-                    print(f"Robot is not holding {item}")
+                    log(f"Robot is not holding {item}")
 
             elif action.startswith("find a/an"):
                 item = action.replace("find a", "").replace("find an", "").strip()
                 found = False
                 for loc, items in state["environment"].items():
                     if item in items:
-                        print(f"Found {item} at {loc}")
+                        log(f"Found {item} at {loc}")
                         found = True
                         break
                 if not found:
-                    print(f"{item} not found in the environment")
+                    log(f"{item} not found in the environment")
 
             elif action.startswith("open the drawer"):
-                print("Robot opened the drawer (no state change implemented)")
+                log("Robot opened the drawer (no state change implemented)")
             
             elif action.startswith("close the drawer"):
-                print("Robot closed the drawer (no state change implemented)")
+                log("Robot closed the drawer (no state change implemented)")
             
             elif "in the drawer" in action and action.startswith("put"):
                 item_match = re.search(r'put (.*?) in the drawer', action)
@@ -139,9 +145,9 @@ class ExternalStateManager:
                     if state["robot_status"]["holding"] == item:
                         state["environment"].setdefault(location, []).append(item)
                         state["robot_status"]["holding"] = None
-                        print(f"Robot put {item} in the drawer at {location}")
+                        log(f"Robot put {item} in the drawer at {location}")
                     else:
-                        print(f"Robot is not holding {item}")
+                        log(f"Robot is not holding {item}")
 
             elif "out of the drawer" in action and action.startswith("take"):
                 item_match = re.search(r'take (.*?) out of the drawer', action)
@@ -151,18 +157,22 @@ class ExternalStateManager:
                     if item in state["environment"].get(location, []):
                         state["environment"][location].remove(item)
                         state["robot_status"]["holding"] = item
-                        print(f"Robot took {item} out of the drawer at {location}")
+                        log(f"Robot took {item} out of the drawer at {location}")
                     else:
-                        print(f"Item {item} not found in the drawer at {location}")
+                        log(f"Item {item} not found in the drawer at {location}")
             
             elif action.startswith("done"):
-                print("Task completed.")
-            
+                log("Task completed.")
+
             else:
-                print(f"Unrecognized action: {action}")
-        
+                log(f"Unrecognized action: {action}")
+
         except Exception as e:
-            return(f"State Update Error: {e} on action: {action}")
+            log(f"State Update Error: {e} on action: {action}")
             # (失敗した場合の処理)
-        
-        print(f"State Updated: Robot at {state['robot_status']['location']}, holding {state['robot_status']['holding']}")
+
+        log(
+            f"State Updated: Robot at {state['robot_status']['location']}, holding {state['robot_status']['holding']}"
+        )
+
+        return "\n".join(log_messages)
