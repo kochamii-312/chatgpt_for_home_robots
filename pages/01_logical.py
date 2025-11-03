@@ -307,7 +307,7 @@ def app():
     task_lines = extract_task_lines(payload)
 
     st.markdown("#### ②指定されたタスク")
-    st.write("下のタスクをそのまま画面下部のチャットに入力してください。")
+    st.caption("下のタスクをそのまま画面下部のチャットに入力してください。")
     if selected_taskinfo:
         st.info(selected_taskinfo)
     else:
@@ -353,9 +353,11 @@ def app():
 
     with tab_conversation:
         st.markdown("#### ③ロボットとの会話")
-        st.write(
-            "最初に②のタスクを入力し、ロボットと自由に会話してください。"
-            "最終的にはロボットと一緒に、タスクを達成させてください。"
+        st.caption(
+            """
+            最初に②のタスクを入力し、ロボットと自由に会話してください。  
+            最終的にはロボットと「協力して」、タスクを達成させてください。
+            """
         )
 
         # 2. 既存の会話履歴を表示
@@ -500,7 +502,7 @@ def app():
         )
 
         # --- 1. ロボットの状態 ---
-        st.markdown("##### 🤖 ロボット")
+        st.markdown("##### 👀 ロボットの様子")
         col1, col2 = st.columns(2)
 
         # esm.py のキーに合わせて指定
@@ -738,34 +740,36 @@ def app():
                 st.session_state["experiment2_followup_prompt"] = True
                 st.session_state.pop("experiment2_followup_choice", None)
 
-    cols1 = st.columns([2, 1])
-    with cols1[0]:
-        st.markdown("🤔「〇〇します」のあとロボットの実行が始まらない場合→")
-    with cols1[1]:
-        if st.button("▶️実行を始める", key="manual_request_next_plan"):
-            next_plan_request = "行動計画も出力して"
-            context.append({"role": "user", "content": next_plan_request})
-            st.chat_message("user").write(next_plan_request)
-            st.session_state.trigger_llm_call = True
-            st.rerun()
-    cols2 = st.columns([2, 1])
-    with cols2[0]:
-        st.markdown("🔄️会話をもう一度やり直したい→")
-    with cols2[1]:
-        if st.button("⚠️会話をクリア", key="reset_conv"):
-            save_conversation_history_to_firestore(
-                "会話をリセットしました",
-                metadata={"experiment_page": PROMPT_GROUP},
-            )
-            _reset_conversation_state(system_prompt)
-            st.rerun()
-    cols = st.columns([2, 1])
-    with cols[0]:
-        st.markdown("✅ロボットとのタスクが完了した場合→")
-    with cols[1]:
-        if st.button("🎉タスク完了！", key="force_end_button"):
-            st.session_state.force_end = True
-            st.rerun()
+    with st.container(border=True):
+        st.markdown("#### ⚙️操作パネル")
+        cols1 = st.columns([2, 1])
+        with cols1[0]:
+            st.markdown("🤔ロボット行動時、赤いボタンが出てこない場合→")
+        with cols1[1]:
+            if st.button("▶️実行を始める", key="manual_request_next_plan"):
+                next_plan_request = "行動計画も出力して"
+                context.append({"role": "user", "content": next_plan_request})
+                st.chat_message("user").write(next_plan_request)
+                st.session_state.trigger_llm_call = True
+                st.rerun()
+        cols2 = st.columns([2, 1])
+        with cols2[0]:
+            st.markdown("⚠️会話をもう一度やり直したい場合→")
+        with cols2[1]:
+            if st.button("🔄️会話をリセット", key="reset_conv"):
+                save_conversation_history_to_firestore(
+                    "会話をリセットしました",
+                    metadata={"experiment_page": PROMPT_GROUP},
+                )
+                _reset_conversation_state(system_prompt)
+                st.rerun()
+        cols = st.columns([2, 1])
+        with cols[0]:
+            st.markdown("🎉ロボットとのタスクが完了した場合→")
+        with cols[1]:
+            if st.button("✅タスク完了！", key="force_end_button"):
+                st.session_state.force_end = True
+                st.rerun()
     if st.session_state.get("experiment2_followup_prompt"):
         if NEXT_PAGE:
             if st.button("次の実験へ→", key="followup_no", type="primary"):
