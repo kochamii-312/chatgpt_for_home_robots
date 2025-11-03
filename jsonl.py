@@ -591,6 +591,32 @@ def save_conversation_history_to_firestore(
     _save_to_firestore(entry, collection_override=collection_override)
 
 
+def record_task_duration(
+    *,
+    prompt_group: Optional[str],
+    started_at: datetime,
+    ended_at: datetime,
+    duration_seconds: float,
+    metadata: Optional[dict[str, Any]] = None,
+    collection_override: str = "task_durations",
+) -> None:
+    """Persist task duration information to Firestore."""
+
+    entry: dict[str, Any] = {
+        "event_type": "task_duration",
+        "prompt_group": prompt_group or "",
+        "started_at": started_at.isoformat(),
+        "ended_at": ended_at.isoformat(),
+        "duration_seconds": duration_seconds,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+    if metadata:
+        entry.update(metadata)
+
+    _save_to_firestore(entry, collection_override=collection_override)
+
+
 def save_experiment_2_result(
     human_scores: dict,
     termination_reason: str = "",

@@ -1,6 +1,7 @@
 import json
 import random
 import re
+from datetime import datetime, timezone
 from pathlib import Path
 
 import streamlit as st
@@ -16,6 +17,7 @@ from dotenv import load_dotenv
 
 from api import build_bootstrap_user_message, client
 from jsonl import (
+    record_task_duration,
     save_conversation_history_to_firestore,
 )
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
@@ -89,6 +91,8 @@ def _reset_conversation_state(system_prompt: str) -> None:
     st.session_state["chat_input_history"] = []
     st.session_state["experiment2_followup_prompt"] = False
     st.session_state.pop("experiment2_followup_choice", None)
+    st.session_state.pop("task_timer_started_at", None)
+    st.session_state.pop("task_duration_recorded", None)
     _update_random_task_selection(
         "experiment2_selected_task_label",
         "experiment2_task_labels",
@@ -378,6 +382,8 @@ def app():
                     messages_for_api = [system_message] + context
 
                     # (D) LLM API 呼び出し
+                    if not st.session_state.get("task_timer_started_at"):
+                        st.session_state["task_timer_started_at"] = datetime.now(timezone.utc).isoformat()
                     response = client.chat.completions.create(
                         model="gpt-4o-mini",  # または "gpt-4-turbo"
                         messages=messages_for_api,
@@ -573,6 +579,23 @@ def app():
             st.markdown("🎉ロボットとのタスクが完了した場合")
         with cols[1]:
             if st.button("✅タスク完了！", key="force_end_button"):
+                if not st.session_state.get("task_duration_recorded"):
+                    started_at_raw = st.session_state.get("task_timer_started_at")
+                    if started_at_raw:
+                        try:
+                            started_at = datetime.fromisoformat(started_at_raw)
+                        except ValueError:
+                            started_at = None
+                        if started_at:
+                            ended_at = datetime.now(timezone.utc)
+                            duration_seconds = (ended_at - started_at).total_seconds()
+                            record_task_duration(
+                                prompt_group=PROMPT_GROUP,
+                                started_at=started_at,
+                                ended_at=ended_at,
+                                duration_seconds=duration_seconds,
+                            )
+                            st.session_state["task_duration_recorded"] = True
                 st.session_state.force_end = True
                 st.rerun()
     if st.session_state.get("experiment2_followup_prompt"):
