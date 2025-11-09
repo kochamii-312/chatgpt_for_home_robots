@@ -45,6 +45,14 @@ class ExternalStateManager:
                 "アルミホイル",
                 "キッチンペーパー"
             ],
+            "キッチンシンク" : [
+                "水",
+                "スポンジ",
+                "食器用洗剤",
+                "たわし",
+                "排水口ネット",
+                "シンク用ブラシ"
+            ],
             "ダイニングテーブル": [
                 "ティッシュ",
                 "花瓶の花",
@@ -253,18 +261,40 @@ class ExternalStateManager:
         xml_prompt += f"    <Holding>{state['robot_status']['holding']}</Holding>\n"
         xml_prompt += f"  </RobotStatus>\n"
         xml_prompt += f"  <Environment>\n"
-        xml_prompt += f"    <dining_table>{state['environment']['dining_table']}</dining_table>\n"
-        xml_prompt += f"    <kitchen_shelf>{state['environment']['kitchen_shelf']}</kitchen_shelf>\n"
-        xml_prompt += f"    <kitchen_drawer>{state['environment']['kitchen_drawer']}</kitchen_drawer>\n"
-        xml_prompt += f"    <living_room>{state['environment']['living_room']}</living_room>\n"
-        xml_prompt += f"    <top_shelf>{state['environment']['top_shelf']}</top_shelf>\n"
-        xml_prompt += f"    <closet>{state['environment']['closet']}</closet>\n"
-        xml_prompt += f"    <storeroom>{state['environment']['storeroom']}</storeroom>\n"
+
+        # --- キッチン・ダイニング ---
+        xml_prompt += f"    <キッチンの棚>{state['environment']['キッチンの棚']}</キッチンの棚>\n"
+        xml_prompt += f"    <キッチンの引き出し>{state['environment']['キッチンの引き出し']}</キッチンの引き出し>\n"
+        xml_prompt += f"    <ダイニングテーブル>{state['environment']['ダイニングテーブル']}</ダイニングテーブル>\n"
+        xml_prompt += f"    <キッチンシンク>{state['environment']['キッチンシンク']}</キッチンシンク>\n"
+        xml_prompt += f"    <冷蔵庫>{state['environment']['冷蔵庫']}</冷蔵庫>\n"
+
+        # --- 居住スペース ---
+        xml_prompt += f"    <リビングルーム>{state['environment']['リビングルーム']}</リビングルーム>\n"
+        xml_prompt += f"    <寝室>{state['environment']['寝室']}</寝室>\n"
+        xml_prompt += f"    <デスク>{state['environment']['デスク']}</デスク>\n"
+
+        # --- 収納 ---
+        xml_prompt += f"    <一番上の棚>{state['environment']['一番上の棚']}</一番上の棚>\n"
+        xml_prompt += f"    <クローゼット>{state['environment']['クローゼット']}</クローゼット>\n"
+        xml_prompt += f"    <物置>{state['environment']['物置']}</物置>\n"
+
+        # --- 水回り・その他 ---
+        xml_prompt += f"    <玄関>{state['environment']['玄関']}</玄関>\n"
+        xml_prompt += f"    <洗面所>{state['environment']['洗面所']}</洗面所>\n"
+        xml_prompt += f"    <浴室>{state['environment']['浴室']}</浴室>\n"
+        xml_prompt += f"    <トイレ>{state['environment']['トイレ']}</トイレ>\n"
+        xml_prompt += f"    <ベランダ>{state['environment']['ベランダ']}</ベランダ>\n"
+
         xml_prompt += f"  </Environment>\n"
         xml_prompt += f"  <TaskGoal>\n"
         xml_prompt += f"    <TargetLocation>{state['task_goal']['target_location']}</TargetLocation>\n"
         xml_prompt += f"    <ItemsNeeded>{state['task_goal']['items_needed']}</ItemsNeeded>\n"
         xml_prompt += f"  </TaskGoal>\n"
+        xml_prompt += "  <PlanningHint>\n"
+        xml_prompt += "    行動計画（FunctionSequence）で場所やアイテムを指定するときは、current_stateに記載された名称の中から最も似ている語を探して使用してください。\n"
+        xml_prompt += "    current_stateに類似した名称が見つからない場合は、その場所やアイテムは環境にないと発話してください。\n"
+        xml_prompt += "  </PlanningHint>\n"
         xml_prompt += "</CurrentState>"
         return xml_prompt
     
