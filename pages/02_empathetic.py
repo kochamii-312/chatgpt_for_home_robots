@@ -199,7 +199,7 @@ def _extract_between(tag: str, text: str) -> str | None:
 
 def app():
     # require_consent()
-    st.markdown("### 実験 異なるコミュニケーションタイプの比較")
+    st.markdown("### 共感型")
 
     if should_hide_sidebar():
         apply_sidebar_hiding()
@@ -563,13 +563,13 @@ def app():
                 st.chat_message("user").write(next_plan_request)
                 st.session_state.trigger_llm_call = True
                 st.rerun()
-        cols2 = st.columns([2, 1])
-        with cols2[0]:
-            st.markdown("⚠️会話をもう一度やり直したい場合→")
-        with cols2[1]:
-            if st.button("🔄️会話をリセット", key="reset_conv"):
-                _reset_conversation_state(system_prompt)
-                st.rerun()
+        # cols2 = st.columns([2, 1])
+        # with cols2[0]:
+        #     st.markdown("⚠️会話をもう一度やり直したい場合→")
+        # with cols2[1]:
+        #     if st.button("🔄️会話をリセット", key="reset_conv"):
+        #         _reset_conversation_state(system_prompt)
+        #         st.rerun()
         cols = st.columns([2, 1])
         with cols[0]:
             st.markdown("🎉ロボットとのタスクが完了した場合→")
