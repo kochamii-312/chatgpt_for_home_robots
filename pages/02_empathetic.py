@@ -248,6 +248,28 @@ def app():
         st.info(selected_taskinfo)
     else:
         st.info("タスクが登録されていません。")
+
+    memo_state_key = f"{PROMPT_GROUP}_task_completion_memo"
+    memo_input_key = f"{memo_state_key}_input"
+    memo_save_key = f"{memo_state_key}_save"
+
+    if memo_input_key not in st.session_state and memo_state_key in st.session_state:
+        st.session_state[memo_input_key] = st.session_state[memo_state_key]
+
+    st.markdown(
+        "**上記のタスクが完了した状態を想像してください。どの場所にどんなものが置かれていますか？ここにメモしてください。**"
+    )
+    st.session_state.setdefault(memo_input_key, "")
+    st.text_area(
+        "タスク完了時の状態メモ",
+        key=memo_input_key,
+        label_visibility="collapsed",
+        placeholder="例：テーブルの中央に花瓶を置き、椅子は壁側にそろえる。",
+    )
+
+    if st.button("保存", key=memo_save_key, type="primary"):
+        st.session_state[memo_state_key] = st.session_state.get(memo_input_key, "")
+        st.success("メモを保存しました。")
     # if task_lines:
     #     for line in task_lines:
     #         st.info(f"{line}")
