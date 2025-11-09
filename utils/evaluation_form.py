@@ -44,7 +44,7 @@ NASA_TLX_QUESTIONS: Tuple[Tuple[str, str], ...] = (
     ),
     (
         "nasa_performance",
-        "ロボットと会話をするにあたって、あなた自身が設定した作業（指示）は、どの程度ロボットによって達成されたと考えますか？",
+        "ロボットと会話をするにあたって、あなた自身が想定した作業（指示）は、どの程度ロボットによって達成されたと考えますか？",
     ),
     (
         "nasa_effort",
@@ -101,6 +101,10 @@ TRUST_SCALE_QUESTIONS: Tuple[Tuple[str, str], ...] = (
     ("trust4", "私はこのロボットに頼れる"),
     ("trust5", "このロボットの動作（ふるまい）は一貫していると思う"),
     ("trust6", "このロボットの助言に従うとき、このロボットは最善を尽くしてくれると信頼している"),
+)
+
+OTHER_QUESTIONS: Tuple[Tuple[str, str], ...] = (
+    ("other1", "これからもこのロボットを使いたいと思う"),
 )
 
 
@@ -212,6 +216,13 @@ def render_standard_evaluation_form(
                 key_prefix=prefix,
             )
 
+        other_scores: Dict[str, int] = {}
+        st.markdown("#### その他の質問")
+        other_scores = _collect_slider_scores(
+            OTHER_QUESTIONS,
+            key_prefix=prefix,
+        )
+
         st.markdown("#### 自由記述")
         impression = st.text_input(
             "AIとの会話や、ロボットの行動計画について「印象に残ったこと」があればお願いします。"
@@ -240,6 +251,7 @@ def render_standard_evaluation_form(
     scores.update(godspeed_likeability_scores)
     scores.update(godspeed_intelligence_scores)
     scores.update(godspeed_safety_scores)
+    scores.update(other_scores)
 
     if include_trust:
         scores.update(trust_scores)
@@ -267,4 +279,5 @@ __all__ = [
     "GODSPEED_PERCEIVED_INTELLIGENCE_QUESTIONS",
     "GODSPEED_PERCEIVED_SAFETY_QUESTIONS",
     "TRUST_SCALE_QUESTIONS",
+    "OTHER_QUESTIONS",
 ]
