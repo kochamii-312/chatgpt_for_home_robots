@@ -25,6 +25,7 @@ LOGICAL_DINING:
         <Skill pattern="open the <location>">Description: Open the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="close the <location>">Description: Close the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="hand over <object> to user">Description: Hand over the currently held object to the user.</Skill>
+        <Skill pattern="push <object>">Description: Push an object (e.g., 'リモコン', 'スピーカー'). </Skill>
         <Skill pattern="done">Description: Use this action ONLY when the entire user request is complete.</Skill>
       </AvailableSkills>
     
@@ -60,7 +61,7 @@ LOGICAL_DINING:
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the キッチンの引き出し" / "take スプーン out of the キッチンの引き出し" / "put down the スプーン" -->
+                  Example: "go to the キッチンの引き出し" / "take スプーン from キッチンの引き出し" / "put スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -111,6 +112,7 @@ LOGICAL_FLOWER:
         <Skill pattern="open the <location>">Description: Open the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="close the <location>">Description: Close the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="hand over <object> to user">Description: Hand over the currently held object to the user.</Skill>
+        <Skill pattern="push <object>">Description: Push an object (e.g., 'リモコン', 'スピーカー'). </Skill>
         <Skill pattern="done">Description: Use this action ONLY when the entire user request is complete.</Skill>
       </AvailableSkills>
 
@@ -144,7 +146,7 @@ LOGICAL_FLOWER:
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the キッチンの引き出し" / "take スプーン out of the キッチンの引き出し" / "put down the スプーン" -->
+                  Example: "go to the キッチンの引き出し" / "take スプーン from キッチンの引き出し" / "put スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -200,6 +202,7 @@ EMPATHETIC_DINING:
         <Skill pattern="open the <location>">Description: Open the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="close the <location>">Description: Close the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="hand over <object> to user">Description: Hand over the currently held object to the user.</Skill>
+        <Skill pattern="push <object>">Description: Push an object (e.g., 'リモコン', 'スピーカー'). </Skill>
         <Skill pattern="done">Description: Use this action ONLY when the entire user request is complete.</Skill>
       </AvailableSkills>
 
@@ -240,7 +243,7 @@ EMPATHETIC_DINING:
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the キッチンの引き出し" / "take スプーン out of the キッチンの引き出し" / "put down the スプーン" -->
+                  Example: "go to the キッチンの引き出し" / "take スプーン from キッチンの引き出し" / "put スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -298,6 +301,7 @@ EMPATHETIC_FLOWER:
         <Skill pattern="open the <location>">Description: Open the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="close the <location>">Description: Close the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="hand over <object> to user">Description: Hand over the currently held object to the user.</Skill>
+        <Skill pattern="push <object>">Description: Push an object (e.g., 'リモコン', 'スピーカー'). </Skill>
         <Skill pattern="done">Description: Use this action ONLY when the entire user request is complete.</Skill>
       </AvailableSkills>
 
@@ -335,7 +339,7 @@ EMPATHETIC_FLOWER:
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the キッチンの引き出し" / "take スプーン out of the キッチンの引き出し" / "put down the スプーン" -->
+                  Example: "go to the キッチンの引き出し" / "take スプーン from キッチンの引き出し" / "put スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -396,6 +400,7 @@ SMALL_TALK_DINING:
         <Skill pattern="open the <location>">Description: Open the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="close the <location>">Description: Close the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="hand over <object> to user">Description: Hand over the currently held object to the user.</Skill>
+        <Skill pattern="push <object>">Description: Push an object (e.g., 'リモコン', 'スピーカー'). </Skill>
         <Skill pattern="done">Description: Use this action ONLY when the entire user request is complete.</Skill>
       </AvailableSkills>
 
@@ -418,7 +423,7 @@ SMALL_TALK_DINING:
           1. (Goal Setting): ユーザーのハイレベルなゴール（テーブル準備をしたい）を理解します。
           2. (Goal Definition): <TaskGoalDefinition>を一度だけ生成します。
           
-          3. (Initial Small Talk): Goal確定後、**FunctionSequenceは空**にし、<SpokenResponse>で非タスク要素（**環境内の無関係なアイテムへの言及を含む**）を引き出す**雑談の質問を必ずしてください**。
+          3. (Initial Small Talk): Goal確定後、**FunctionSequenceは空**にし、<SpokenResponse>で非タスク要素（**環境内の無関係なアイテムへの言及を含む**）を引き出す**雑談の質問を必ずしてください**。非タスク要素について、「～しましょうか？」のようなサブタスクの提案も含めることができます。
           
           4. (Planning Trigger): ユーザーが**「（オブジェクト）を（場所）へ運んで」や「（オブジェクト）を取ってきて」のように、<AvailableSkills>で実行可能な具体的なサブタスクを指示**した場合に**のみ**、FunctionSequenceを生成します。
           
@@ -454,7 +459,7 @@ SMALL_TALK_DINING:
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the キッチンの引き出し" / "take スプーン out of the キッチンの引き出し" / "put down the スプーン" -->
+                  Example: "go to the キッチンの引き出し" / "take スプーン from キッチンの引き出し" / "put スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
@@ -509,6 +514,7 @@ SMALL_TALK_FLOWER:
         <Skill pattern="open the <location>">Description: Open the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="close the <location>">Description: Close the location (e.g., 'キッチンの引き出し').</Skill>
         <Skill pattern="hand over <object> to user">Description: Hand over the currently held object to the user.</Skill>
+        <Skill pattern="push <object>">Description: Push an object (e.g., 'リモコン', 'スピーカー'). </Skill>
         <Skill pattern="done">Description: Use this action ONLY when the entire user request is complete.</Skill>
       </AvailableSkills>
 
@@ -531,7 +537,7 @@ SMALL_TALK_FLOWER:
           1. (Goal Setting): ユーザーのハイレベルなゴール（花を活けたい）を理解します。
           2. (Goal Definition): <TaskGoalDefinition>を一度だけ生成します。
 
-          3. (Initial Small Talk): Goal確定後、**FunctionSequenceは空**にし、<SpokenResponse>で非タスク要素（**環境内の無関係なアイテムへの言及を含む**）を引き出す**雑談の質問を必ずしてください**。
+          3. (Initial Small Talk): Goal確定後、**FunctionSequenceは空**にし、<SpokenResponse>で非タスク要素（**環境内の無関係なアイテムへの言及を含む**）を引き出す**雑談の質問を必ずしてください**。非タスク要素について、「～しましょうか？」のようなサブタスクの提案も含めることができます。
 
           4. (Planning Trigger): ユーザーが**「（オブジェクト）を（場所）へ運んで」や「（オブジェクト）を取ってきて」のように、<AvailableSkills>で実行可能な具体的なサブタスクを指示**した場合に**のみ**、FunctionSequenceを生成します。
 
@@ -561,7 +567,7 @@ SMALL_TALK_FLOWER:
               <!-- Use only the patterns defined in <AvailableSkills>. -->
               <!-- DO NOT use any XML tags here. -->
               <!-- Each step must contain exactly one skill sentence.
-                  Example: "go to the キッチンの引き出し" / "take スプーン out of the キッチンの引き出し" / "put down the スプーン" -->
+                  Example: "go to the キッチンの引き出し" / "take スプーン from キッチンの引き出し" / "put スプーン" -->
               <!-- Rule: "If you ask, don't plan."
                   If you output a <ClarifyingQuestion> in this turn, submit an EMPTY <FunctionSequence> (plan in the next turn). -->
             </FunctionSequence>
