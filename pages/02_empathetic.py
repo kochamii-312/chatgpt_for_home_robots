@@ -18,7 +18,6 @@ from dotenv import load_dotenv
 from api import build_bootstrap_user_message, client
 from jsonl import (
     record_task_duration,
-    save_conversation_history_to_firestore,
 )
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import run_plan_and_show, show_spoken_response, show_function_sequence
@@ -569,10 +568,6 @@ def app():
             st.markdown("⚠️会話をもう一度やり直したい場合→")
         with cols2[1]:
             if st.button("🔄️会話をリセット", key="reset_conv"):
-                save_conversation_history_to_firestore(
-                    "会話をリセットしました",
-                    metadata={"experiment_page": PROMPT_GROUP},
-                )
                 _reset_conversation_state(system_prompt)
                 st.rerun()
         cols = st.columns([2, 1])
