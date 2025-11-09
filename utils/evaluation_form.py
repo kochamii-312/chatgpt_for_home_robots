@@ -236,25 +236,26 @@ def render_standard_evaluation_form(
 
     st.warning("評価を保存しました！適宜休憩をとってください☕")
 
-    scores: Dict[str, int | str] = {
-        "name": name,
-        "impression": impression,
-        "free": free,
+    godspeed_scores: Dict[str, Dict[str, int]] = {
+        "anthropomorphism": godspeed_anthroporphism_scores,
+        "animacy": godspeed_animacy_scores,
+        "likeability": godspeed_likeability_scores,
+        "perceived_intelligence": godspeed_intelligence_scores,
+        "perceived_safety": godspeed_safety_scores,
     }
 
-    if include_sus:
-        scores.update(sus_scores)
-
-    scores.update(nasa_scores)
-    scores.update(godspeed_anthroporphism_scores)
-    scores.update(godspeed_animacy_scores)
-    scores.update(godspeed_likeability_scores)
-    scores.update(godspeed_intelligence_scores)
-    scores.update(godspeed_safety_scores)
-    scores.update(other_scores)
-
-    if include_trust:
-        scores.update(trust_scores)
+    human_scores: Dict[str, object] = {
+        "participant_name": name,
+        "sus": sus_scores if include_sus else {},
+        "nasatlx": nasa_scores,
+        "godspeed": godspeed_scores,
+        "trust_scale": trust_scores if include_trust else {},
+        "other": other_scores,
+        "text_inputs": {
+            "impression": impression,
+            "free": free,
+        },
+    }
 
     if termination_label is None:
         termination_label = (
@@ -263,7 +264,11 @@ def render_standard_evaluation_form(
             else ""
         )
 
-    save_experiment_2_result(scores, termination_label=termination_label)
+    save_experiment_2_result(
+        human_scores,
+        prompt_group=prompt_group,
+        termination_label=termination_label,
+    )
 
     return True
 
