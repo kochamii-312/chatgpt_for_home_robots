@@ -1,6 +1,7 @@
 import json
 import os
 import re
+from copy import deepcopy
 from datetime import datetime, timezone
 from itertools import zip_longest
 from pathlib import Path
@@ -147,8 +148,29 @@ def evaluate_plan_success_probability(
     return max(0.0, min(100.0, value))
 
 
-def _save_to_firestore(entry, collection_override=None):
+def _normalize_prompt_group(prompt_group: Optional[str]) -> str:
+    if not prompt_group:
+        return ""
+    slug = re.sub(r"[^0-9a-zA-Z]+", "_", str(prompt_group)).strip("_")
+    return slug.lower()
+
+
+def _apply_prompt_group_to_collection(
+    collection: Optional[str], prompt_group: Optional[str]
+) -> Optional[str]:
+    if not collection:
+        return collection
+    slug = _normalize_prompt_group(prompt_group)
+    if not slug:
+        return collection
+    if collection.endswith(f"_{slug}"):
+        return collection
+    return f"{collection}_{slug}"
+
+
+def _save_to_firestore(entry, collection_override=None, prompt_group: Optional[str] = None):
     collection = collection_override or os.getenv("FIREBASE_COLLECTION")
+    collection = _apply_prompt_group_to_collection(collection, prompt_group)
     creds = (
         os.getenv("FIREBASE_CREDENTIALS")
         or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")  # ← 追加: ADC/パス
@@ -540,6 +562,15 @@ def _strip_visible_text(text: Optional[str]) -> str:
     return cleaned.strip()
 
 
+def _extract_xml_tag(text: Optional[str], tag: str) -> str:
+    if not text:
+        return ""
+    match = re.search(fr"<{tag}>([\s\S]*?)</{tag}>", text, re.IGNORECASE)
+    if match:
+        return match.group(1).strip()
+    return ""
+
+
 def _collect_conversation_history(include_system: bool = False) -> list[dict[str, Any]]:
     """Return the current conversation history stored in session state."""
 
@@ -551,25 +582,81 @@ def _collect_conversation_history(include_system: bool = False) -> list[dict[str
         if not include_system and role == "system":
             continue
 
-        entry: dict[str, Any] = {"role": role}
-        content = message.get("content")
-        if isinstance(content, str):
-            entry["content"] = content
+        timestamp = message.get("timestamp")
+        if not isinstance(timestamp, str):
+            timestamp = datetime.now(timezone.utc).isoformat()
+
+        raw_content = message.get("full_reply")
+        visible_content = message.get("content")
+        if isinstance(visible_content, str) and not raw_content:
+            raw_content = visible_content
+
+        base_content = raw_content or ""
+
+        entry: dict[str, Any] = {
+            "31_content": base_content,
+            "32_spoken_response": "",
+            "33_task_goal_definition": "",
+            "34_function_sequence": "",
+            "35_role": role,
+            "36_time": timestamp,
+        }
 
         if role == "assistant":
-            full_reply = message.get("full_reply")
-            if isinstance(full_reply, str) and full_reply:
-                entry["full_reply"] = full_reply
+            spoken = message.get("spoken_response")
+            if not isinstance(spoken, str):
+                spoken = _extract_xml_tag(raw_content, "SpokenResponse") or (
+                    visible_content if isinstance(visible_content, str) else ""
+                )
+            entry["32_spoken_response"] = spoken
+            entry["33_task_goal_definition"] = _extract_xml_tag(
+                raw_content, "TaskGoalDefinition"
+            )
+            entry["34_function_sequence"] = _extract_xml_tag(
+                raw_content, "FunctionSequence"
+            )
+        else:
+            entry["32_spoken_response"] = (
+                visible_content if isinstance(visible_content, str) else ""
+            )
+
+        # Maintain backward compatibility with previous, non-numbered keys
+        entry.update(
+            {
+                "content": base_content,
+                "spoken_response": entry["32_spoken_response"],
+                "task_goal_definition": entry["33_task_goal_definition"],
+                "function_sequence": entry["34_function_sequence"],
+                "role": role,
+                "time": timestamp,
+            }
+        )
 
         history.append(entry)
 
     return history
 
 
+def _format_state_history_snapshots(
+    state_history: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    formatted: list[dict[str, Any]] = []
+    for snapshot in state_history:
+        formatted_snapshot = dict(snapshot)
+        formatted_snapshot["41_robot_statue"] = snapshot.get("robot_status", {})
+        formatted_snapshot["42_environment"] = snapshot.get("environment", {})
+        formatted_snapshot["43_known_locations"] = snapshot.get("known_locations", {})
+        formatted_snapshot["44_open_locations"] = snapshot.get("open_locations", [])
+        formatted_snapshot["45_time"] = snapshot.get("time", "")
+        formatted.append(formatted_snapshot)
+    return formatted
+
+
 def save_conversation_history_to_firestore(
     termination_label: str,
     metadata: Optional[dict[str, Any]] = None,
     collection_override: Optional[str] = "experiment_2_results",
+    prompt_group: Optional[str] = None,
 ) -> None:
     """Persist the current conversation history with the specified termination label."""
 
@@ -581,14 +668,25 @@ def save_conversation_history_to_firestore(
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
 
+    entry["3_conversation_history"] = conversation_history
+
     if metadata:
         entry.update(metadata)
+
+    prompt_group_value = prompt_group or st.session_state.get("prompt_group")
+    if prompt_group_value:
+        entry["prompt_group"] = prompt_group_value
 
     prompt_label = st.session_state.get("prompt_label")
     if prompt_label:
         entry["prompt_label"] = prompt_label
+    entry["1_prompt_label"] = prompt_label or ""
 
-    _save_to_firestore(entry, collection_override=collection_override)
+    _save_to_firestore(
+        entry,
+        collection_override=collection_override,
+        prompt_group=prompt_group_value,
+    )
 
 
 def record_task_duration(
@@ -614,11 +712,19 @@ def record_task_duration(
     if metadata:
         entry.update(metadata)
 
-    _save_to_firestore(entry, collection_override=collection_override)
+    st.session_state["task_duration_latest"] = entry
+
+    _save_to_firestore(
+        entry,
+        collection_override=collection_override,
+        prompt_group=prompt_group,
+    )
 
 
 def save_experiment_2_result(
     human_scores: dict,
+    *,
+    prompt_group: Optional[str] = None,
     termination_reason: str = "",
     termination_label: str = "",
 ):
@@ -666,7 +772,6 @@ def save_experiment_2_result(
         "information": information,
         "clarifying_history": clarifying_history,
         "human_scores": human_scores,
-        "prompt_label": st.session_state.get("prompt_label", ""),
         "termination_label": termination_label,
         "termination_reason": termination_reason,
         "function": {
@@ -675,6 +780,63 @@ def save_experiment_2_result(
             "variable_lengths": variable_lengths,
         },
     }
+    prompt_group_value = prompt_group or st.session_state.get("prompt_group") or ""
+    if prompt_group_value:
+        entry["prompt_group"] = prompt_group_value
+
+    prompt_label = st.session_state.get("prompt_label")
+    if not prompt_label and prompt_group_value:
+        for key in (
+            f"{prompt_group_value}_prompt_label",
+            f"experiment2_{prompt_group_value}_prompt_label",
+        ):
+            prompt_label = st.session_state.get(key)
+            if prompt_label:
+                break
+    if prompt_label:
+        entry["prompt_label"] = prompt_label
+    entry["1_prompt_label"] = prompt_label or ""
+
+    memo_state = ""
+    if prompt_group_value:
+        memo_state = st.session_state.get(
+            f"{prompt_group_value}_task_completion_memo", ""
+        )
+    entry["memo_state"] = memo_state
+    entry["2_memo_state"] = memo_state
+
+    conversation_history = _collect_conversation_history()
+    entry["conversation_history"] = conversation_history
+    entry["3_conversation_history"] = conversation_history
+
+    esm = st.session_state.get("esm")
+    state_history: list[dict[str, Any]] = []
+    if esm and hasattr(esm, "state_history"):
+        state_history = [deepcopy(s) for s in getattr(esm, "state_history", [])]
+    formatted_state_history = _format_state_history_snapshots(state_history)
+    entry["current_state_history"] = formatted_state_history
+    entry["4_current_state"] = formatted_state_history
+
+    task_duration = st.session_state.get("task_duration_latest")
+    if not task_duration:
+        started_at_raw = st.session_state.get("task_timer_started_at")
+        started_at = None
+        if isinstance(started_at_raw, str):
+            try:
+                started_at = datetime.fromisoformat(started_at_raw)
+            except ValueError:
+                started_at = None
+        if started_at:
+            ended_at = datetime.now(timezone.utc)
+            task_duration = {
+                "prompt_group": prompt_group_value,
+                "started_at": started_at.isoformat(),
+                "ended_at": ended_at.isoformat(),
+                "duration_seconds": (ended_at - started_at).total_seconds(),
+            }
+    if task_duration:
+        entry["task_duration"] = task_duration
+        entry["5_task_duration"] = task_duration
     if success_probability is not None:
         entry["plan_success_probability"] = success_probability
 
@@ -685,6 +847,17 @@ def save_experiment_2_result(
 
     if assistant_visible_messages:
         entry["assistant_visible_messages"] = assistant_visible_messages
+
+    structured_human_scores = {
+        "61_sus": human_scores.get("sus", {}),
+        "62_nasatlx": human_scores.get("nasatlx", {}),
+        "63_godspeed": human_scores.get("godspeed", {}),
+        "64_trust_scale": human_scores.get("trust_scale", {}),
+        "65_other": human_scores.get("other", {}),
+        "66_text_inputs": human_scores.get("text_inputs", {}),
+    }
+    entry["6_human_scores"] = structured_human_scores
+    entry["participant_name"] = human_scores.get("participant_name", "")
 
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
@@ -700,7 +873,11 @@ def save_experiment_2_result(
         if need_newline:
             f.write("\n")
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    _save_to_firestore(entry, collection_override="experiment_2_results")
+    _save_to_firestore(
+        entry,
+        collection_override="experiment_2_results",
+        prompt_group=prompt_group_value,
+    )
 
 def show_jsonl_block():
     """保存済みjsonlデータをコードブロックで表示"""

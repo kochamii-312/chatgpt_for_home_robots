@@ -1,5 +1,7 @@
 import ast
 import re
+from copy import deepcopy
+from datetime import datetime, timezone
 
 class ExternalStateManager:
     def __init__(self):
@@ -224,6 +226,32 @@ class ExternalStateManager:
                 "items_needed": {}
             }
         }
+        self.state_history: list[dict] = []
+        self._record_state_snapshot("initialized")
+
+    def _record_state_snapshot(self, event: str, metadata: dict | None = None) -> None:
+        snapshot = {
+            "event": event,
+            "time": datetime.now(timezone.utc).isoformat(),
+            "robot_status": deepcopy(self.current_state.get("robot_status", {})),
+            "environment": deepcopy(self.current_state.get("environment", {})),
+            "known_locations": deepcopy(self.current_state.get("known_item_locations", {})),
+            "open_locations": list(self.current_state.get("open_locations", [])),
+        }
+        if metadata:
+            snapshot["metadata"] = metadata
+
+        if self.state_history:
+            last = self.state_history[-1]
+            if (
+                last.get("robot_status") == snapshot["robot_status"]
+                and last.get("environment") == snapshot["environment"]
+                and last.get("known_locations") == snapshot["known_locations"]
+                and last.get("open_locations") == snapshot["open_locations"]
+            ):
+                return
+
+        self.state_history.append(snapshot)
     
     def set_task_goal_from_llm(self, goal_description_from_llm):
         """
@@ -245,6 +273,10 @@ class ExternalStateManager:
             self.current_state['task_goal']['target_location'] = goal_dict.get('target_location')
             self.current_state['task_goal']['items_needed'] = goal_dict.get('items_needed', {})
             print(f"Goal Set: {self.current_state['task_goal']}")
+            self._record_state_snapshot(
+                "task_goal_updated",
+                metadata={"raw": goal_description_from_llm},
+            )
             return True # パース成功
         except Exception as e:
             print(f"Error parsing task goal: {e}")
@@ -511,6 +543,11 @@ class ExternalStateManager:
         holding_display = robot_status.get("holding", [])
         log(
             f"State Updated: Robot at {robot_status.get('location')}, holding {holding_display}"
+        )
+
+        self._record_state_snapshot(
+            "action_update",
+            metadata={"action": executed_action_string},
         )
 
         return "\n".join(log_messages)

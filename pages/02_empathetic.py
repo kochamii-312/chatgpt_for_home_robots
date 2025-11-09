@@ -143,6 +143,16 @@ def safe_format_prompt(template: str, **kwargs) -> str:
     pattern = re.compile(r"\{(current_state_xml|house|room)\}")
     return pattern.sub(lambda m: str(kwargs.get(m.group(1), m.group(0))), template)
 
+
+def _append_context_message(context: list[dict], message: dict) -> None:
+    stamped = dict(message)
+    stamped.setdefault("timestamp", datetime.now(timezone.utc).isoformat())
+    if stamped.get("role") == "assistant" and "spoken_response" not in stamped:
+        content = stamped.get("content")
+        if isinstance(content, str):
+            stamped["spoken_response"] = content
+    context.append(stamped)
+
 def run_plan_and_show(reply: str):
     """<Plan> ... </Plan> を見つけて実行し、結果を表示"""
     plan_match = re.search(r"<Plan>(.*?)</Plan>", reply, re.S)
@@ -233,6 +243,8 @@ def app():
         return
 
     st.session_state[prompt_label_state_key] = prompt_label
+    st.session_state["prompt_label"] = prompt_label
+    st.session_state["prompt_group"] = PROMPT_GROUP
 
     payload = {}
 
@@ -348,7 +360,10 @@ def app():
                 # 実行結果を会話履歴（コンテキスト）に追加
                 exec_details = execution_log or "ロボットの状態を更新しました。"
                 exec_msg = f"（実行完了: {action_to_run}。\n{exec_details}）"
-                context.append({"role": "user", "content": exec_msg})  # 実行結果をLLMに伝える
+                _append_context_message(
+                    context,
+                    {"role": "user", "content": exec_msg},
+                )  # 実行結果をLLMに伝える
                 st.chat_message("user").write(exec_msg)
 
                 # キューが空になったら、LLMに次の計画を尋ねる
@@ -382,7 +397,10 @@ def app():
 
             # [変更点] ユーザー入力があった場合のみコンテキストに追加
             if user_input:
-                context.append({"role": "user", "content": user_input})
+                _append_context_message(
+                    context,
+                    {"role": "user", "content": user_input},
+                )
 
             # [!!!] LLM呼び出しのコアロジック [!!!]
             with st.chat_message("assistant"):
@@ -417,12 +435,13 @@ def app():
                     if not spoken_response:
                         spoken_response = strip_tags(reply) or "(...)"
 
-                    context.append(
+                    _append_context_message(
+                        context,
                         {
                             "role": "assistant",
                             "content": spoken_response,
                             "full_reply": reply,
-                        }
+                        },
                     )
                     st.session_state.turn_count += 1
 
@@ -581,7 +600,10 @@ def app():
         with cols1[1]:
             if st.button("▶️実行を始める", key="manual_request_next_plan"):
                 next_plan_request = "正しい形式で番号付き行動計画リストも出力して"
-                context.append({"role": "user", "content": next_plan_request})
+                _append_context_message(
+                    context,
+                    {"role": "user", "content": next_plan_request},
+                )
                 st.chat_message("user").write(next_plan_request)
                 st.session_state.trigger_llm_call = True
                 st.rerun()
