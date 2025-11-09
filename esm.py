@@ -6,8 +6,8 @@ class ExternalStateManager:
         # 1. 既知の初期状態
         self.current_state = {
             "robot_status": {
-                "location": "living_room",
-                "holding": None
+                "location": "リビングルーム",
+                "holding": []
             },
             "environment": {
             "キッチンの棚": [
@@ -217,6 +217,8 @@ class ExternalStateManager:
                 "室外機"
             ]
             },
+            "known_item_locations": {},
+            "open_locations": [],
             "task_goal": {
                 "target_location": None,
                 "items_needed": {}
@@ -287,6 +289,8 @@ class ExternalStateManager:
         xml_prompt += f"    <ベランダ>{state['environment']['ベランダ']}</ベランダ>\n"
 
         xml_prompt += f"  </Environment>\n"
+        xml_prompt += f"  <KnownItemLocations>{state.get('known_item_locations', {})}</KnownItemLocations>\n"
+        xml_prompt += f"  <OpenLocations>{state.get('open_locations', [])}</OpenLocations>\n"
         xml_prompt += f"  <TaskGoal>\n"
         xml_prompt += f"    <TargetLocation>{state['task_goal']['target_location']}</TargetLocation>\n"
         xml_prompt += f"    <ItemsNeeded>{state['task_goal']['items_needed']}</ItemsNeeded>\n"
@@ -312,77 +316,189 @@ class ExternalStateManager:
             log_messages.append(message)
 
         log(f"Action Executed: {executed_action_string}")
-        action = executed_action_string.lower().strip()
+        action = executed_action_string.strip()
+        normalized_action = action.lower()
         state = self.current_state
+        robot_status = state.setdefault("robot_status", {})
+        environment = state.setdefault("environment", {})
+        known_locations = state.setdefault("known_item_locations", {})
+        open_locations = state.setdefault("open_locations", [])
+
+        def ensure_holding_list():
+            holding = robot_status.get("holding", [])
+            if isinstance(holding, list):
+                return holding
+            if holding:
+                robot_status["holding"] = [holding]
+            else:
+                robot_status["holding"] = []
+            return robot_status["holding"]
+
+        def resolve_location(name):
+            for existing_location in environment.keys():
+                if existing_location.lower() == name.lower():
+                    return existing_location
+            return name
+
+        def resolve_item(name, location_key=None):
+            if location_key:
+                for existing_item in environment.get(location_key, []):
+                    if existing_item.lower() == name.lower():
+                        return existing_item
+            for loc, items in environment.items():
+                for existing_item in items:
+                    if existing_item.lower() == name.lower():
+                        return existing_item
+            for held_item in ensure_holding_list():
+                if held_item.lower() == name.lower():
+                    return held_item
+            return name
+
+        def remove_from_holding(name):
+            holding_items = ensure_holding_list()
+            for idx, held_item in enumerate(holding_items):
+                if held_item.lower() == name.lower():
+                    return holding_items.pop(idx)
+            return None
 
         try:
-            if action.startswith("go to the"):
-                location = action.replace("go to the", "").strip()
-                state["robot_status"]["location"] = location
-                log(f"Robot moved to {location}")
-            
-            elif action.startswith("pick up the"):
-                item = action.replace("pick up the", "").strip()
-                location = state["robot_status"]["location"]
-                if item in state["environment"].get(location, []):
-                    state["environment"][location].remove(item)
-                    state["robot_status"]["holding"] = item
-                    log(f"Robot picked up {item} from {location}")
+            if normalized_action.startswith("go to the "):
+                match = re.match(r"go to the (.+)", action, re.IGNORECASE)
+                if match:
+                    requested_location = match.group(1).strip()
+                    resolved_location = resolve_location(requested_location)
+                    robot_status["location"] = resolved_location
+                    log(f"Robot moved to {resolved_location}")
                 else:
-                    log(f"Item {item} not found at {location}")
+                    log(f"Could not parse location in action: {action}")
 
-            elif action.startswith("put down the"):
-                item = action.replace("put down the", "").strip()
-                location = state["robot_status"]["location"]
-                if state["robot_status"]["holding"] == item:
-                    state["environment"].setdefault(location, []).append(item)
-                    state["robot_status"]["holding"] = None
-                    log(f"Robot put down {item} at {location}")
+            elif normalized_action.startswith("find "):
+                match = re.match(r"find (.+)", action, re.IGNORECASE)
+                if match:
+                    requested_item = match.group(1).strip()
+                    resolved_item = None
+                    resolved_location = None
+                    for loc, items in environment.items():
+                        for candidate in items:
+                            if candidate.lower() == requested_item.lower():
+                                resolved_item = candidate
+                                resolved_location = loc
+                                break
+                        if resolved_item:
+                            break
+                    if resolved_item:
+                        known_locations[resolved_item] = resolved_location
+                        log(f"Found {resolved_item} at {resolved_location}")
+                    else:
+                        log(f"{requested_item} not found in the environment")
                 else:
-                    log(f"Robot is not holding {item}")
+                    log(f"Could not parse item to find in action: {action}")
 
-            elif action.startswith("find a/an"):
-                item = action.replace("find a", "").replace("find an", "").strip()
-                found = False
-                for loc, items in state["environment"].items():
-                    if item in items:
-                        log(f"Found {item} at {loc}")
-                        found = True
-                        break
-                if not found:
-                    log(f"{item} not found in the environment")
-
-            elif action.startswith("open the drawer"):
-                log("Robot opened the drawer (no state change implemented)")
-            
-            elif action.startswith("close the drawer"):
-                log("Robot closed the drawer (no state change implemented)")
-            
-            elif "in the drawer" in action and action.startswith("put"):
-                item_match = re.search(r'put (.*?) in the drawer', action)
-                if item_match:
-                    item = item_match.group(1).strip()
-                    location = state["robot_status"]["location"]
-                    if state["robot_status"]["holding"] == item:
-                        state["environment"].setdefault(location, []).append(item)
-                        state["robot_status"]["holding"] = None
-                        log(f"Robot put {item} in the drawer at {location}")
+            elif normalized_action.startswith("pick up the "):
+                match = re.match(r"pick up the (.+)", action, re.IGNORECASE)
+                if match:
+                    requested_item = match.group(1).strip()
+                    current_location = robot_status.get("location")
+                    resolved_location = resolve_location(current_location) if current_location else None
+                    resolved_item = resolve_item(requested_item, resolved_location)
+                    if resolved_location and resolved_item in environment.get(resolved_location, []):
+                        environment[resolved_location].remove(resolved_item)
+                        ensure_holding_list().append(resolved_item)
+                        known_locations.pop(resolved_item, None)
+                        log(f"Robot picked up {resolved_item} from {resolved_location}")
                     else:
-                        log(f"Robot is not holding {item}")
+                        log(f"Item {requested_item} not found at {current_location}")
+                else:
+                    log(f"Could not parse item to pick up in action: {action}")
 
-            elif "out of the drawer" in action and action.startswith("take"):
-                item_match = re.search(r'take (.*?) out of the drawer', action)
-                if item_match:
-                    item = item_match.group(1).strip()
-                    location = state["robot_status"]["location"]
-                    if item in state["environment"].get(location, []):
-                        state["environment"][location].remove(item)
-                        state["robot_status"]["holding"] = item
-                        log(f"Robot took {item} out of the drawer at {location}")
+            elif normalized_action.startswith("take ") and " from " in normalized_action:
+                match = re.match(r"take (.+) from (.+)", action, re.IGNORECASE)
+                if match:
+                    requested_item = match.group(1).strip()
+                    requested_location = match.group(2).strip()
+                    resolved_location = resolve_location(requested_location)
+                    resolved_item = resolve_item(requested_item, resolved_location)
+                    current_location = robot_status.get("location")
+                    if current_location and resolved_location.lower() != current_location.lower():
+                        log(
+                            f"Robot is at {current_location} and cannot take items from {requested_location}"
+                        )
+                    elif resolved_item in environment.get(resolved_location, []):
+                        environment[resolved_location].remove(resolved_item)
+                        ensure_holding_list().append(resolved_item)
+                        known_locations.pop(resolved_item, None)
+                        log(f"Robot took {resolved_item} from {resolved_location}")
                     else:
-                        log(f"Item {item} not found in the drawer at {location}")
-            
-            elif action.startswith("done"):
+                        log(f"Item {requested_item} not found in {requested_location}")
+                else:
+                    log(f"Could not parse take action: {action}")
+
+            elif normalized_action.startswith("put ") and " in the " in normalized_action:
+                match = re.match(r"put (.+) in the (.+)", action, re.IGNORECASE)
+                if match:
+                    requested_item = match.group(1).strip()
+                    requested_location = match.group(2).strip()
+                    resolved_location = resolve_location(requested_location)
+                    current_location = robot_status.get("location")
+                    if current_location and resolved_location.lower() != current_location.lower():
+                        log(
+                            f"Robot is at {current_location} and cannot put items in {requested_location}"
+                        )
+                    else:
+                        resolved_item = resolve_item(requested_item)
+                        removed_item = remove_from_holding(resolved_item)
+                        if removed_item:
+                            environment.setdefault(resolved_location, []).append(removed_item)
+                            known_locations[removed_item] = resolved_location
+                            log(f"Robot put {removed_item} in the {resolved_location}")
+                        else:
+                            log(f"Robot is not holding {requested_item}")
+                else:
+                    log(f"Could not parse put action: {action}")
+
+            elif normalized_action.startswith("open the "):
+                match = re.match(r"open the (.+)", action, re.IGNORECASE)
+                if match:
+                    requested_location = match.group(1).strip()
+                    resolved_location = resolve_location(requested_location)
+                    if resolved_location not in open_locations:
+                        open_locations.append(resolved_location)
+                    log(f"Robot opened the {resolved_location}")
+                else:
+                    log(f"Could not parse location to open in action: {action}")
+
+            elif normalized_action.startswith("close the "):
+                match = re.match(r"close the (.+)", action, re.IGNORECASE)
+                if match:
+                    requested_location = match.group(1).strip()
+                    resolved_location = resolve_location(requested_location)
+                    if resolved_location in open_locations:
+                        open_locations.remove(resolved_location)
+                    log(f"Robot closed the {resolved_location}")
+                else:
+                    log(f"Could not parse location to close in action: {action}")
+
+            elif normalized_action.startswith("hand over ") and " to user" in normalized_action:
+                match = re.match(r"hand over (.+) to user", action, re.IGNORECASE)
+                if match:
+                    requested_item = match.group(1).strip()
+                    removed_item = remove_from_holding(requested_item)
+                    if removed_item:
+                        log(f"Robot handed over {removed_item} to the user")
+                    else:
+                        log(f"Robot is not holding {requested_item}")
+                else:
+                    log(f"Could not parse hand over action: {action}")
+
+            elif normalized_action.startswith("push "):
+                match = re.match(r"push (.+)", action, re.IGNORECASE)
+                if match:
+                    pushed_object = match.group(1).strip()
+                    log(f"Robot pushed {pushed_object}")
+                else:
+                    log(f"Could not parse push action: {action}")
+
+            elif normalized_action.startswith("done"):
                 log("Task completed.")
 
             else:
@@ -392,8 +508,9 @@ class ExternalStateManager:
             log(f"State Update Error: {e} on action: {action}")
             # (失敗した場合の処理)
 
+        holding_display = robot_status.get("holding", [])
         log(
-            f"State Updated: Robot at {state['robot_status']['location']}, holding {state['robot_status']['holding']}"
+            f"State Updated: Robot at {robot_status.get('location')}, holding {holding_display}"
         )
 
         return "\n".join(log_messages)
