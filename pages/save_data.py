@@ -3,7 +3,7 @@ import os
 import re
 
 import streamlit as st
-from consent import require_consent
+from pages.consent import require_consent
 from dotenv import load_dotenv
 
 from api import client, build_bootstrap_user_message, CREATING_DATA_SYSTEM_PROMPT

@@ -1,5 +1,5 @@
 import streamlit as st
-from consent import require_consent
+from pages.consent import require_consent
 import json
 import os
 from difflib import SequenceMatcher

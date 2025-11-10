@@ -7,7 +7,7 @@ from pathlib import Path
 import streamlit as st
 import streamlit.components.v1 as components
 import yaml
-from consent import (
+from pages.consent import (
     apply_sidebar_hiding,
     configure_page,
     require_consent,
