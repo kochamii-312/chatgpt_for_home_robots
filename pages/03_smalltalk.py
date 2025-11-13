@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import streamlit as st
-import streamlit.components.v1 as components
 import yaml
 from pages.consent import (
     apply_sidebar_hiding,
@@ -21,15 +20,11 @@ from jsonl import (
 )
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import run_plan_and_show, show_spoken_response, show_function_sequence
-from image_task_sets import (
-    build_task_set_choices,
-    extract_task_lines,
-    load_image_task_sets,
-    resolve_image_paths,
-)
+from image_task_sets import extract_task_lines
 from two_classify import prepare_data  # 既存関数を利用
 from esm import ExternalStateManager
 from utils.evaluation_form import render_standard_evaluation_form
+from utils.image_choice import render_task_completion_image_choice
 
 PROMPT_GROUP = "smalltalk"
 NEXT_PAGE = None
@@ -264,23 +259,13 @@ def app():
     memo_input_key = f"{memo_state_key}_input"
     memo_save_key = f"{memo_state_key}_save"
 
-    if memo_input_key not in st.session_state and memo_state_key in st.session_state:
-        st.session_state[memo_input_key] = st.session_state[memo_state_key]
-
-    st.markdown(
-        "**上記のタスクが完了した状態を想像してください。どの場所にどんなものが置かれていますか？ここにメモしてください。**"
+    render_task_completion_image_choice(
+        selected_prompt=selected_prompt,
+        memo_state_key=memo_state_key,
+        memo_input_key=memo_input_key,
+        memo_save_key=memo_save_key,
+        instruction_text="上記のタスクが完了した状態を想像してください。5枚の写真から最もイメージに合うものを選んでください。",
     )
-    st.session_state.setdefault(memo_input_key, "")
-    st.text_area(
-        "タスク完了時の状態メモ",
-        key=memo_input_key,
-        label_visibility="collapsed",
-        placeholder="例：テーブルの中央に花瓶を置き、椅子は壁側にそろえる。",
-    )
-
-    if st.button("保存", key=memo_save_key, type="primary"):
-        st.session_state[memo_state_key] = st.session_state.get(memo_input_key, "")
-        st.success("メモを保存しました。")
     # if task_lines:
     #     for line in task_lines:
     #         st.info(f"{line}")
