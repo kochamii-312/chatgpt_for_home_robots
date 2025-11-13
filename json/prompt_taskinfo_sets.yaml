@@ -84,6 +84,12 @@ LOGICAL_DINING:
       </ClarificationPolicy>
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
+  image_candidates:
+    - images/house2/DINING/00000-rgb.png
+    - images/house2/DINING/00001-rgb.png
+    - images/house2/DINING/00002-rgb.png
+    - images/house2/DINING/00003-rgb.png
+    - images/house2/DINING/00004-rgb.png
 LOGICAL_FLOWER:
   task: 花束を活ける
   prompt_group: logical
@@ -168,12 +174,24 @@ LOGICAL_FLOWER:
       </ClarificationPolicy>
       </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
+  image_candidates:
+    - images/house6/LIVING/00043-rgb.png
+    - images/house6/LIVING/00044-rgb.png
+    - images/house6/LIVING/00045-rgb.png
+    - images/house6/LIVING/00046-rgb.png
+    - images/house6/LIVING/00047-rgb.png
 LOGICAL_PRESENT:
   task: プレゼントを包む
   prompt_group: none
   prompt: |
-    
+
   taskinfo: 友だちの誕生日プレゼントを一緒に包もう！
+  image_candidates:
+    - images/house6/DINING/00021-rgb.png
+    - images/house6/DINING/00022-rgb.png
+    - images/house6/DINING/00023-rgb.png
+    - images/house6/DINING/00024-rgb.png
+    - images/house6/DINING/00025-rgb.png
 EMPATHETIC_DINING:
   task: 夕食のテーブル準備
   prompt_group: empathetic
@@ -272,6 +290,12 @@ EMPATHETIC_DINING:
       </ClarificationPolicy>
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
+  image_candidates:
+    - images/house2/DINING/00000-rgb.png
+    - images/house2/DINING/00001-rgb.png
+    - images/house2/DINING/00002-rgb.png
+    - images/house2/DINING/00003-rgb.png
+    - images/house2/DINING/00004-rgb.png
 EMPATHETIC_FLOWER:
   task: 花束を活ける
   prompt_group: empathetic
@@ -359,12 +383,24 @@ EMPATHETIC_FLOWER:
       </ClarificationPolicy>
     </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
+  image_candidates:
+    - images/house6/LIVING/00043-rgb.png
+    - images/house6/LIVING/00044-rgb.png
+    - images/house6/LIVING/00045-rgb.png
+    - images/house6/LIVING/00046-rgb.png
+    - images/house6/LIVING/00047-rgb.png
 EMPATHETIC_PRESENT:
   task: プレゼントを包む
   prompt_group: none
   prompt: |
-    
+
   taskinfo: 友だちの誕生日プレゼントを一緒に包もう！
+  image_candidates:
+    - images/house6/DINING/00021-rgb.png
+    - images/house6/DINING/00022-rgb.png
+    - images/house6/DINING/00023-rgb.png
+    - images/house6/DINING/00024-rgb.png
+    - images/house6/DINING/00025-rgb.png
 SMALL_TALK_DINING:
   task: 夕食のテーブル準備
   prompt_group: smalltalk
@@ -475,6 +511,12 @@ SMALL_TALK_DINING:
       </ClarificationPolicy>
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
+  image_candidates:
+    - images/house2/DINING/00000-rgb.png
+    - images/house2/DINING/00001-rgb.png
+    - images/house2/DINING/00002-rgb.png
+    - images/house2/DINING/00003-rgb.png
+    - images/house2/DINING/00004-rgb.png
 SMALL_TALK_FLOWER:
   task: 花束を活ける
   prompt_group: smalltalk
@@ -582,10 +624,22 @@ SMALL_TALK_FLOWER:
       </ClarificationPolicy>
     </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
+  image_candidates:
+    - images/house6/LIVING/00043-rgb.png
+    - images/house6/LIVING/00044-rgb.png
+    - images/house6/LIVING/00045-rgb.png
+    - images/house6/LIVING/00046-rgb.png
+    - images/house6/LIVING/00047-rgb.png
 SMALL_TALK_PRESENT:
   task: プレゼントを包む
   prompt_group: none
   prompt: |
-    
-    
+
+
   taskinfo: 友だちの誕生日プレゼントを一緒に包もう！
+  image_candidates:
+    - images/house6/DINING/00021-rgb.png
+    - images/house6/DINING/00022-rgb.png
+    - images/house6/DINING/00023-rgb.png
+    - images/house6/DINING/00024-rgb.png
+    - images/house6/DINING/00025-rgb.png
