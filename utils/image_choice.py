@@ -83,7 +83,7 @@ def render_task_completion_image_choice(
         st.session_state[memo_input_key] = existing[0]
 
     option_labels = {
-        path: f"画像{index}（{Path(path).name}）"
+        path: f"画像{index}"
         for index, path in enumerate(existing, start=1)
     }
 
@@ -92,7 +92,7 @@ def render_task_completion_image_choice(
         label = option_labels[path]
         with column:
             column.markdown(f"**{label.split('（')[0]}**")
-            column.image(path, use_column_width=True)
+            column.image(path, use_container_width=True)
             column.caption(Path(path).name)
 
     st.radio(
