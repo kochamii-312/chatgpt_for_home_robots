@@ -1,20 +1,24 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 import streamlit as st
 
 from image_task_sets import resolve_image_paths
+from utils.firebase_utils import save_document
+
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_IMAGE_DIRECTORIES = {
+    "DINING": _PROJECT_ROOT / "images" / "dining",
+    "FLOWER": _PROJECT_ROOT / "images" / "flower",
+}
+_IMAGE_PATTERNS = ("*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp", "*.gif")
 
 
 def _normalise_candidate_paths(candidates: Any, limit: int) -> list[str]:
-    """Return a list of path strings derived from ``candidates``.
-
-    ``candidates`` may be any iterable containing objects that can be
-    converted to strings.  Only the first ``limit`` entries are returned,
-    preserving order and skipping falsy values.
-    """
+    """Return a list of path strings derived from ``candidates``."""
 
     if not isinstance(candidates, Iterable) or isinstance(candidates, (str, bytes)):
         return []
@@ -28,25 +32,92 @@ def _normalise_candidate_paths(candidates: Any, limit: int) -> list[str]:
     return paths
 
 
+def _determine_image_directory(
+    selected_prompt: dict[str, Any] | None, prompt_label: str | None
+) -> Path | None:
+    """Return the image directory that best matches the current task."""
+
+    if isinstance(selected_prompt, dict):
+        explicit = selected_prompt.get("image_directory")
+        if explicit:
+            candidate = Path(explicit)
+            if not candidate.is_absolute():
+                candidate = (_PROJECT_ROOT / candidate).resolve()
+            if candidate.exists():
+                return candidate
+
+    label_candidates: list[str] = []
+
+    if prompt_label:
+        label_candidates.append(str(prompt_label))
+
+    if isinstance(selected_prompt, dict):
+        for key in ("task", "taskinfo"):
+            value = selected_prompt.get(key)
+            if isinstance(value, str) and value.strip():
+                label_candidates.append(value)
+
+    for label in label_candidates:
+        upper_label = label.upper()
+        if "DINING" in upper_label or any(
+            keyword in label for keyword in ("夕食", "テーブル", "食事", "ディナー")
+        ):
+            return _IMAGE_DIRECTORIES.get("DINING")
+        if "FLOWER" in upper_label or any(
+            keyword in label for keyword in ("花束", "花", "フラワー")
+        ):
+            return _IMAGE_DIRECTORIES.get("FLOWER")
+
+    return None
+
+
+def _collect_directory_images(directory: Path | None, limit: int) -> list[str]:
+    """Return image paths from ``directory`` up to ``limit`` entries."""
+
+    if directory is None:
+        return []
+
+    images: list[str] = []
+    if directory.exists():
+        seen: set[str] = set()
+        for pattern in _IMAGE_PATTERNS:
+            for path in sorted(directory.glob(pattern)):
+                path_str = str(path)
+                if path_str not in seen:
+                    images.append(path_str)
+                    seen.add(path_str)
+                if len(images) >= limit:
+                    break
+            if len(images) >= limit:
+                break
+    return images
+
+
+def _to_storage_path(path: str) -> str:
+    """Convert an absolute path to a project-relative string when possible."""
+
+    try:
+        resolved = Path(path).resolve()
+    except OSError:
+        return path
+
+    try:
+        return str(resolved.relative_to(_PROJECT_ROOT))
+    except ValueError:
+        return str(resolved)
+
+
 def render_task_completion_image_choice(
     *,
     selected_prompt: dict[str, Any] | None,
+    prompt_label: str | None,
     memo_state_key: str,
     memo_input_key: str,
     memo_save_key: str,
     instruction_text: str | None = None,
     max_images: int = 5,
 ) -> None:
-    """Render an image selection UI for the task completion memo.
-
-    Args:
-        selected_prompt: Prompt metadata that may contain ``image_candidates``.
-        memo_state_key: Session state key used to persist the saved choice.
-        memo_input_key: Session state key used by the radio widget.
-        memo_save_key: Session state key used by the save button.
-        instruction_text: Optional text shown above the image grid.
-        max_images: Maximum number of images to display.
-    """
+    """Render an image selection UI for the task completion memo."""
 
     st.session_state.setdefault(memo_state_key, "")
 
@@ -59,13 +130,19 @@ def render_task_completion_image_choice(
     if isinstance(selected_prompt, dict):
         candidates = selected_prompt.get("image_candidates") or []
 
-    candidate_paths = _normalise_candidate_paths(candidates, max_images)
+    image_directory = _determine_image_directory(selected_prompt, prompt_label)
+    if image_directory is not None:
+        candidate_paths = _collect_directory_images(image_directory, max_images)
+    else:
+        candidate_paths = _normalise_candidate_paths(candidates, max_images)
+
     existing, missing = resolve_image_paths(candidate_paths)
 
     if missing:
         missing_list = "\n".join(f"- {path}" for path in missing)
         st.warning(
-            "以下の画像を読み込めませんでした。" "設定を確認してください:\n" + missing_list
+            "以下の画像を読み込めませんでした。"
+            "設定を確認してください:\n" + missing_list
         )
 
     if not existing:
@@ -102,6 +179,28 @@ def render_task_completion_image_choice(
         format_func=lambda path: option_labels.get(path, path),
     )
 
+    status_placeholder = st.empty()
+
     if st.button("保存", key=memo_save_key, type="primary"):
         st.session_state[memo_state_key] = st.session_state.get(memo_input_key, "")
-        st.success("選択を保存しました。")
+        selected_path = st.session_state.get(memo_input_key, "")
+        storage_path = _to_storage_path(selected_path)
+        available_images = [_to_storage_path(path) for path in existing]
+        payload = {
+            "selected_image": storage_path,
+            "available_images": available_images,
+            "prompt_label": prompt_label or "",
+            "prompt_group": st.session_state.get("prompt_group", ""),
+            "task": selected_prompt.get("task", "") if isinstance(selected_prompt, dict) else "",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        if image_directory is not None:
+            payload["image_directory"] = _to_storage_path(str(image_directory))
+        payload["instruction_text"] = instruction
+
+        try:
+            save_document("task_completion_image_choices", payload)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            status_placeholder.error(f"Firestoreへの保存に失敗しました: {exc}")
+        else:
+            status_placeholder.success("選択を保存しました。")
