@@ -83,7 +83,7 @@ def render_task_completion_image_choice(
         st.session_state[memo_input_key] = existing[0]
 
     option_labels = {
-        path: f"画像{index}"
+        path: f"{index}"
         for index, path in enumerate(existing, start=1)
     }
 
@@ -100,8 +100,9 @@ def render_task_completion_image_choice(
         existing,
         key=memo_input_key,
         format_func=lambda path: option_labels.get(path, path),
+        horizontal=True,
     )
 
     if st.button("保存", key=memo_save_key, type="primary"):
         st.session_state[memo_state_key] = st.session_state.get(memo_input_key, "")
-        st.success("選択を保存しました。")
+        st.success("選択を保存しました。ただし、ロボットはこの画像の情報を持っていません。")

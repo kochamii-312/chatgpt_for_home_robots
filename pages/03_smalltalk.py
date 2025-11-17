@@ -83,15 +83,15 @@ def _reset_conversation_state(system_prompt: str) -> None:
     st.session_state.turn_count = 0
     st.session_state.force_end = False
     st.session_state["chat_input_history"] = []
-    st.session_state["experiment2_followup_prompt"] = False
-    st.session_state.pop("experiment2_followup_choice", None)
+    st.session_state["experiment_followup_prompt"] = False
+    st.session_state.pop("experiment_followup_choice", None)
     st.session_state.pop("task_timer_started_at", None)
     st.session_state.pop("task_duration_recorded", None)
     _update_random_task_selection(
-        "experiment2_selected_task_label",
-        "experiment2_task_labels",
-        "experiment2_label_to_key",
-        "experiment2_selected_task_set",
+        "experiment_selected_task_label",
+        "experiment_task_labels",
+        "experiment_label_to_key",
+        "experiment_selected_task_set",
     )
 
 def _update_random_task_selection(label_key: str, labels_key: str, mapping_key: str, set_key: str) -> None:
@@ -214,7 +214,7 @@ def app():
         return
 
     prompt_keys = list(prompt_options.keys())
-    prompt_label_state_key = f"experiment2_{PROMPT_GROUP}_prompt_label"
+    prompt_label_state_key = f"experiment_{PROMPT_GROUP}_prompt_label"
     if prompt_label_state_key not in st.session_state:
         st.session_state[prompt_label_state_key] = random.choice(prompt_keys)
 
@@ -264,7 +264,6 @@ def app():
         memo_state_key=memo_state_key,
         memo_input_key=memo_input_key,
         memo_save_key=memo_save_key,
-        instruction_text="上記のタスクが完了した状態を想像してください。5枚の写真から最もイメージに合うものを選んでください。",
     )
     # if task_lines:
     #     for line in task_lines:
@@ -290,8 +289,8 @@ def app():
         st.session_state.force_end = False
     if "chat_input_history" not in st.session_state:
         st.session_state["chat_input_history"] = []
-    if "experiment2_followup_prompt" not in st.session_state:
-        st.session_state["experiment2_followup_prompt"] = False
+    if "experiment_followup_prompt" not in st.session_state:
+        st.session_state["experiment_followup_prompt"] = False
 
     context = st.session_state.context
     esm = st.session_state.esm
@@ -309,8 +308,8 @@ def app():
         st.markdown("#### ③ロボットとの会話")
         st.caption(
             """
-            最初に②のタスクを入力し、ロボットと自由に会話してください。
-            最終的にはロボットと「協力して」、タスクを達成させてください。
+            最初に②のタスクを入力し、ロボットと自然に会話してください。
+            最終的にはロボットと協力してタスクを達成させることが目標ですが、タスクに関係ない会話や指示もすることができます。
             """
         )
 
@@ -573,14 +572,14 @@ def app():
 
             if submitted:
                 st.session_state.active = False
-                st.session_state["experiment2_followup_prompt"] = True
-                st.session_state.pop("experiment2_followup_choice", None)
+                st.session_state["experiment_followup_prompt"] = True
+                st.session_state.pop("experiment_followup_choice", None)
 
     with st.container(border=True):
         st.markdown("#### ⚙️操作パネル")
         cols1 = st.columns([2, 1])
         with cols1[0]:
-            st.markdown("🤔ロボット行動時、赤いボタンが出てこない場合→")
+            st.markdown("🤔ロボットが行動しようとしているのに、赤い「実行」ボタンが出てこない場合→")
         with cols1[1]:
             if st.button("▶️実行を始める", key="manual_request_next_plan"):
                 next_plan_request = "正しい形式で番号付き行動計画リストも出力して"
@@ -622,19 +621,19 @@ def app():
                             st.session_state["task_duration_recorded"] = True
                 st.session_state.force_end = True
                 st.rerun()
-    if st.session_state.get("experiment2_followup_prompt"):
+    if st.session_state.get("experiment_followup_prompt"):
         if NEXT_PAGE:
             if st.button("次の実験へ→", key="followup_no", type="primary"):
-                st.session_state["experiment2_followup_prompt"] = False
-                st.session_state.pop("experiment2_followup_choice", None)
+                st.session_state["experiment_followup_prompt"] = False
+                st.session_state.pop("experiment_followup_choice", None)
                 _reset_conversation_state(system_prompt)
                 st.switch_page(NEXT_PAGE)
         else:
             st.info("お疲れさまでした。これで全ての実験が終了です。")
+            st.balloons()
         # if st.button("🙆‍♂️はい → 実験終了", key="followup_yes", type="primary"):
-        #     st.session_state["experiment2_followup_prompt"] = False
-        #     st.session_state.pop("experiment2_followup_choice", None)
+        #     st.session_state["experiment_followup_prompt"] = False
+        #     st.session_state.pop("experiment_followup_choice", None)
         #     st.success("実験お疲れ様でした！ご協力ありがとうございました。")
-        #     st.balloons()
 
 app()
