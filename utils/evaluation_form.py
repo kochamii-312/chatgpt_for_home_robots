@@ -6,7 +6,7 @@ from typing import Dict, Tuple
 
 import streamlit as st
 
-from jsonl import save_experiment_2_result
+from jsonl import save_experiment_result
 
 SUS_OPTIONS: Tuple[Tuple[str, int], ...] = (
     ("とても当てはまる (5)", 5),
@@ -95,7 +95,7 @@ GODSPEED_PERCEIVED_SAFETY_QUESTIONS: Tuple[Tuple[str, str], ...] = (
 )
 
 TRUST_SCALE_QUESTIONS: Tuple[Tuple[str, str], ...] = (
-    ("trust1", "このロボットは能力が高いと信じている"),
+    ("trust1", "このロボットは能力が高いと信じる"),
     ("trust2", "私はこのロボットを信頼している"),
     ("trust3", "このロボットの助言（アドバイス）は信頼できる"),
     ("trust4", "私はこのロボットに頼れる"),
@@ -154,7 +154,7 @@ def render_standard_evaluation_form(
 
     with st.form(form_key):
         st.subheader("⑥評価フォーム")
-        name = st.text_input("あなたの名前やユーザーネーム等（被験者区別用）")
+        name = st.text_input("あなたの名前")
 
         sus_scores: Dict[str, int] = {}
         if include_sus:
@@ -195,14 +195,14 @@ def render_standard_evaluation_form(
         )
 
         st.markdown(
-            "**・知能の知覚（Perceived Intelligence）**: 以下のスケールに基づいてあなたの心の状態を評価してください。"
+            "**・知能の知覚（Perceived Intelligence）**: 以下のスケールに基づいてこのロボットの印象を評価してください。"
         )
         godspeed_intelligence_scores = _collect_slider_scores(
             GODSPEED_PERCEIVED_INTELLIGENCE_QUESTIONS,
             key_prefix=prefix,
         )
 
-        st.markdown("**・安全性の知覚（Perceived Safety）**")
+        st.markdown("**・安全性の知覚（Perceived Safety）**: 以下のスケールに基づいてあなたの心の状態を評価してください。")
         godspeed_safety_scores = _collect_slider_scores(
             GODSPEED_PERCEIVED_SAFETY_QUESTIONS,
             key_prefix=prefix,
@@ -227,9 +227,9 @@ def render_standard_evaluation_form(
         impression = st.text_input(
             "AIとの会話や、ロボットの行動計画について「印象に残ったこと」があればお願いします。"
         )
-        free = st.text_input("その他に何かじたことがあればお願いします。")
+        free = st.text_input("その他に何か感じたことがあればお願いします。")
 
-        submitted = st.form_submit_button("評価を保存")
+        submitted = st.form_submit_button("評価を保存", type="primary")
 
     if not submitted:
         return False
@@ -264,7 +264,7 @@ def render_standard_evaluation_form(
             else ""
         )
 
-    save_experiment_2_result(
+    save_experiment_result(
         human_scores,
         prompt_group=prompt_group,
         termination_label=termination_label,
