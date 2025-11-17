@@ -261,6 +261,7 @@ def app():
 
     render_task_completion_image_choice(
         selected_prompt=selected_prompt,
+        prompt_label=prompt_label,
         memo_state_key=memo_state_key,
         memo_input_key=memo_input_key,
         memo_save_key=memo_save_key,
