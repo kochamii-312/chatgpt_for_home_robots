@@ -1,5 +1,5 @@
 LOGICAL_DINING:
-  task: 夕食のテーブル準備
+  task: dining
   prompt_group: logical
   prompt: |
     
@@ -86,13 +86,13 @@ LOGICAL_DINING:
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
   image_candidates:
-    - images/house2/DINING/00000-rgb.png
-    - images/house2/DINING/00001-rgb.png
-    - images/house2/DINING/00002-rgb.png
-    - images/house2/DINING/00003-rgb.png
-    - images/house2/DINING/00004-rgb.png
+    - images/dining/01_食器だけセッティングした様子.jpg
+    - images/dining/02_大皿料理を囲む様子.jpg
+    - images/dining/03_花を飾った和食の食卓.jpg
+    - images/dining/04_お盆で和定食.jpg
+    - images/dining/05_子供がいる家庭のソファダイニング.jpg
 LOGICAL_FLOWER:
-  task: 花束を活ける
+  task: flower
   prompt_group: logical
   prompt: |
     <System>
@@ -177,13 +177,13 @@ LOGICAL_FLOWER:
       </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
   image_candidates:
-    - images/house6/LIVING/00043-rgb.png
-    - images/house6/LIVING/00044-rgb.png
-    - images/house6/LIVING/00045-rgb.png
-    - images/house6/LIVING/00046-rgb.png
-    - images/house6/LIVING/00047-rgb.png
+    - images/flower/01_窓辺.jpg
+    - images/flower/02_ダイニングテーブル.jpg
+    - images/flower/03_リビングのローテーブル.jpg
+    - images/flower/04_玄関の下駄箱の上.jpg
+    - images/flower/05_廊下.jpg
 LOGICAL_PRESENT:
-  task: プレゼントを包む
+  task: present
   prompt_group: none
   prompt: |
 
@@ -195,7 +195,7 @@ LOGICAL_PRESENT:
     - images/house6/DINING/00024-rgb.png
     - images/house6/DINING/00025-rgb.png
 EMPATHETIC_DINING:
-  task: 夕食のテーブル準備
+  task: dining
   prompt_group: empathetic
   prompt: |
     
@@ -294,13 +294,13 @@ EMPATHETIC_DINING:
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
   image_candidates:
-    - images/house2/DINING/00000-rgb.png
-    - images/house2/DINING/00001-rgb.png
-    - images/house2/DINING/00002-rgb.png
-    - images/house2/DINING/00003-rgb.png
-    - images/house2/DINING/00004-rgb.png
+    - images/dining/01_食器だけセッティングした様子.jpg
+    - images/dining/02_大皿料理を囲む様子.jpg
+    - images/dining/03_花を飾った和食の食卓.jpg
+    - images/dining/04_お盆で和定食.jpg
+    - images/dining/05_子供がいる家庭のソファダイニング.jpg
 EMPATHETIC_FLOWER:
-  task: 花束を活ける
+  task: flower
   prompt_group: empathetic
   prompt: |
     
@@ -388,13 +388,13 @@ EMPATHETIC_FLOWER:
     </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
   image_candidates:
-    - images/house6/LIVING/00043-rgb.png
-    - images/house6/LIVING/00044-rgb.png
-    - images/house6/LIVING/00045-rgb.png
-    - images/house6/LIVING/00046-rgb.png
-    - images/house6/LIVING/00047-rgb.png
+    - images/flower/01_窓辺.jpg
+    - images/flower/02_ダイニングテーブル.jpg
+    - images/flower/03_リビングのローテーブル.jpg
+    - images/flower/04_玄関の下駄箱の上.jpg
+    - images/flower/05_廊下.jpg
 EMPATHETIC_PRESENT:
-  task: プレゼントを包む
+  task: present
   prompt_group: none
   prompt: |
 
@@ -406,7 +406,7 @@ EMPATHETIC_PRESENT:
     - images/house6/DINING/00024-rgb.png
     - images/house6/DINING/00025-rgb.png
 SMALL_TALK_DINING:
-  task: 夕食のテーブル準備
+  task: dining
   prompt_group: smalltalk
   prompt: |
     
@@ -517,13 +517,13 @@ SMALL_TALK_DINING:
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
   image_candidates:
-    - images/house2/DINING/00000-rgb.png
-    - images/house2/DINING/00001-rgb.png
-    - images/house2/DINING/00002-rgb.png
-    - images/house2/DINING/00003-rgb.png
-    - images/house2/DINING/00004-rgb.png
+    - images/dining/01_食器だけセッティングした様子.jpg
+    - images/dining/02_大皿料理を囲む様子.jpg
+    - images/dining/03_花を飾った和食の食卓.jpg
+    - images/dining/04_お盆で和定食.jpg
+    - images/dining/05_子供がいる家庭のソファダイニング.jpg
 SMALL_TALK_FLOWER:
-  task: 花束を活ける
+  task: flower
   prompt_group: smalltalk
   prompt: |
     
@@ -631,13 +631,13 @@ SMALL_TALK_FLOWER:
     </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
   image_candidates:
-    - images/house6/LIVING/00043-rgb.png
-    - images/house6/LIVING/00044-rgb.png
-    - images/house6/LIVING/00045-rgb.png
-    - images/house6/LIVING/00046-rgb.png
-    - images/house6/LIVING/00047-rgb.png
+    - images/flower/01_窓辺.jpg
+    - images/flower/02_ダイニングテーブル.jpg
+    - images/flower/03_リビングのローテーブル.jpg
+    - images/flower/04_玄関の下駄箱の上.jpg
+    - images/flower/05_廊下.jpg
 SMALL_TALK_PRESENT:
-  task: プレゼントを包む
+  task: present
   prompt_group: none
   prompt: |
 
