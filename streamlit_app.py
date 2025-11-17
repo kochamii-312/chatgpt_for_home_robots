@@ -1,68 +1,29 @@
 import streamlit as st
 
-from consent import require_consent
+from pages.consent import require_consent
 
 ACTIVE_PAGE_STATE_KEY = "current_active_page"
 ACTIVE_PAGE_VALUE = "instructions"
 
 def app():
-    require_consent(allow_withdrawal=True, redirect_to_instructions=False)
+    # require_consent(allow_withdrawal=True, redirect_to_instructions=False)
     st.session_state[ACTIVE_PAGE_STATE_KEY] = ACTIVE_PAGE_VALUE
     if st.session_state.get("redirect_to_instruction_page"):
         st.session_state["redirect_to_instruction_page"] = False
     # st.title("LLMATCH Criticデモアプリ")
-    st.subheader("実験方法と利用案内")
-    st.warning("このページの内容は、以下のGoogleドキュメントと同じ内容です。")
-    st.write("👉 [Googleドキュメントを見る](https://docs.google.com/document/d/10ZAhJMUuT9SC0maI0S5eWDMCf_pBUn6xWQvqqD6-7Mc/edit?usp=sharing)")
-
+    st.subheader("CHORDへようこそ！")
     st.markdown("""
-    #### 研究概要
-    LLMATCH研究員の **吉田馨** です。
+    慶應義塾大学理工学部情報工学科/LLMATCH研究員の 吉田馨 です。
     本研究にご協力いただきありがとうございます。 
     """)
-
     st.markdown("""
-    #### 実験の構成
-    **実験1**  
-    - RAGにおける「知らない状態の認識」を重視した *SIM-RAG* フレームワークを参考に、情報が十分かどうかを二値分類問題として判断するCriticモデルを採用。  
-    - 「規定回数だけ質問を繰り返す GPT」 vs 「情報が十分になるまで質問を続ける GPT with Critic」を比較。  
-    - 生成した行動計画の具体性・成功率とユーザーとの関係性を分析。  
-
-    **実験2**  
-    - GPT with Critic を用い、3つの異なるコミュニケーションタイプを比較。  
-        1. Standard（グライスの格率に従う）  
-        2. Friendly（フレンドリーに振る舞う）  
-        3. Pratfall（プラットフォール効果を狙う）  
-    - 生成した行動計画の具体性・成功率とユーザーとの関係性を分析。
+    このWebアプリは、 **家庭内ロボットを想定したチャットボットデモアプリ** です。
+    LLMを搭載したロボットがタスクを遂行する際に、どのようなコミュニケーションスタイルを取るべきかを研究しています。
     """)
-    # st.error("⚠️ 実験の途中でサイドバーから他のページに移動しないでください。進行中の会話や評価が正しく保存されなくなる可能性があります。")
-    
-    st.markdown("""
-    #### 実験1 の利用方法  
-    ① 「モード選択」から **GPT / GPT with Critic** を選ぶ  
-    ② 「指定されたタスク」が表示されるので、テキストボックスに入力  
-    ③ 「指定されたタスクが行われる場所」の画像が表示  
-    ④ 約30秒後に「ロボット行動計画」と「ロボットからの質問」が出力されるため、③の写真を見ながらロボットの質問に対して回答  
-    ⑤ Critic モデルにより会話は自動終了し、評価フォームを記入 → 評価を保存 をクリック  
-    ⑥ ① のモード選択をほかのものに選びなおし再度実験（2パターン1回ずつ）  
-    ⑦ その後、実験2 画面に遷移します。
-
-    ⚠️ 会話が終わらない場合は：  
-    「会話を終了したい理由」を選択 → **🚨 会話を終了** ボタンを押す  
-    """)
-
-    st.markdown("""
-    #### 実験2 の利用方法
-    ① 「プロンプト選択」から **1 / 2 / 3** のいずれかを選ぶ  
-    ② 「指定されたタスク」が表示されるので、テキストボックスに入力  
-    ③ 「指定されたタスクが行われる場所」の画像が表示  
-    ④ 約30秒後に「ロボット行動計画」と「ロボットからの質問」が出力されるため、③の写真を見ながらロボットの質問に対して回答  
-    ⑤ Critic モデルにより会話は自動終了し、評価フォームを記入 → 評価を保存 をクリック  
-    ⑥ 「会話をリセット」ボタンを押して① のモード選択をほかのものに選びなおし再度実験（3パターン1回ずつ）  
-
-    ⚠️ 会話が終わらない場合は：  
-    「会話を終了したい理由」を選択 → **🚨 会話を終了** ボタンを押す  
-    """)
+    st.warning("説明会に参加されていない方は、以下の説明動画をご覧ください。")
+    st.video("https://www.youtube.com/watch?v=Z6bX6YkQX1o")
+    st.write("この動画内で共有している操作マニュアルは、以下のリンクからもご覧いただけます。")
+    st.write("👉 [Googleスライドを見る](https://docs.google.com/presentation/d/170fsT62Pm_U1_FMcTsrCM27pVbMOy9_ZlhFZP5KOkxw/edit?usp=sharing)")
 
     st.info(
         """
@@ -75,7 +36,7 @@ def app():
     if st.button("実験を始める", use_container_width=True, type="primary"):
         st.session_state["redirect_to_instruction_page"] = False
         st.session_state.pop("experiment1_scroll_reset_done", None)
-        st.session_state.pop("experiment2_scroll_reset_done", None)
-        st.switch_page("pages/experiment_2.py")
+        st.session_state.pop("experiment_scroll_reset_done", None)
+        st.switch_page("pages/01_logical.py")
 
 app()
