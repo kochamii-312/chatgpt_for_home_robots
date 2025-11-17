@@ -173,7 +173,7 @@ def _save_to_firestore(entry, collection_override=None, prompt_group: Optional[s
     collection = _apply_prompt_group_to_collection(collection, prompt_group)
     creds = (
         os.getenv("FIREBASE_CREDENTIALS")
-        or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")  # ← 追加: ADC/パス
+        or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")  # ← ADC/パス
         or None
     )
     if not collection:
@@ -470,86 +470,6 @@ def save_pre_experiment_result(human_score: int):
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     _save_to_firestore(entry, collection_override="pre_experiment_results")
 
-def save_experiment_1_result(
-    human_scores: dict,
-    termination_reason: str = "",
-    termination_label: str = "",
-):
-    """保存済みコンテキストから実験結果をjsonl形式で保存
-
-    Parameters
-    ----------
-    human_scores: dict
-        4段階評価の結果を格納した辞書。各質問項目をキー、評価を値として渡す。
-    """
-    instruction = next((m["content"] for m in st.session_state.context if m["role"] == "user"), "")
-    last_assistant = next((m["content"] for m in reversed(st.session_state.context) if m["role"] == "assistant"), "")
-
-    fs_match = re.search(r"<FunctionSequence>([\s\S]*?)</FunctionSequence>", last_assistant, re.IGNORECASE)
-    info_match = re.search(r"<Information>([\s\S]*?)</Information>", last_assistant, re.IGNORECASE)
-
-    function_sequence = fs_match.group(1).strip() if fs_match else ""
-    information = info_match.group(1).strip() if info_match else ""
-
-    function_count, variable_lengths = _analyze_function_sequence(function_sequence)
-
-    human_scores = dict(human_scores)
-    success_probability = evaluate_plan_success_probability(
-        instruction,
-        function_sequence,
-    )
-    if success_probability is not None:
-        human_scores["plan_success_probability"] = success_probability
-
-    clarifying_history = _collect_clarifying_history()
-    text = f"instruction: {instruction} \nfs: {function_sequence}"
-    # TODO: 類似度どうするか考える。プレ実験にしか含めないか、experiment_1にも含めるか
-    similarity = None
-    model_path = Path(st.session_state.get("model_path", MODEL_PATH))
-    if model_path.exists():
-        try:
-            model = joblib.load(model_path)
-            similarity = float(model.predict_proba([text])[0][1])
-        except Exception:
-            similarity = None
-
-    entry = {
-        "instruction": instruction,
-        "information": information,
-        "clarifying_history": clarifying_history,
-        "similarity": similarity,
-        "human_scores": human_scores,
-        "mode": st.session_state.get("mode", ""),
-        "function": {
-            "sequence": function_sequence,
-            "count": function_count,
-            "variable_lengths": variable_lengths,
-        },
-    }
-    if success_probability is not None:
-        entry["plan_success_probability"] = success_probability
-    if termination_label:
-        entry["termination_label"] = termination_label
-    if termination_reason:
-        entry["termination_reason"] = termination_reason
-
-    if "saved_jsonl" not in st.session_state:
-        st.session_state.saved_jsonl = []
-    st.session_state.saved_jsonl.append(entry)
-
-    EXPERIMENT_1_PATH.parent.mkdir(parents=True, exist_ok=True)
-    need_newline = False
-    if EXPERIMENT_1_PATH.exists() and EXPERIMENT_1_PATH.stat().st_size > 0:
-        with EXPERIMENT_1_PATH.open("rb") as f:
-            f.seek(-1, 2)
-            need_newline = f.read(1) != b"\n"
-    with EXPERIMENT_1_PATH.open("a", encoding="utf-8") as f:
-        if need_newline:
-            f.write("\n")
-        f.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    _save_to_firestore(entry, collection_override="experiment_1_results")
-
-
 def _strip_visible_text(text: Optional[str]) -> str:
     """Convert assistant output into the plain text shown to users."""
 
@@ -620,18 +540,6 @@ def _collect_conversation_history(include_system: bool = False) -> list[dict[str
                 visible_content if isinstance(visible_content, str) else ""
             )
 
-        # Maintain backward compatibility with previous, non-numbered keys
-        entry.update(
-            {
-                "content": base_content,
-                "spoken_response": entry["32_spoken_response"],
-                "task_goal_definition": entry["33_task_goal_definition"],
-                "function_sequence": entry["34_function_sequence"],
-                "role": role,
-                "time": timestamp,
-            }
-        )
-
         history.append(entry)
 
     return history
@@ -655,7 +563,7 @@ def _format_state_history_snapshots(
 def save_conversation_history_to_firestore(
     termination_label: str,
     metadata: Optional[dict[str, Any]] = None,
-    collection_override: Optional[str] = "experiment_2_results",
+    collection_override: Optional[str] = "results",
     prompt_group: Optional[str] = None,
 ) -> None:
     """Persist the current conversation history with the specified termination label."""
@@ -674,12 +582,8 @@ def save_conversation_history_to_firestore(
         entry.update(metadata)
 
     prompt_group_value = prompt_group or st.session_state.get("prompt_group")
-    if prompt_group_value:
-        entry["prompt_group"] = prompt_group_value
 
     prompt_label = st.session_state.get("prompt_label")
-    if prompt_label:
-        entry["prompt_label"] = prompt_label
     entry["1_prompt_label"] = prompt_label or ""
 
     _save_to_firestore(
@@ -721,7 +625,7 @@ def record_task_duration(
     )
 
 
-def save_experiment_2_result(
+def save_experiment_result(
     human_scores: dict,
     *,
     prompt_group: Optional[str] = None,
@@ -754,47 +658,18 @@ def save_experiment_2_result(
     if success_probability is not None:
         human_scores["plan_success_probability"] = success_probability
 
-    clarifying_history = _collect_clarifying_history()
-    text = f"instruction: {instruction} \nfs: {function_sequence}"
-
-    assistant_visible_messages = [
-        visible
-        for visible in (
-            _strip_visible_text(m.get("content", ""))
-            for m in st.session_state.context
-            if m.get("role") == "assistant"
-        )
-        if visible
-    ]
-
-    entry = {
-        "instruction": instruction,
-        "information": information,
-        "clarifying_history": clarifying_history,
-        "human_scores": human_scores,
-        "termination_label": termination_label,
-        "termination_reason": termination_reason,
-        "function": {
-            "sequence": function_sequence,
-            "count": function_count,
-            "variable_lengths": variable_lengths,
-        },
-    }
+    entry = {}
     prompt_group_value = prompt_group or st.session_state.get("prompt_group") or ""
-    if prompt_group_value:
-        entry["prompt_group"] = prompt_group_value
 
     prompt_label = st.session_state.get("prompt_label")
     if not prompt_label and prompt_group_value:
         for key in (
             f"{prompt_group_value}_prompt_label",
-            f"experiment2_{prompt_group_value}_prompt_label",
+            f"experiment_{prompt_group_value}_prompt_label",
         ):
             prompt_label = st.session_state.get(key)
             if prompt_label:
                 break
-    if prompt_label:
-        entry["prompt_label"] = prompt_label
     entry["1_prompt_label"] = prompt_label or ""
 
     memo_state = ""
@@ -802,11 +677,9 @@ def save_experiment_2_result(
         memo_state = st.session_state.get(
             f"{prompt_group_value}_task_completion_memo", ""
         )
-    entry["memo_state"] = memo_state
     entry["2_memo_state"] = memo_state
 
     conversation_history = _collect_conversation_history()
-    entry["conversation_history"] = conversation_history
     entry["3_conversation_history"] = conversation_history
 
     esm = st.session_state.get("esm")
@@ -814,7 +687,6 @@ def save_experiment_2_result(
     if esm and hasattr(esm, "state_history"):
         state_history = [deepcopy(s) for s in getattr(esm, "state_history", [])]
     formatted_state_history = _format_state_history_snapshots(state_history)
-    entry["current_state_history"] = formatted_state_history
     entry["4_current_state"] = formatted_state_history
 
     task_duration = st.session_state.get("task_duration_latest")
@@ -835,18 +707,12 @@ def save_experiment_2_result(
                 "duration_seconds": (ended_at - started_at).total_seconds(),
             }
     if task_duration:
-        entry["task_duration"] = task_duration
         entry["5_task_duration"] = task_duration
     if success_probability is not None:
         entry["plan_success_probability"] = success_probability
 
     if termination_label:
         entry["termination_label"] = termination_label
-    if termination_reason:
-        entry["termination_reason"] = termination_reason
-
-    if assistant_visible_messages:
-        entry["assistant_visible_messages"] = assistant_visible_messages
 
     structured_human_scores = {
         "61_sus": human_scores.get("sus", {}),
@@ -857,7 +723,7 @@ def save_experiment_2_result(
         "66_text_inputs": human_scores.get("text_inputs", {}),
     }
     entry["6_human_scores"] = structured_human_scores
-    entry["participant_name"] = human_scores.get("participant_name", "")
+    entry["7_participant_name"] = human_scores.get("participant_name", "")
 
     if "saved_jsonl" not in st.session_state:
         st.session_state.saved_jsonl = []
@@ -875,7 +741,7 @@ def save_experiment_2_result(
         f.write(json.dumps(entry, ensure_ascii=False) + "\n")
     _save_to_firestore(
         entry,
-        collection_override="experiment_2_results",
+        collection_override="results",
         prompt_group=prompt_group_value,
     )
 
