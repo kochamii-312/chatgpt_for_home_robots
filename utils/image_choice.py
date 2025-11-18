@@ -11,9 +11,21 @@ from image_task_sets import is_web_url, resolve_image_paths
 from utils.firebase_utils import save_document
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _select_image_directory(*relative_paths: str) -> Path:
+    """Return the first existing directory from the provided candidates."""
+
+    candidates = [(_PROJECT_ROOT / Path(path)).resolve() for path in relative_paths]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return candidates[0]
+
+
 _IMAGE_DIRECTORIES = {
-    "DINING": _PROJECT_ROOT / "images" / "dining",
-    "FLOWER": _PROJECT_ROOT / "images" / "flower",
+    "DINING": _select_image_directory("images/dining", "dining"),
+    "FLOWER": _select_image_directory("images/flower", "flower"),
 }
 _IMAGE_PATTERNS = ("*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp", "*.gif")
 _REMOTE_IMAGE_SECRET_KEYS = ("image_base_url", "image_cdn_base_url")
