@@ -86,11 +86,11 @@ LOGICAL_DINING:
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
   image_candidates:
-    - images/dining/01_食器だけセッティングした様子.png
-    - images/dining/02_大皿料理を囲む様子.png
-    - images/dining/03_花を飾った和食の食卓.png
-    - images/dining/04_お盆で和定食.png
-    - images/dining/05_子供がいる家庭のソファダイニング.png
+    - dining/01_食器だけセッティングした様子.png
+    - dining/02_大皿料理を囲む様子.png
+    - dining/03_花を飾った和食の食卓.png
+    - dining/04_お盆で和定食.png
+    - dining/05_子供がいる家庭のソファダイニング.png
 LOGICAL_FLOWER:
   task: flower
   prompt_group: logical
@@ -177,11 +177,11 @@ LOGICAL_FLOWER:
       </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
   image_candidates:
-    - images/flower/01_窓辺.png
-    - images/flower/02_ダイニングテーブル.png
-    - images/flower/03_リビングのローテーブル.png
-    - images/flower/04_玄関の下駄箱の上.png
-    - images/flower/05_廊下.png
+    - flower/01_窓辺.png
+    - flower/02_ダイニングテーブル.png
+    - flower/03_リビングのローテーブル.png
+    - flower/04_玄関の下駄箱の上.png
+    - flower/05_廊下.png
 LOGICAL_PRESENT:
   task: present
   prompt_group: none
@@ -294,11 +294,11 @@ EMPATHETIC_DINING:
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
   image_candidates:
-    - images/dining/01_食器だけセッティングした様子.png
-    - images/dining/02_大皿料理を囲む様子.png
-    - images/dining/03_花を飾った和食の食卓.png
-    - images/dining/04_お盆で和定食.png
-    - images/dining/05_子供がいる家庭のソファダイニング.png
+    - dining/01_食器だけセッティングした様子.png
+    - dining/02_大皿料理を囲む様子.png
+    - dining/03_花を飾った和食の食卓.png
+    - dining/04_お盆で和定食.png
+    - dining/05_子供がいる家庭のソファダイニング.png
 EMPATHETIC_FLOWER:
   task: flower
   prompt_group: empathetic
@@ -388,11 +388,11 @@ EMPATHETIC_FLOWER:
     </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
   image_candidates:
-    - images/flower/01_窓辺.png
-    - images/flower/02_ダイニングテーブル.png
-    - images/flower/03_リビングのローテーブル.png
-    - images/flower/04_玄関の下駄箱の上.png
-    - images/flower/05_廊下.png
+    - flower/01_窓辺.png
+    - flower/02_ダイニングテーブル.png
+    - flower/03_リビングのローテーブル.png
+    - flower/04_玄関の下駄箱の上.png
+    - flower/05_廊下.png
 EMPATHETIC_PRESENT:
   task: present
   prompt_group: none
@@ -517,11 +517,11 @@ SMALL_TALK_DINING:
     </System>
   taskinfo: ごはんできたから一緒にテーブルの準備をしよう！
   image_candidates:
-    - images/dining/01_食器だけセッティングした様子.png
-    - images/dining/02_大皿料理を囲む様子.png
-    - images/dining/03_花を飾った和食の食卓.png
-    - images/dining/04_お盆で和定食.png
-    - images/dining/05_子供がいる家庭のソファダイニング.png
+    - dining/01_食器だけセッティングした様子.png
+    - dining/02_大皿料理を囲む様子.png
+    - dining/03_花を飾った和食の食卓.png
+    - dining/04_お盆で和定食.png
+    - dining/05_子供がいる家庭のソファダイニング.png
 SMALL_TALK_FLOWER:
   task: flower
   prompt_group: smalltalk
@@ -631,11 +631,11 @@ SMALL_TALK_FLOWER:
     </System>
   taskinfo: 友達から花束をもらったから一緒に活けよう！
   image_candidates:
-    - images/flower/01_窓辺.png
-    - images/flower/02_ダイニングテーブル.png
-    - images/flower/03_リビングのローテーブル.png
-    - images/flower/04_玄関の下駄箱の上.png
-    - images/flower/05_廊下.png
+    - flower/01_窓辺.png
+    - flower/02_ダイニングテーブル.png
+    - flower/03_リビングのローテーブル.png
+    - flower/04_玄関の下駄箱の上.png
+    - flower/05_廊下.png
 SMALL_TALK_PRESENT:
   task: present
   prompt_group: none
