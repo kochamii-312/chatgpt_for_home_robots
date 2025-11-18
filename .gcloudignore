@@ -1,0 +1,15 @@
+# gcloud が自動で無視してほしいものたち
+.gcloudignore
+.git
+.gitignore
+
+# データやモデル・大きいファイル
+images/
+house1/
+*.png
+house2/
+DINING/
+*.png
+LIVING/
+*.png
+
