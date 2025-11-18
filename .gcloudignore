@@ -2,4 +2,7 @@
 .gcloudignore
 .git
 .gitignore
+.
+
+models/
 
