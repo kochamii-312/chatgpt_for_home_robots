@@ -86,6 +86,7 @@ python api.py
 - Env / Secrets: API キーや評価用の保存先がある場合は .env などで管理
 - Firebase / GCP: firebase_utils.py と .gcloudignore があるため、Firebase/GCP 連携の構成を想定（必要に応じて認証情報を配置）
 - Procfile: プロセス定義があるため、PaaS（Render/Heroku 等）へのデプロイの雛形として利用可能
+- Task completion images: デプロイ環境で `images/` ディレクトリを含めない場合は、同じパス構造の画像をホスティングした CDN / Cloud Storage の URL を `st.secrets["image_base_url"]` または環境変数 `IMAGE_BASE_URL` で指定してください（HTTP(S) URL はローカルファイルと同様に表示されます）。
 
 ---
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Tuple
+from urllib.parse import urlparse
 
 _DATA_PATH = Path("json/image_task_sets.json")
 _PROJECT_ROOT = Path(__file__).resolve().parent
@@ -116,6 +117,16 @@ def build_task_set_choices(
     return choices
 
 
+def is_web_url(path_str: str) -> bool:
+    """Return True if ``path_str`` looks like a HTTP(S) URL."""
+
+    try:
+        scheme = urlparse(str(path_str)).scheme.lower()
+    except ValueError:
+        return False
+    return scheme in {"http", "https"}
+
+
 def resolve_image_path(path_str: str) -> Path:
     """Return a Path object that best matches the stored path string.
 
@@ -151,17 +162,20 @@ def resolve_image_path(path_str: str) -> Path:
 
 
 def resolve_image_paths(paths: Iterable[str]) -> Tuple[List[str], List[str]]:
-    """Resolve a collection of image paths.
+    """Resolve a collection of image paths or URLs.
 
     Returns a tuple of ``(existing, missing)`` where ``existing`` contains
-    strings to the resolved paths that were found on disk and ``missing``
-    contains the original strings that could not be resolved.
+    local filesystem paths or HTTP(S) URLs that are available to Streamlit and
+    ``missing`` contains the original strings that could not be resolved.
     """
 
     existing: List[str] = []
     missing: List[str] = []
 
     for path_str in paths:
+        if is_web_url(path_str):
+            existing.append(str(path_str))
+            continue
         resolved = resolve_image_path(path_str)
         if resolved.exists():
             existing.append(str(resolved))

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
 import streamlit as st
 
-from image_task_sets import resolve_image_paths
+from image_task_sets import is_web_url, resolve_image_paths
 from utils.firebase_utils import save_document
 
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -15,6 +16,8 @@ _IMAGE_DIRECTORIES = {
     "FLOWER": _PROJECT_ROOT / "images" / "flower",
 }
 _IMAGE_PATTERNS = ("*.png", "*.jpg", "*.jpeg", "*.webp", "*.bmp", "*.gif")
+_REMOTE_IMAGE_SECRET_KEYS = ("image_base_url", "image_cdn_base_url")
+_REMOTE_IMAGE_ENV_KEYS = ("IMAGE_BASE_URL", "IMAGE_CDN_BASE_URL")
 
 
 def _normalise_candidate_paths(candidates: Any, limit: int) -> list[str]:
@@ -93,8 +96,55 @@ def _collect_directory_images(directory: Path | None, limit: int) -> list[str]:
     return images
 
 
+def _get_remote_image_base_url() -> str | None:
+    """Return the configured remote image base URL if available."""
+
+    for key in _REMOTE_IMAGE_SECRET_KEYS:
+        try:
+            value = st.secrets[key]
+        except (AttributeError, KeyError, RuntimeError):
+            continue
+        if isinstance(value, str) and value.strip():
+            return value.rstrip("/")
+
+    for env_key in _REMOTE_IMAGE_ENV_KEYS:
+        value = os.environ.get(env_key)
+        if isinstance(value, str) and value.strip():
+            return value.rstrip("/")
+
+    return None
+
+
+def _resolve_remote_image_urls(paths: Sequence[str]) -> tuple[list[str], list[str]]:
+    """Convert relative paths to remote URLs when a base URL is configured."""
+
+    if not paths:
+        return [], []
+
+    base_url = _get_remote_image_base_url()
+    remote: list[str] = []
+    unresolved: list[str] = []
+
+    for path in paths:
+        if is_web_url(path):
+            remote.append(str(path))
+            continue
+
+        if not base_url:
+            unresolved.append(str(path))
+            continue
+
+        normalised = str(path).replace("\\", "/").lstrip("./")
+        remote.append(f"{base_url}/{normalised}")
+
+    return remote, unresolved
+
+
 def _to_storage_path(path: str) -> str:
     """Convert an absolute path to a project-relative string when possible."""
+
+    if is_web_url(path):
+        return path
 
     try:
         resolved = Path(path).resolve()
@@ -137,6 +187,11 @@ def render_task_completion_image_choice(
         candidate_paths = _normalise_candidate_paths(candidates, max_images)
 
     existing, missing = resolve_image_paths(candidate_paths)
+
+    remote_existing, unresolved = _resolve_remote_image_urls(missing)
+    if remote_existing:
+        existing.extend(remote_existing)
+    missing = unresolved
 
     if missing:
         missing_list = "\n".join(f"- {path}" for path in missing)
