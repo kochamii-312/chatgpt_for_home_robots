@@ -91,7 +91,7 @@ def finalize_and_render_plan(label: str):
         st.write(f"{sim:.2f}")
 
 def app():
-    require_consent()
+    # require_consent()
     # st.title("LLMATCH Criticデモアプリ")
     st.subheader("プレ実験")
     st.write("目的：GPT with Criticの学習の効果を図る。")

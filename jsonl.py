@@ -672,13 +672,6 @@ def save_experiment_result(
                 break
     entry["1_prompt_label"] = prompt_label or ""
 
-    memo_state = ""
-    if prompt_group_value:
-        memo_state = st.session_state.get(
-            f"{prompt_group_value}_task_completion_memo", ""
-        )
-    entry["2_memo_state"] = memo_state
-
     conversation_history = _collect_conversation_history()
     entry["3_conversation_history"] = conversation_history
 

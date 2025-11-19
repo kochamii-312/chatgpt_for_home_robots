@@ -5,14 +5,6 @@
 
 
 /models/*
-/images/*
-/dining/*
-/pages/consent.py
 /pages/images_and_tasks.py
 /pages/pre-experiment.py
-/pages/save_data.py
 /pages/00_simple_firestore_save.py
-/flower/02_ダイニングテーブル.png
-/flower/03_リビングのローテーブル.png
-/flower/04_玄関の下駄箱の上.png
-/flower/05_廊下.png
