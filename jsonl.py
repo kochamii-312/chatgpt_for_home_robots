@@ -671,6 +671,7 @@ def save_experiment_result(
             if prompt_label:
                 break
     entry["1_prompt_label"] = prompt_label or ""
+    entry["2_image_selection"] = st.session_state.get("2_image_selection", "")
 
     conversation_history = _collect_conversation_history()
     entry["3_conversation_history"] = conversation_history
