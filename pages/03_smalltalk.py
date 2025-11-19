@@ -24,7 +24,6 @@ from image_task_sets import extract_task_lines
 from two_classify import prepare_data  # 既存関数を利用
 from esm import ExternalStateManager
 from utils.evaluation_form import render_standard_evaluation_form
-from utils.image_choice import render_task_completion_image_choice
 
 PROMPT_GROUP = "smalltalk"
 NEXT_PAGE = None
@@ -259,13 +258,6 @@ def app():
     memo_input_key = f"{memo_state_key}_input"
     memo_save_key = f"{memo_state_key}_save"
 
-    render_task_completion_image_choice(
-        selected_prompt=selected_prompt,
-        prompt_label=prompt_label,
-        memo_state_key=memo_state_key,
-        memo_input_key=memo_input_key,
-        memo_save_key=memo_save_key,
-    )
     # if task_lines:
     #     for line in task_lines:
     #         st.info(f"{line}")
