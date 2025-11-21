@@ -27,9 +27,26 @@ from utils.evaluation_form import render_standard_evaluation_form
 
 PROMPT_GROUP = "smalltalk"
 NEXT_PAGE = None
-
-PROMPT_TASKINFO_PATH = Path(__file__).resolve().parent.parent / "json" / "prompt_taskinfo_sets.yaml"
+REPO_ROOT = Path(__file__).resolve().parent.parent
+PROMPT_TASKINFO_PATH = REPO_ROOT / "json" / "prompt_taskinfo_sets.yaml"
 _PROMPT_TASKINFO_CACHE: dict[str, dict[str, str]] | None = None
+
+IMAGE_TITLE_MAP: dict[str, list[str]] = {
+    "dining": [
+        "1 食器だけセッティングした様子",
+        "2 大皿料理を囲む様子",
+        "3 花を飾った和食の食卓",
+        "4 お盆で和定食",
+        "5 子供がいる家庭のソファダイニング",
+    ],
+    "flower": [
+        "1 窓辺",
+        "2 ダイニングテーブル",
+        "3 リビングのローテーブル",
+        "4 玄関",
+        "5 廊下",
+    ],
+}
 
 
 def load_prompt_taskinfo_sets() -> dict[str, dict[str, str]]:
@@ -46,6 +63,44 @@ def get_prompt_options(prompt_group: str) -> dict[str, dict[str, str]]:
         for key, value in load_prompt_taskinfo_sets().items()
         if value.get("prompt_group") == prompt_group
     }
+
+
+def _get_image_title(task_name: str, index: int) -> str:
+    if not task_name:
+        return f"{index:02d}: {index}"
+    titles = IMAGE_TITLE_MAP.get(task_name.lower())
+    if titles and 1 <= index <= len(titles):
+        return titles[index - 1]
+    return f"{index:02d}: {index}"
+
+
+def _render_task_image_picker(image_paths: list[str], task_name: str) -> None:
+    if not image_paths:
+        return
+
+    st.markdown("上記のタスクが完了した状態を想像し、写真からイメージに近いものを選んでください。")
+    columns = st.columns(len(image_paths))
+    for idx, (col, image_path) in enumerate(zip(columns, image_paths), start=1):
+        resolved_path = (REPO_ROOT / image_path).resolve()
+        title = _get_image_title(task_name, idx)
+        with col:
+            st.image(str(resolved_path), use_container_width=True)
+            st.caption(title)
+
+    image_options = list(range(1, len(image_paths) + 1))
+    if not image_options:
+        return
+
+    selection_key = "2_image_selection"
+    if selection_key not in st.session_state:
+        st.session_state[selection_key] = image_options[0]
+
+    st.radio(
+        "1~5の中からイメージに近いものを選んでください",
+        image_options,
+        horizontal=True,
+        key=selection_key,
+    )
 
 load_dotenv()
 
@@ -230,6 +285,7 @@ def app():
     system_prompt = selected_prompt.get("prompt", "")
     selected_task_name = selected_prompt.get("task", "")
     selected_taskinfo = selected_prompt.get("taskinfo", "")
+    image_candidates = selected_prompt.get("image_candidates") or []
 
     if not system_prompt:
         st.error("プロンプトの内容が設定されていません。JSONファイルを確認してください。")
@@ -254,9 +310,7 @@ def app():
     else:
         st.info("タスクが登録されていません。")
 
-    memo_state_key = f"{PROMPT_GROUP}_task_completion_memo"
-    memo_input_key = f"{memo_state_key}_input"
-    memo_save_key = f"{memo_state_key}_save"
+    _render_task_image_picker(image_candidates, selected_task_name)
 
     # if task_lines:
     #     for line in task_lines:

@@ -34,18 +34,18 @@ _PROMPT_TASKINFO_CACHE: dict[str, dict[str, str]] | None = None
 
 IMAGE_TITLE_MAP: dict[str, list[str]] = {
     "dining": [
-        "01: 1 食器だけセッティングした様子",
-        "02: 2 大皿料理を囲む様子",
-        "03: 3 花を飾った和食の食卓",
-        "04: 4 お盆で和定食",
-        "05: 5 子供がいる家庭のソファダイニング",
+        "1 食器だけセッティングした様子",
+        "2 大皿料理を囲む様子",
+        "3 花を飾った和食の食卓",
+        "4 お盆で和定食",
+        "5 子供がいる家庭のソファダイニング",
     ],
     "flower": [
-        "01: 1 窓辺",
-        "02: 2 ダイニングテーブル",
-        "03: 3 リビングのローテーブル",
-        "04: 4 玄関",
-        "05: 5 廊下",
+        "1 窓辺",
+        "2 ダイニングテーブル",
+        "3 リビングのローテーブル",
+        "4 玄関",
+        "5 廊下",
     ],
 }
 
@@ -85,7 +85,7 @@ def _render_task_image_picker(image_paths: list[str], task_name: str) -> None:
         resolved_path = (REPO_ROOT / image_path).resolve()
         title = _get_image_title(task_name, idx)
         with col:
-            st.image(str(resolved_path), width="stretch")
+            st.image(str(resolved_path), use_container_width=True)
             st.caption(title)
 
     image_options = list(range(1, len(image_paths) + 1))
@@ -313,10 +313,6 @@ def app():
         st.info("タスクが登録されていません。")
 
     _render_task_image_picker(image_candidates, selected_task_name)
-
-    memo_state_key = f"{PROMPT_GROUP}_task_completion_memo"
-    memo_input_key = f"{memo_state_key}_input"
-    memo_save_key = f"{memo_state_key}_save"
 
     # if task_lines:
     #     for line in task_lines:
