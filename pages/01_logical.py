@@ -312,7 +312,7 @@ def app():
         st.info("タスクが登録されていません。")
 
     _render_task_image_picker(image_candidates, selected_task_name)
-
+    st.warning("ロボットは、これらの画像の情報は持っていません。あくまでイメージを掴むための参考としてご利用ください。")
 
     # if task_lines:
     #     for line in task_lines:
@@ -361,6 +361,11 @@ def app():
             最終的にはロボットと協力してタスクを達成させることが目標ですが、タスクに関係ない会話や指示もすることができます。
             """
         )
+
+        if selected_taskinfo:
+            st.info(selected_taskinfo)
+        else:
+            st.info("タスクが登録されていません。")
 
         # 2. 既存の会話履歴を表示
         for msg in context:
@@ -648,7 +653,7 @@ def app():
         #         st.rerun()
         cols = st.columns([2, 1])
         with cols[0]:
-            st.markdown("🎉ロボットとのタスクが完了した場合→")
+            st.markdown("🎉ロボットとの会話を終了したい場合→")
         with cols[1]:
             if st.button("✅タスク完了！", key="force_end_button"):
                 if not st.session_state.get("task_duration_recorded"):
