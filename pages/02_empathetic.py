@@ -262,8 +262,8 @@ def app():
     # require_consent()
     st.markdown("### 共感型")
 
-    if should_hide_sidebar():
-        apply_sidebar_hiding()
+    # if should_hide_sidebar():
+    #     apply_sidebar_hiding()
 
     prompt_options = get_prompt_options(PROMPT_GROUP)
     if not prompt_options:

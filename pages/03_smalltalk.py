@@ -261,7 +261,7 @@ def app():
     st.markdown("### 雑談型")
 
     # if should_hide_sidebar():
-        apply_sidebar_hiding()
+    #     apply_sidebar_hiding()
 
     prompt_options = get_prompt_options(PROMPT_GROUP)
     if not prompt_options:

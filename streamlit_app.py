@@ -20,15 +20,18 @@ def app():
     このWebアプリは、 **家庭内ロボットを想定したチャットボットデモアプリ** です。
     LLMを搭載したロボットがタスクを遂行する際に、どのようなコミュニケーションスタイルを取るべきかを研究しています。
     """)
+    st.error("""
+     **実験実施（評価の回答）: 11/30（日）まで** 
+    """)
     st.warning("説明会に参加されていない方は、以下の説明動画をご覧ください。")
-    st.video("https://www.youtube.com/watch?v=Z6bX6YkQX1o")
+    st.video("https://youtu.be/y7kyjG707rc")
     st.write("この動画内で共有している操作マニュアルは、以下のリンクからもご覧いただけます。")
     st.write("👉 [Googleスライドを見る](https://docs.google.com/presentation/d/170fsT62Pm_U1_FMcTsrCM27pVbMOy9_ZlhFZP5KOkxw/edit?usp=sharing)")
 
     st.info(
         """
          **質問やお問い合わせはこちら**  
-        Slack の [@Kaoru Yoshida](https://matsuokenllmcommunity.slack.com/team/U071ML4LY5C) までお願いします。
+        email: kaoru.yoshida@keio.jp までお願いします。
         """,
         icon="📩"
     )
