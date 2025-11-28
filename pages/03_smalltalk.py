@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from api import build_bootstrap_user_message, client
 from jsonl import (
     record_task_duration,
+    save_conversation_history_to_firestore
 )
 from move_functions import move_to, pick_object, place_object_next_to, place_object_on
 from run_and_show import run_plan_and_show, show_spoken_response, show_function_sequence
@@ -259,7 +260,7 @@ def app():
     # require_consent()
     st.markdown("### 雑談型")
 
-    if should_hide_sidebar():
+    # if should_hide_sidebar():
         apply_sidebar_hiding()
 
     prompt_options = get_prompt_options(PROMPT_GROUP)
@@ -645,10 +646,19 @@ def app():
                 st.rerun()
         cols2 = st.columns([2, 1])
         with cols2[0]:
-            st.markdown("「▶️実行を始める」ボタンを何度押しても上手くいかない場合→")
+            st.markdown("⚠️上のボタンを何度押しても上手くいかない場合→")
         with cols2[1]:
-            if st.button("🗃️保存", key="reset_conv"):
-                # TODO: 「保存」ボタンが押されたことと、会話履歴をfirestoreに保存
+            if st.button("🗃️会話履歴を保存", key="reset_conv"):
+                save_conversation_history_to_firestore(
+                    "保存ボタンが押されました",
+                    metadata={
+                        "page": "smalltalk",
+                        "event": "manual_save_button",
+                    },
+                    collection_override="conversation_saves",
+                    prompt_group=PROMPT_GROUP,
+                )
+                st.toast("会話履歴をFirestoreに保存しました。ページを再読み込みしてください。")         
         cols = st.columns([2, 1])
         with cols[0]:
             st.markdown("🎉ロボットとの会話を終了したい場合→")
